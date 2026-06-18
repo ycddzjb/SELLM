@@ -15,7 +15,10 @@ public class RegexAnonymizer implements Anonymizer {
 
     @Override
     public AnonymizationResult anonymize(String text, List<String> names, List<String> schools) {
-        return anonymize(text, names, schools, names);
+        List<String> mustNotContain = new ArrayList<>();
+        mustNotContain.addAll(names);
+        mustNotContain.addAll(schools);
+        return anonymize(text, names, schools, mustNotContain);
     }
 
     public AnonymizationResult anonymize(String text, List<String> names,
