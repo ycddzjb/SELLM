@@ -1,0 +1,22 @@
+# 依赖与构建产物
+node_modules/
+dist/
+target/
+*.class
+
+# IDE / 编辑器
+.idea/
+.vscode/
+*.iml
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志与本地环境
+*.log
+.env
+.env.local
+
+# Superpowers 可视化伴侣中间产物
+.superpowers/
