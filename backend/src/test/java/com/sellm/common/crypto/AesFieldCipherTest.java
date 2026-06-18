@@ -33,4 +33,12 @@ class AesFieldCipherTest {
         assertThatThrownBy(() -> new AesFieldCipher("tooshort"))
             .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void 密文过短则抛IllegalArgumentException() {
+        // Base64("abc") 解码后仅 3 字节,短于 12 字节 IV
+        String tooShort = java.util.Base64.getEncoder().encodeToString(new byte[]{1, 2, 3});
+        assertThatThrownBy(() -> cipher.decrypt(tooShort))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
 }

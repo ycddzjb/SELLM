@@ -47,8 +47,11 @@ public class AesFieldCipher implements FieldCipher {
 
     @Override
     public String decrypt(String ciphertext) {
+        byte[] combined = Base64.getDecoder().decode(ciphertext);
+        if (combined.length < IV_LENGTH) {
+            throw new IllegalArgumentException("密文长度非法(短于 IV 长度)");
+        }
         try {
-            byte[] combined = Base64.getDecoder().decode(ciphertext);
             byte[] iv = new byte[IV_LENGTH];
             byte[] ct = new byte[combined.length - IV_LENGTH];
             System.arraycopy(combined, 0, iv, 0, IV_LENGTH);
