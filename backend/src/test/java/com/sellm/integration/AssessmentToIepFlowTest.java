@@ -36,7 +36,7 @@ class AssessmentToIepFlowTest {
             new KnowledgeDoc("d2", "ASD IEP 社交干预 范例 长期短期目标", "范例库")
         );
         // 测试桩:固定返回内存文档,驱动 Report/Iep 服务,无需 Spring/DB
-        RagRetriever rag = (query, topK) -> knowledgeDocs;
+        RagRetriever rag = (query, topK) -> knowledgeDocs.stream().limit(topK).toList();
 
         // 1. 评估 + 计分
         Scale cars = new Scale("cars", "CARS", "v1",
