@@ -6,8 +6,8 @@ import com.sellm.anonymizer.RegexAnonymizer;
 import com.sellm.iep.Iep;
 import com.sellm.iep.IepService;
 import com.sellm.iep.IepStatus;
-import com.sellm.rag.InMemoryRagRetriever;
 import com.sellm.rag.KnowledgeDoc;
+import com.sellm.rag.RagRetriever;
 import com.sellm.report.Report;
 import com.sellm.report.ReportService;
 import com.sellm.report.ReportStatus;
@@ -31,10 +31,12 @@ class AssessmentToIepFlowTest {
     void 全链路_评估到IEP草案_身份不泄露且结果还原() {
         RegexAnonymizer anonymizer = new RegexAnonymizer();
         DefaultAiGateway gateway = new DefaultAiGateway(anonymizer, new AssertingModel());
-        InMemoryRagRetriever rag = new InMemoryRagRetriever(List.of(
+        List<KnowledgeDoc> knowledgeDocs = List.of(
             new KnowledgeDoc("d1", "CARS 解读 轻-中度 建议结构化干预", "手册B"),
             new KnowledgeDoc("d2", "ASD IEP 社交干预 范例 长期短期目标", "范例库")
-        ));
+        );
+        // 测试桩:固定返回内存文档,驱动 Report/Iep 服务,无需 Spring/DB
+        RagRetriever rag = (query, topK) -> knowledgeDocs;
 
         // 1. 评估 + 计分
         Scale cars = new Scale("cars", "CARS", "v1",
