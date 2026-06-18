@@ -18,3 +18,25 @@ CREATE TABLE IF NOT EXISTS knowledge_doc (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 -- (Task 7 追加 scale / scale_item / score_band 表)
+CREATE TABLE IF NOT EXISTS scale (
+    scale_id  VARCHAR(64) PRIMARY KEY,
+    name      VARCHAR(128) NOT NULL,
+    version   VARCHAR(32)  NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS scale_item (
+    id        BIGINT PRIMARY KEY AUTO_INCREMENT,
+    scale_id  VARCHAR(64) NOT NULL,
+    item_id   VARCHAR(64) NOT NULL,
+    stem      VARCHAR(512) NOT NULL,
+    dimension VARCHAR(128)
+);
+
+CREATE TABLE IF NOT EXISTS score_band (
+    id             BIGINT PRIMARY KEY AUTO_INCREMENT,
+    scale_id       VARCHAR(64) NOT NULL,
+    lower_bound    DOUBLE NOT NULL,
+    upper_bound    DOUBLE NOT NULL,
+    label          VARCHAR(128) NOT NULL,
+    interpretation VARCHAR(512)
+);
