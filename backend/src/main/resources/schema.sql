@@ -10,4 +10,11 @@ CREATE TABLE IF NOT EXISTS child (
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 -- (Task 6 追加 knowledge_doc 表)
+CREATE TABLE IF NOT EXISTS knowledge_doc (
+    id        BIGINT PRIMARY KEY AUTO_INCREMENT,
+    doc_id    VARCHAR(64)  NOT NULL,
+    content   VARCHAR(4000) NOT NULL,
+    source    VARCHAR(256),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 -- (Task 7 追加 scale / scale_item / score_band 表)
