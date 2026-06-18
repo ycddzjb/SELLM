@@ -1,21 +1,24 @@
 package com.sellm.rag;
 
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+@Primary
 @Component
-public class InMemoryRagRetriever implements RagRetriever {
+public class DbRagRetriever implements RagRetriever {
 
-    private final List<KnowledgeDoc> docs;
+    private final KnowledgeDocMapper mapper;
 
-    public InMemoryRagRetriever(List<KnowledgeDoc> docs) {
-        this.docs = docs;
+    public DbRagRetriever(KnowledgeDocMapper mapper) {
+        this.mapper = mapper;
     }
 
     @Override
     public List<KnowledgeDoc> retrieve(String query, int topK) {
+        List<KnowledgeDoc> docs = mapper.findAll();
         String[] terms = query.trim().split("\\s+");
         List<Scored> scored = new ArrayList<>();
         for (KnowledgeDoc doc : docs) {

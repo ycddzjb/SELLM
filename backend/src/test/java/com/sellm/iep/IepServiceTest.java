@@ -50,7 +50,7 @@ class IepServiceTest {
     @Test
     void 定稿后状态为FINALIZED() {
         Iep iep = new Iep("小明", "草案");
-        iep.finalizePlan();
+        iep.finalizePlan("终稿内容");
         assertThat(iep.getStatus()).isEqualTo(IepStatus.FINALIZED);
     }
 }

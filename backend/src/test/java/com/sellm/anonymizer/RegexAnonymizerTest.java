@@ -40,4 +40,31 @@ class RegexAnonymizerTest {
             anonymizer.anonymize("张伟同学", List.of(), List.of(), List.of("张伟"))
         ).isInstanceOf(AnonymizationException.class);
     }
+
+    @Test
+    void 四参版本将学校名纳入校验名单残留则硬阻断() {
+        // schools 替换列表为空使"阳光小学"未被替换,mustNotContain 含它 → 校验阶段硬阻断
+        assertThatThrownBy(() ->
+            anonymizer.anonymize("就读于阳光小学", List.of(), List.of(),
+                List.of("阳光小学"))
+        ).isInstanceOf(AnonymizationException.class);
+    }
+
+    @Test
+    void 三参版本学校被正常替换且不误伤() {
+        AnonymizationResult r = anonymizer.anonymize(
+            "就读于阳光小学", List.of(), List.of("阳光小学"));
+        assertThat(r.getAnonymizedText()).doesNotContain("阳光小学").contains("[学校1]");
+        assertThat(anonymizer.restore(r.getAnonymizedText(), r.getRestoreMap()))
+            .isEqualTo("就读于阳光小学");
+    }
+
+    @Test
+    void 三参委托传入姓名与学校均被脱敏且校验通过() {
+        AnonymizationResult r = anonymizer.anonymize(
+            "小明就读于阳光小学", List.of("小明"), List.of("阳光小学"));
+        assertThat(r.getAnonymizedText())
+            .doesNotContain("小明").doesNotContain("阳光小学")
+            .contains("[儿童1]").contains("[学校1]");
+    }
 }
