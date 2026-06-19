@@ -11,6 +11,8 @@ public interface AppUserMapper {
     Map<String, Object> findByUsername(@Param("username") String username);
     Map<String, Object> findById(@Param("id") Long id);
     List<Map<String, Object>> findPendingByOrg(@Param("orgId") Long orgId);
+    List<Map<String, Object>> findAll();
+    List<Map<String, Object>> findByOrg(@Param("orgId") Long orgId);
     void updateRoleOrgStatus(@Param("id") Long id, @Param("role") String role,
                              @Param("orgId") Long orgId, @Param("status") String status);
     void updateStatus(@Param("id") Long id, @Param("status") String status);

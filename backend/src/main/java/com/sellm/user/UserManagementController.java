@@ -55,6 +55,15 @@ public class UserManagementController {
         return Result.ok(saved.getId());
     }
 
+    @GetMapping
+    public Result<List<UserResponse>> list() {
+        AuthPrincipal me = currentUser.require();
+        List<AppUser> users = (me.getRole() == Role.SUPER_ADMIN)
+            ? userRepository.listAll()
+            : userRepository.listByOrg(me.getOrgId());
+        return Result.ok(map(users));
+    }
+
     // 机构管理者:本机构待审家长列表
     @GetMapping("/pending")
     public Result<List<UserResponse>> pendingParents() {

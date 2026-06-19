@@ -52,6 +52,22 @@ public class UserRepository {
         return result;
     }
 
+    public List<AppUser> listAll() {
+        List<AppUser> result = new ArrayList<>();
+        for (Map<String, Object> row : mapper.findAll()) {
+            result.add(toAppUser(row));
+        }
+        return result;
+    }
+
+    public List<AppUser> listByOrg(Long orgId) {
+        List<AppUser> result = new ArrayList<>();
+        for (Map<String, Object> row : mapper.findByOrg(orgId)) {
+            result.add(toAppUser(row));
+        }
+        return result;
+    }
+
     private AppUser toAppUser(Map<String, Object> row) {
         if (row == null) {
             return null;
