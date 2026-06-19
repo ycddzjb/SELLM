@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS child (
     org_id       BIGINT,
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- (Task 7 追加 child.guardian_user_id 列:关联家长账号,行级权限用)
+ALTER TABLE child ADD COLUMN IF NOT EXISTS guardian_user_id BIGINT;
 -- (Task 6 追加 knowledge_doc 表)
 CREATE TABLE IF NOT EXISTS knowledge_doc (
     id        BIGINT PRIMARY KEY AUTO_INCREMENT,
