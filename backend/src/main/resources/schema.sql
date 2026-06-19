@@ -59,3 +59,14 @@ CREATE TABLE IF NOT EXISTS app_user (
     org_id        BIGINT,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- (Task 8 追加 assessment 表:评估记录落库)
+CREATE TABLE IF NOT EXISTS assessment (
+    id           BIGINT PRIMARY KEY AUTO_INCREMENT,
+    child_id     BIGINT NOT NULL,
+    scale_id     VARCHAR(64) NOT NULL,
+    total_score  DOUBLE NOT NULL,
+    band_label   VARCHAR(128) NOT NULL,
+    interpretation VARCHAR(512),
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
