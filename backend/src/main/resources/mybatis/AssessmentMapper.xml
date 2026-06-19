@@ -22,4 +22,9 @@
         FROM assessment WHERE id = #{id}
     </select>
 
+    <select id="findByChildId" parameterType="long" resultMap="assessmentMap">
+        SELECT id, child_id, scale_id, total_score, band_label, interpretation
+        FROM assessment WHERE child_id = #{childId} ORDER BY id DESC
+    </select>
+
 </mapper>

@@ -6,6 +6,9 @@ import com.sellm.iep.dto.IepFinalizeRequest;
 import com.sellm.iep.dto.IepResponse;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/ieps")
 public class IepController {
@@ -24,6 +27,15 @@ public class IepController {
     @GetMapping("/{id}")
     public Result<IepResponse> get(@PathVariable Long id) {
         return Result.ok(toResponse(appService.get(id)));
+    }
+
+    @GetMapping
+    public Result<List<IepResponse>> listByChild(@RequestParam Long childId) {
+        List<IepResponse> out = new ArrayList<>();
+        for (IepRecord r : appService.listByChild(childId)) {
+            out.add(toResponse(r));
+        }
+        return Result.ok(out);
     }
 
     @PutMapping("/{id}/finalize")

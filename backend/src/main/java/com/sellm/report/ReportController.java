@@ -6,6 +6,9 @@ import com.sellm.report.dto.GenerateReportRequest;
 import com.sellm.report.dto.ReportResponse;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/reports")
 public class ReportController {
@@ -26,6 +29,15 @@ public class ReportController {
     public Result<ReportResponse> get(@PathVariable Long id) {
         ReportRecord r = appService.get(id);
         return Result.ok(toResponse(r));
+    }
+
+    @GetMapping
+    public Result<List<ReportResponse>> listByChild(@RequestParam Long childId) {
+        List<ReportResponse> out = new ArrayList<>();
+        for (ReportRecord r : appService.listByChild(childId)) {
+            out.add(toResponse(r));
+        }
+        return Result.ok(out);
     }
 
     @PutMapping("/{id}/finalize")

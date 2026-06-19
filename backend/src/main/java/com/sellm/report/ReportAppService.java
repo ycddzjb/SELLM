@@ -76,4 +76,10 @@ public class ReportAppService {
         recordRepository.finalizeReport(reportId, content);
         return recordRepository.findById(reportId);
     }
+
+    public java.util.List<ReportRecord> listByChild(Long childId) {
+        Child child = childRepository.findById(childId);
+        accessGuard.checkChildAccess(currentUser.require(), child); // child 为 null → canAccess false → 403
+        return recordRepository.listByChild(childId);
+    }
 }

@@ -22,6 +22,11 @@
         FROM report WHERE id = #{id}
     </select>
 
+    <select id="findByChildId" parameterType="long" resultMap="reportMap">
+        SELECT id, assessment_id, child_id, draft, finalized_content, status
+        FROM report WHERE child_id = #{childId} ORDER BY id DESC
+    </select>
+
     <update id="updateFinalized">
         UPDATE report SET finalized_content = #{content}, status = 'FINALIZED' WHERE id = #{id}
     </update>

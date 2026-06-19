@@ -31,4 +31,14 @@ public class AssessmentController {
         return Result.ok(new AssessmentResponse(saved.getId(), saved.getTotalScore(),
             saved.getBandLabel(), saved.getInterpretation()));
     }
+
+    @GetMapping
+    public Result<List<AssessmentResponse>> listByChild(@RequestParam Long childId) {
+        List<AssessmentResponse> out = new ArrayList<>();
+        for (Assessment a : appService.listByChild(childId)) {
+            out.add(new AssessmentResponse(a.getId(), a.getTotalScore(),
+                a.getBandLabel(), a.getInterpretation()));
+        }
+        return Result.ok(out);
+    }
 }
