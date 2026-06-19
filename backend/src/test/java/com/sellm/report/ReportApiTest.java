@@ -2,6 +2,7 @@ package com.sellm.report;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sellm.support.AuthTestSupport;
+import com.sellm.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ class ReportApiTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper json;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private UserRepository userRepository;
 
     @BeforeEach
     void seedScale() {
@@ -41,7 +43,7 @@ class ReportApiTest {
 
     @Test
     void 生成报告草稿并定稿() throws Exception {
-        String token = AuthTestSupport.registerAndLogin(mvc, json, "rep_teacher", "pw123456", "TEACHER");
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository, "rep_teacher", "pw123456", "TEACHER");
         long childId = createChild(token, "小明");
         long assessmentId = submitAssessment(token, childId);
 

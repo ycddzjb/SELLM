@@ -3,6 +3,7 @@ package com.sellm.flow;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sellm.support.AuthTestSupport;
+import com.sellm.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ class FullChainApiTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper json;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private UserRepository userRepository;
 
     @BeforeEach
     void seedScale() {
@@ -42,7 +44,7 @@ class FullChainApiTest {
 
     @Test
     void 登录到IEP的完整链路() throws Exception {
-        String token = AuthTestSupport.registerAndLogin(mvc, json, "flow_teacher", "pw123456", "TEACHER");
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository, "flow_teacher", "pw123456", "TEACHER");
 
         long childId = dataLong(postOk("/api/children", token, Map.of("name","小明","disorderType","ASD","orgId",1)), false);
         long assessmentId = dataLong(postOk("/api/assessments", token, Map.of("childId",childId,"scaleId","cars",

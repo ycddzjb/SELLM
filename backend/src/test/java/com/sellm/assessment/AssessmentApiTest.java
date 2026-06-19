@@ -2,6 +2,7 @@ package com.sellm.assessment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sellm.support.AuthTestSupport;
+import com.sellm.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,8 @@ class AssessmentApiTest {
     private ObjectMapper json;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private UserRepository userRepository;
 
     @BeforeEach
     void seedScale() {
@@ -44,7 +47,7 @@ class AssessmentApiTest {
 
     @Test
     void 老师提交评估得到计分结果且落库() throws Exception {
-        String token = AuthTestSupport.registerAndLogin(mvc, json, "asm_teacher", "pw123456", "TEACHER");
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository, "asm_teacher", "pw123456", "TEACHER");
         // 建档
         String cb = mvc.perform(post("/api/children").header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -65,7 +68,7 @@ class AssessmentApiTest {
 
     @Test
     void 家长提交评估被拒403() throws Exception {
-        String token = AuthTestSupport.registerAndLogin(mvc, json, "asm_parent", "pw123456", "PARENT");
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository, "asm_parent", "pw123456", "PARENT");
         mvc.perform(post("/api/assessments").header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of(

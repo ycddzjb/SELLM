@@ -2,6 +2,7 @@ package com.sellm.iep;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sellm.support.AuthTestSupport;
+import com.sellm.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ class IepApiTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper json;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private UserRepository userRepository;
 
     @BeforeEach
     void seedScale() {
@@ -41,7 +43,7 @@ class IepApiTest {
 
     @Test
     void 基于报告生成IEP草案并定稿() throws Exception {
-        String token = AuthTestSupport.registerAndLogin(mvc, json, "iep_teacher", "pw123456", "TEACHER");
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository, "iep_teacher", "pw123456", "TEACHER");
         long childId = post1("/api/children", token, Map.of("name","小明","disorderType","ASD","orgId",1), "$.data");
         long assessmentId = post1("/api/assessments", token, Map.of("childId",childId,"scaleId","cars",
             "answers", List.of(Map.of("itemId","q1","score",2), Map.of("itemId","q2","score",3))), "$.data.id");

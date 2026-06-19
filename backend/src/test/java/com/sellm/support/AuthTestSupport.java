@@ -2,6 +2,8 @@ package com.sellm.support;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sellm.security.Role;
+import com.sellm.user.UserRepository;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -14,23 +16,23 @@ public final class AuthTestSupport {
 
     private AuthTestSupport() {}
 
-    /** 注册(忽略已存在)并登录,orgId 默认 1,返回 JWT。 */
-    public static String registerAndLogin(MockMvc mvc, ObjectMapper json,
+    /**
+     * 造种子账号(任意角色)并登录,orgId 默认 1,返回 JWT。
+     * 公开注册端点改造后只产 PARENT,故测试种子直接经 UserRepository 落库(绕过公开端点),
+     * 再走 HTTP login 拿 token。
+     */
+    public static String registerAndLogin(MockMvc mvc, ObjectMapper json, UserRepository userRepo,
                                           String username, String password, String role) throws Exception {
-        return registerAndLogin(mvc, json, username, password, role, 1L);
+        return registerAndLogin(mvc, json, userRepo, username, password, role, 1L);
     }
 
-    /** 注册(忽略已存在)并登录,指定 orgId(可为 null),返回 JWT。 */
-    public static String registerAndLogin(MockMvc mvc, ObjectMapper json,
+    /** 造种子账号(任意角色,指定 orgId 可为 null)并登录,返回 JWT。 */
+    public static String registerAndLogin(MockMvc mvc, ObjectMapper json, UserRepository userRepo,
                                           String username, String password, String role, Long orgId) throws Exception {
-        Map<String, Object> reg = new HashMap<>();
-        reg.put("username", username);
-        reg.put("password", password);
-        reg.put("role", role);
-        reg.put("orgId", orgId);
-        mvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(reg)));
+        // 已存在则跳过(用唯一用户名时通常不会命中),避免 UNIQUE 约束异常
+        if (userRepo.findByUsername(username) == null) {
+            userRepo.register(username, password, Role.valueOf(role), orgId);
+        }
         Map<String, Object> login = new HashMap<>();
         login.put("username", username);
         login.put("password", password);

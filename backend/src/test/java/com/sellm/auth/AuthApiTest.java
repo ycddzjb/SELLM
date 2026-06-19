@@ -31,11 +31,11 @@ class AuthApiTest {
     void 注册并登录拿到token() throws Exception {
         jdbc.update("DELETE FROM app_user WHERE username = 'api_t1'");
 
+        // 公开注册不接受 role/orgId,一律产 PARENT
         mvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of(
-                    "username", "api_t1", "password", "secret123",
-                    "role", "TEACHER", "orgId", 1))))
+                    "username", "api_t1", "password", "secret123"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("0"));
 
@@ -45,7 +45,7 @@ class AuthApiTest {
                     "username", "api_t1", "password", "secret123"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.token").isNotEmpty())
-            .andExpect(jsonPath("$.data.role").value("TEACHER"));
+            .andExpect(jsonPath("$.data.role").value("PARENT"));
     }
 
     @Test
@@ -54,7 +54,7 @@ class AuthApiTest {
         mvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of(
-                    "username", "api_t2", "password", "right", "role", "TEACHER", "orgId", 1))))
+                    "username", "api_t2", "password", "right"))))
             .andExpect(status().isOk());
 
         mvc.perform(post("/api/auth/login")
