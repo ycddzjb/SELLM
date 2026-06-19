@@ -7,6 +7,7 @@ spring:
   sql:
     init:
       mode: always
+      encoding: UTF-8            # 种子脚本用 UTF-8 读取(否则 Windows 平台默认 GBK 会乱码中文量表文案)
       schema-locations: classpath:schema.sql
       data-locations: classpath:seed-dev.sql
       continue-on-error: true   # 种子幂等(重复启动时 INSERT 冲突忽略)
