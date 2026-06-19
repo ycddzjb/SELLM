@@ -16,7 +16,7 @@
           <span style="color:#606266;font-size:14px">
             {{ auth.username }}
             <el-tag size="small" type="primary" style="margin:0 4px">{{ auth.roleLabel }}</el-tag>
-            <span v-if="auth.orgName" style="color:#909399">· {{ auth.orgName }}</span>
+            <span v-if="auth.orgLabel" style="color:#909399">· {{ auth.orgLabel }}</span>
           </span>
           <el-button size="small" @click="onLogout">退出登录</el-button>
         </div>

@@ -67,7 +67,7 @@
           <el-table-column prop="orgId" label="机构ID" width="100" />
           <el-table-column label="状态">
             <template #default="{ row }">
-              <el-tag size="small" :type="statusType(row.status)">{{ row.status }}</el-tag>
+              <el-tag size="small" :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
             </template>
           </el-table-column>
         </el-table>
@@ -103,7 +103,7 @@
           <el-table-column prop="username" label="用户名" />
           <el-table-column label="状态">
             <template #default="{ row }">
-              <el-tag size="small" type="warning">{{ row.status }}</el-tag>
+              <el-tag size="small" type="warning">{{ statusLabel(row.status) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="200">
@@ -126,7 +126,7 @@
           </el-table-column>
           <el-table-column label="状态">
             <template #default="{ row }">
-              <el-tag size="small" :type="statusType(row.status)">{{ row.status }}</el-tag>
+              <el-tag size="small" :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
             </template>
           </el-table-column>
         </el-table>
@@ -152,6 +152,8 @@ const ROLE_LABELS = {
 }
 const roleLabel = (r) => ROLE_LABELS[r] || r
 const statusType = (s) => (s === 'ACTIVE' ? 'success' : s === 'PENDING' ? 'warning' : 'info')
+const STATUS_LABELS = { ACTIVE: '已激活', PENDING: '待审核', REJECTED: '已拒绝' }
+const statusLabel = (s) => STATUS_LABELS[s] || s
 
 const auth = useAuthStore()
 
