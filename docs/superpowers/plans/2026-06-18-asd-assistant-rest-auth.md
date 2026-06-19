@@ -3118,6 +3118,8 @@ cd "D:/works/test/SELLM" && git add backend/src/test/java/com/sellm/flow/ backen
 5. **真实 AI 接入 / 真实向量库**:替换 MockAiModel 与 DbRagRetriever 关键词检索。
 6. **机构管理 API**:Organization 的 CRUD 与机构维度管理(本计划已建表 + repository,管理端点留后续)。
 7. **运行时配置硬化 / 防御式编程 / 计分引擎硬化 / IEP 实体不可变**:延续前两计划记录的待办。
+8. **安全响应体统一与审计日志**(Task 5 审查提出,留待后续):自定义 `AuthenticationEntryPoint`/`AccessDeniedHandler` 让 401/403 也返回统一 `Result` JSON 体(当前返回 Spring 默认体,状态码正确);JwtAuthFilter 加认证成功/失败的审计日志。注:Task 5 已修复"非法 role 致 500"的真问题(filter 容错 + 测试覆盖);Task 7 已加 `HttpStatusEntryPoint` 使无 token 返回 401。
+9. **DTO 输入校验 + 记录 list DB 层过滤 + 软删除**(Task 7 审查提出,留待后续):各请求 DTO 加 `@Valid`/`@NotBlank`;Child/记录的 list 改为 DB 层按 orgId/guardian 过滤(替内存过滤,应对规模);Child 删除考虑软删 `deleted_at`(审计合规)。`CurrentUser` 未认证可加专门的 `UNAUTHENTICATED` 码。
 
 ---
 

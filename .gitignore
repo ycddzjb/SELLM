@@ -20,3 +20,6 @@ Thumbs.db
 
 # Superpowers 可视化伴侣中间产物
 .superpowers/
+
+# Claude 本地会话/设置
+.claude/
