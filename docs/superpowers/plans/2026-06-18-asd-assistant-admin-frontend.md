@@ -23,10 +23,11 @@
 - `GET /api/reports/{id}` → data:同上;`PUT /api/reports/{id}/finalize` {content} → data:同上(status FINALIZED)
 - `POST /api/ieps` {reportId} → data:{id,draft,finalizedContent,status}
 - `GET /api/ieps/{id}`;`PUT /api/ieps/{id}/finalize` {content} → data:同上
+- **(本计划新增)按 child 列出历史**:`GET /api/assessments?childId={id}` → data:[{id,childId,scaleId,totalScore,bandLabel,interpretation}];`GET /api/reports?childId={id}` → data:[{id,draft,finalizedContent,status}];`GET /api/ieps?childId={id}` → data:[{id,draft,finalizedContent,status}]。均经 AccessGuard 行级校验(对该 child 无权 → 403)。
 
 **已知 API 约束(影响前端设计):**
-- 无"列出评估/报告/IEP"或"按 child 查其历史记录"的端点,只能按 id GET 单个。故主链路页面按**工作流式**设计:在一次操作里串起 child→评估(得 assessmentId)→报告(得 reportId)→IEP(得 iepId),前端在会话内持有这些 id。历史浏览列表留后续(需后端补 list 端点)。
-- 量表:后端只有按 scaleId 取量表用于计分,无"列出量表/取量表题目"端点。前端第一版**硬编码 CARS 量表的题目结构**(scaleId=cars,q1/q2 两题,与种子一致),用于评估表单渲染。后端补量表查询端点后再改为动态。
+- 量表:后端只有按 scaleId 取量表用于计分,无"列出量表/取量表题目"端点。前端第一版**硬编码 CARS 量表的题目结构**(scaleId=cars,q1/q2 两题,与种子一致),用于评估表单渲染。后端补量表查询端点后再改为动态(列入后续)。
+- 历史回看:本计划已补"按 child 列出评估/报告/IEP"端点(见上),故支持**以孩子为中心的工作台**——儿童详情页聚合该童的评估/报告/IEP 历史,可回看与续作。
 
 ---
 
@@ -37,6 +38,8 @@ backend/
   src/main/resources/
     application-dev.yml        # H2 文件库 dev profile(Task 1)
     seed-dev.sql               # 种子:机构 + MANAGER + CARS 量表(Task 1)
+  # (Task 2-backend)按 child 列出历史:各 Mapper 加 findByChildId、Repository 加 listByChild、
+  #   Controller 加 GET ?childId= 列表端点(assessment/report/iep);均经 AccessGuard 行级校验
 frontend/
   package.json / vite.config.js / index.html / .gitignore
   src/
@@ -54,6 +57,7 @@ frontend/
     views/
       LoginView.vue
       ChildrenView.vue         # 儿童档案列表 + 新建/编辑/删除
+      ChildDetailView.vue      # 以孩子为中心的工作台:档案 + 评估/报告/IEP 历史 + 续作入口
       AssessmentView.vue       # 选童+选量表+答题→提交→得分
       ReportView.vue           # 由评估生成报告草稿→编辑定稿
       IepView.vue              # 由报告生成 IEP 草案→编辑定稿
@@ -62,7 +66,7 @@ frontend/
        ...(按需小组件)
 ```
 
-**为什么这样切:** api/ 每个后端资源一个模块,集中管理端点;stores 只放跨页共享的认证态;views 一页一文件,职责单一;layouts 提供统一框架。工作流式页面(评估→报告→IEP)各自独立但可通过路由 query 传递上一步的 id。
+**为什么这样切:** api/ 每个后端资源一个模块,集中管理端点;stores 只放跨页共享的认证态;views 一页一文件,职责单一;layouts 提供统一框架。**儿童详情页(ChildDetailView)是以孩子为中心的工作台**:聚合该童的评估/报告/IEP 历史(靠新增的按 child 列表端点),并提供续作入口;工作流式操作页(评估→报告→IEP)各自独立,可经路由 query 传上一步 id,也可从详情页带 childId 进入。
 
 ---
 
@@ -209,6 +213,94 @@ Run: `cd "D:/works/test/SELLM/backend" && ./mvnw -q test`
 Expected: 此前 78 + DevSeederSmokeTest 1 = 79 全绿(dev 资源不影响 test profile)。
 ```bash
 cd "D:/works/test/SELLM" && git add backend/src/main/resources/application-dev.yml backend/src/main/resources/seed-dev.sql backend/src/main/java/com/sellm/config/DevSeeder.java backend/src/test/java/com/sellm/config/DevSeederSmokeTest.java .gitignore && git commit -q -m "feat(dev): 后端 dev profile(H2 文件库 + 种子 MANAGER/机构/CARS)供前端联调"
+```
+
+---
+### Task 1B: 后端按 child 列出评估/报告/IEP 历史端点(支撑前端工作台,TDD)
+
+为支持"以孩子为中心的工作台",给三类记录加"按 childId 列表"端点,均经 AccessGuard 行级校验(对该 child 无权 → 403)。
+
+**Files:**
+- Modify: `backend/src/main/java/com/sellm/assessment/{AssessmentMapper.java,AssessmentRepository.java,AssessmentAppService.java,AssessmentController.java}` + `backend/src/main/resources/mybatis/AssessmentMapper.xml`
+- Modify: `backend/src/main/java/com/sellm/report/{ReportRecordMapper.java,ReportRecordRepository.java,ReportAppService.java,ReportController.java}` + `mybatis/ReportRecordMapper.xml`
+- Modify: `backend/src/main/java/com/sellm/iep/{IepRecordMapper.java,IepRecordRepository.java,IepAppService.java,IepController.java}` + `mybatis/IepRecordMapper.xml`
+- Test: `backend/src/test/java/com/sellm/flow/ListByChildApiTest.java`
+
+- [ ] **Step 1: Mapper 加 findByChildId**
+
+三个 Mapper 接口各加(以 AssessmentMapper 为例,其余同形):
+```java
+    java.util.List<java.util.Map<String, Object>> findByChildId(@Param("childId") Long childId);
+```
+对应 XML 各加一个 select(复用各自已有的 resultMap;以 AssessmentMapper.xml 为例):
+```xml
+    <select id="findByChildId" parameterType="long" resultMap="assessmentMap">
+        SELECT id, child_id, scale_id, total_score, band_label, interpretation
+        FROM assessment WHERE child_id = #{childId} ORDER BY id DESC
+    </select>
+```
+ReportRecordMapper.xml(复用 reportMap):
+```xml
+    <select id="findByChildId" parameterType="long" resultMap="reportMap">
+        SELECT id, assessment_id, child_id, draft, finalized_content, status
+        FROM report WHERE child_id = #{childId} ORDER BY id DESC
+    </select>
+```
+IepRecordMapper.xml(复用 iepMap):
+```xml
+    <select id="findByChildId" parameterType="long" resultMap="iepMap">
+        SELECT id, report_id, child_id, draft, finalized_content, status
+        FROM iep WHERE child_id = #{childId} ORDER BY id DESC
+    </select>
+```
+
+- [ ] **Step 2: Repository 加 listByChild(组装为各自实体 List)**
+
+各 Repository 加 `listByChild(Long childId)`,遍历 `mapper.findByChildId(childId)` 用既有的行→实体组装逻辑(与 findById 相同的字段提取)产出 `List<Assessment>` / `List<ReportRecord>` / `List<IepRecord>`。Number 强转 longValue/doubleValue 与既有一致。
+
+- [ ] **Step 3: AppService 加 listByChild(行级校验)**
+
+各 AppService 加:
+```java
+    public java.util.List<XxxRecord> listByChild(Long childId) {
+        com.sellm.child.Child child = childRepository.findById(childId);
+        accessGuard.checkChildAccess(currentUser.require(), child); // child 为 null → canAccess false → 403
+        return xxxRepository.listByChild(childId);
+    }
+```
+- AssessmentAppService 已注入 childRepository/currentUser/accessGuard,直接用。
+- ReportAppService、IepAppService 也已注入这三者(Task 9/10 的 generate 用过),直接用。
+
+- [ ] **Step 4: Controller 加 GET 列表端点(?childId=)**
+
+各 Controller 加:
+```java
+    @GetMapping
+    public Result<List<XxxResponse>> listByChild(@RequestParam Long childId) {
+        List<XxxResponse> out = new ArrayList<>();
+        for (XxxRecord r : appService.listByChild(childId)) {
+            out.add(toResponse(r));  // 复用已有的 toResponse / 构造响应
+        }
+        return Result.ok(out);
+    }
+```
+- AssessmentController 原本只有 POST,加这个 GET(`GET /api/assessments?childId=`)。AssessmentResponse 字段 {id,totalScore,bandLabel,interpretation};列表里也带上即可(可直接复用 AssessmentResponse,或新建只读 DTO——复用即可)。
+- ReportController / IepController 已有 GET /{id};新增的 GET(无 {id}、带 @RequestParam childId)与之不冲突(路径 /api/reports vs /api/reports/{id})。复用 ReportResponse/IepResponse。
+- **SecurityConfig 检查**:这些是 GET /api/{assessments,reports,ieps}?childId=,落在"其余 /api/** authenticated"(三角色登录可访问,行级由 AppService 的 AccessGuard 控),无需改 SecurityConfig 的 POST/PUT 规则。确认现有规则没有把这些 GET 限死成只有老师/管理者——GET 应三角色可达(家长也要能看自己孩子的历史)。
+
+- [ ] **Step 5: 写测试 ListByChildApiTest(MockMvc)**
+
+`backend/src/test/java/com/sellm/flow/ListByChildApiTest.java`:种 CARS 量表;老师建档→提交评估→生成报告→生成 IEP;然后:
+- `GET /api/assessments?childId={id}` 返回非空数组、含刚提交的评估(bandLabel"轻-中度")。
+- `GET /api/reports?childId={id}`、`GET /api/ieps?childId={id}` 各返回非空。
+- 行级:另一机构老师 `GET /api/assessments?childId={id}` → 403。
+用 AuthTestSupport 取 token(注意:此时 AuthTestSupport 仍是计划三的版本,造老师用 register 或 userRepo——按当前 master 的 AuthTestSupport 实际签名调用)。
+
+- [ ] **Step 6: 全量回归 + 提交**
+
+Run: `cd "D:/works/test/SELLM/backend" && ./mvnw -q test`,期望此前 79 + ListByChildApiTest(约 2-3)全绿。报告实际数。
+```bash
+cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/assessment/ backend/src/main/java/com/sellm/report/ backend/src/main/java/com/sellm/iep/ backend/src/main/resources/mybatis/ && git add backend/src/test/java/com/sellm/flow/ListByChildApiTest.java && git commit -q -m "feat(api): 按 child 列出评估/报告/IEP 历史端点(行级校验)"
 ```
 
 ---
@@ -1070,6 +1162,150 @@ cd "D:/works/test/SELLM" && git add frontend/src/api/users.js frontend/src/views
 ```
 
 ---
+### Task 6B: 儿童详情工作台页(聚合评估/报告/IEP 历史)
+
+以孩子为中心的工作台:从儿童档案页点某娃进入,展示其档案信息 + 评估/报告/IEP 历史列表(用 Task 1B 的按 child 列表端点),并提供续作入口(去评估 / 由某评估生成报告 / 由某报告生成 IEP)。这是"历史回看"的落地页。
+
+**Files:**
+- Modify: `frontend/src/api/assessments.js`、`reports.js`、`ieps.js`(各加 listByChild)
+- Modify: `frontend/src/router/index.js`(加 `children/:id` 路由)
+- Modify: `frontend/src/views/ChildrenView.vue`(列表加"详情"按钮跳详情页)
+- Create: `frontend/src/views/ChildDetailView.vue`
+
+- [ ] **Step 1: API 各加 listByChild**
+
+`assessments.js` 加:`export const listAssessmentsByChild = (childId) => http.get('/assessments', { params: { childId } })`
+`reports.js` 加:`export const listReportsByChild = (childId) => http.get('/reports', { params: { childId } })`
+`ieps.js` 加:`export const listIepsByChild = (childId) => http.get('/ieps', { params: { childId } })`
+
+- [ ] **Step 2: 路由加详情页**
+
+`router/index.js` 的 children 子路由组里加:
+```js
+      { path: 'children/:id', component: () => import('../views/ChildDetailView.vue') },
+```
+(放在 `children` 项之后即可。)
+
+- [ ] **Step 3: ChildrenView 列表加"详情"入口**
+
+在 ChildrenView 操作列加一个按钮:`<el-button size="small" @click="goDetail(row)">详情</el-button>`,并加:
+```js
+function goDetail(row) { router.push(`/children/${row.id}`) }
+```
+
+- [ ] **Step 4: ChildDetailView.vue**
+
+`frontend/src/views/ChildDetailView.vue`:
+```vue
+<template>
+  <div v-loading="loading">
+    <el-page-header @back="$router.push('/children')" :content="child ? child.name + ' 的档案' : '儿童档案'" />
+    <el-descriptions v-if="child" :column="3" border style="margin:16px 0">
+      <el-descriptions-item label="ID">{{ child.id }}</el-descriptions-item>
+      <el-descriptions-item label="姓名">{{ child.name }}</el-descriptions-item>
+      <el-descriptions-item label="障碍类型">{{ child.disorderType }}</el-descriptions-item>
+    </el-descriptions>
+
+    <div style="margin-bottom:12px">
+      <el-button type="primary" @click="goAssessment">新建评估</el-button>
+    </div>
+
+    <el-divider>评估历史</el-divider>
+    <el-table :data="assessments" border size="small">
+      <el-table-column prop="id" label="ID" width="70" />
+      <el-table-column prop="bandLabel" label="分段" />
+      <el-table-column prop="totalScore" label="总分" width="90" />
+      <el-table-column prop="interpretation" label="解读" />
+      <el-table-column label="操作" width="140">
+        <template #default="{ row }">
+          <el-button size="small" @click="goReportFrom(row)">生成报告</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-divider>报告历史</el-divider>
+    <el-table :data="reports" border size="small">
+      <el-table-column prop="id" label="ID" width="70" />
+      <el-table-column prop="status" label="状态" width="110" />
+      <el-table-column prop="finalizedContent" label="定稿内容" show-overflow-tooltip />
+      <el-table-column label="操作" width="200">
+        <template #default="{ row }">
+          <el-button size="small" @click="openReport(row)">查看/定稿</el-button>
+          <el-button size="small" @click="goIepFrom(row)">生成IEP</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-divider>IEP 历史</el-divider>
+    <el-table :data="ieps" border size="small">
+      <el-table-column prop="id" label="ID" width="70" />
+      <el-table-column prop="status" label="状态" width="110" />
+      <el-table-column prop="finalizedContent" label="定稿内容" show-overflow-tooltip />
+      <el-table-column label="操作" width="140">
+        <template #default="{ row }">
+          <el-button size="small" @click="openIep(row)">查看/定稿</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { getChild } from '../api/children'
+import { listAssessmentsByChild } from '../api/assessments'
+import { listReportsByChild } from '../api/reports'
+import { listIepsByChild } from '../api/ieps'
+
+const route = useRoute()
+const router = useRouter()
+const childId = Number(route.params.id)
+const child = ref(null)
+const assessments = ref([])
+const reports = ref([])
+const ieps = ref([])
+const loading = ref(false)
+
+async function load() {
+  loading.value = true
+  try {
+    child.value = await getChild(childId)
+    assessments.value = await listAssessmentsByChild(childId)
+    reports.value = await listReportsByChild(childId)
+    ieps.value = await listIepsByChild(childId)
+  } finally { loading.value = false }
+}
+onMounted(load)
+
+function goAssessment() {
+  router.push({ path: '/assessment', query: { childId } })
+}
+function goReportFrom(a) {
+  router.push({ path: '/report', query: { assessmentId: a.id } })
+}
+function openReport(r) {
+  router.push({ path: '/report', query: { reportId: r.id } })
+}
+function goIepFrom(r) {
+  router.push({ path: '/iep', query: { reportId: r.id } })
+}
+function openIep(i) {
+  router.push({ path: '/iep', query: { iepId: i.id } })
+}
+</script>
+```
+
+注:ReportView/IepView 目前从 query 取 `assessmentId`/`reportId` 触发生成。为支持详情页的"查看已有报告/IEP",ReportView 需支持 query `reportId`(直接 GET 加载已有报告而非生成)、IepView 支持 query `iepId`/`reportId`。**本步同时给 ReportView/IepView 补一个 onMounted:若 query 带 reportId(report)/iepId(iep)则调 getReport/getIep 加载展示;若带 assessmentId(report)/reportId(iep)则维持原"待生成"态。** 改动小,实现者在 ReportView/IepView 的 setup 里加 onMounted 判断即可(getReport 已在 reports.js,getIep 已在 ieps.js)。
+
+- [ ] **Step 5: 构建验证 + 提交**
+
+Run: `cd "D:/works/test/SELLM/frontend" && npm run build`,Expected 成功。
+```bash
+cd "D:/works/test/SELLM" && git add frontend/src/api/ frontend/src/router/index.js frontend/src/views/ChildrenView.vue frontend/src/views/ChildDetailView.vue frontend/src/views/ReportView.vue frontend/src/views/IepView.vue && git commit -q -m "feat(frontend): 儿童详情工作台(聚合评估/报告/IEP 历史 + 续作)"
+```
+
+---
 
 ### Task 7: 端到端联调验证(前后端真实连通)
 
@@ -1100,7 +1336,7 @@ Expected:登录得 token;建档返回 id;列表返回明文"小明";评估返回
 
 - [ ] **Step 4: 浏览器侧人工核对(描述预期,供执行者确认)**
 
-打开 http://localhost:5173 → 用 admin/admin123 登录 → 儿童档案页能看到/新建档案 → 点"评估"带入 childId,答题提交得分 → "生成报告"→ 草稿展示、编辑、定稿 → "生成 IEP"→ 草案、定稿 → 用户管理页建一个 TEACHER 账号 → 登出、用新老师账号登录验证其只能看本机构档案。
+打开 http://localhost:5173 → 用 admin/admin123 登录 → 儿童档案页能看到/新建档案 → 点"评估"带入 childId,答题提交得分 → "生成报告"→ 草稿展示、编辑、定稿 → "生成 IEP"→ 草案、定稿 → 回儿童档案点"详情"进工作台,确认该童的评估/报告/IEP 历史都列出来、可查看/续作 → 用户管理页建一个 TEACHER 账号 → 登出、用新老师账号登录验证其只能看本机构档案。
 执行者用 curl(Step 3)确认后端契约;浏览器人工步骤记录为"待人工验收"清单(自动化测试不强求,属联调验收)。
 
 - [ ] **Step 5: 停服务 + 记录联调结果**
@@ -1114,9 +1350,9 @@ cd "D:/works/test/SELLM" && git add -A frontend/ && git commit -q -m "docs(front
 
 ## 后续计划(不在本计划范围)
 
-1. **历史浏览**:后端补"列出评估/报告/IEP、按 child 查历史记录"端点,前端加列表/详情/分页页。
-2. **量表动态化**:后端补"列出量表 / 取量表题目"端点,前端评估表单改为动态渲染(去掉硬编码 CARS)。
-3. **机构管理 / 家长关联**:Organization 管理页、给 child 选择/绑定家长账号的更友好交互。
+1. **量表动态化**:后端补"列出量表 / 取量表题目"端点,前端评估表单改为动态渲染(去掉硬编码 CARS)。
+2. **机构管理 / 家长关联**:Organization 管理页、给 child 选择/绑定家长账号的更友好交互(目前建档填家长 userId)。
+3. **列表分页与筛选**:儿童/记录列表上规模后加分页、搜索、按机构/状态筛选(本计划 list 端点是全量返回)。
 4. **小程序家长端**:uni-app 家长端(查看 IEP/报告、居家建议、反馈、进度趋势)。
 5. **真实 AI 接入**:后端 MockAiModel 换合规大模型 API(下一计划)。
 6. **生产部署**:docker-compose(mysql/redis/minio/backend)+ 前端构建产物托管;dev profile 仅本地联调用。
@@ -1125,7 +1361,7 @@ cd "D:/works/test/SELLM" && git add -A frontend/ && git commit -q -m "docs(front
 
 ## 自检结论
 
-- **范围覆盖**:后端 dev profile(零安装联调)+ 登录 + 儿童档案 CRUD + 评估 + 报告(生成/定稿)+ IEP(生成/定稿)+ 用户管理(MANAGER 建老师)+ 端到端联调,覆盖"主链路 + 用户管理"。历史列表/量表动态化/机构管理列入后续(受后端现有端点约束)。
+- **范围覆盖**:后端 dev profile(零安装联调)+ **按 child 列出历史的后端端点(Task 1B)** + 登录 + 儿童档案 CRUD + **儿童详情工作台(历史回看,Task 6B)** + 评估 + 报告(生成/定稿)+ IEP(生成/定稿)+ 用户管理(MANAGER 建老师)+ 端到端联调,覆盖"主链路 + 用户管理 + 历史回看"。量表动态化/机构管理/分页列入后续(量表查询端点按你确认不在本计划)。
 - **API 契约一致**:前端 api/ 各模块严格对齐后端真实端点(路径/方法/请求体/Result 解包),契约表已在计划头列出并据后端源码核对。
 - **红线衔接**:报告/IEP 页明确标注"AI 草稿仅供参考、需人工把关",定稿是人工编辑后提交——呼应"AI 只产草案、人定稿";JWT 经 axios 拦截器注入,行级权限由后端 AccessGuard 保证,前端登出/401 跳登录;Child 姓名前端只经 API 拿明文(加解密在后端)。
 - **占位符**:无 TBD/TODO。Task 2 Step 7 明确要求先建 5 个占位 view 以免路由加载报错,后续任务替换——这是有意的渐进,非占位符遗留。
