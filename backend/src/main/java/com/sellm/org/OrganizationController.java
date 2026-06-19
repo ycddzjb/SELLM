@@ -16,9 +16,11 @@ import java.util.List;
 public class OrganizationController {
 
     private final OrganizationRepository repo;
+    private final OrganizationAppService appService;
 
-    public OrganizationController(OrganizationRepository repo) {
+    public OrganizationController(OrganizationRepository repo, OrganizationAppService appService) {
         this.repo = repo;
+        this.appService = appService;
     }
 
     /** 公开:注册选机构用(免登录)。返回 id+name+region 供下拉。 */
@@ -27,11 +29,10 @@ public class OrganizationController {
         return Result.ok(toResponses());
     }
 
-    /** 超管:建机构(端点级已限 SUPER_ADMIN)。 */
+    /** 超管:一体创建机构 + 该机构管理员(事务原子,端点级已限 SUPER_ADMIN)。 */
     @PostMapping
     public Result<Long> create(@RequestBody CreateOrgRequest req) {
-        Organization saved = repo.save(new Organization(null, req.getName(), req.getRegion()));
-        return Result.ok(saved.getId());
+        return Result.ok(appService.createWithManager(req));
     }
 
     /** 超管:看所有机构(端点级已限 SUPER_ADMIN)。 */
@@ -42,7 +43,8 @@ public class OrganizationController {
 
     private List<OrgResponse> toResponses() {
         return repo.listAll().stream()
-            .map(o -> new OrgResponse(o.getId(), o.getName(), o.getRegion()))
+            .map(o -> new OrgResponse(o.getId(), o.getName(), o.getRegion(),
+                o.getDisorderTypes(), o.getProvince(), o.getCity()))
             .toList();
     }
 }
