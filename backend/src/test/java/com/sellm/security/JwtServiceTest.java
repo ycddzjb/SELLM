@@ -39,12 +39,11 @@ class JwtServiceTest {
     }
 
     @Test
-    void 无效签名的token校验失败() {
-        String token = jwt.issue("t1", "TEACHER", 7L, 3L);
-        // 修改token的签名部分
-        String[] parts = token.split("\\.");
-        String tamperedToken = parts[0] + "." + parts[1] + ".invalidsignature";
-        assertThat(jwt.isValid(tamperedToken)).isFalse();
+    void 已过期token校验失败() {
+        JwtService expired =
+            new JwtService("test-jwt-secret-key-at-least-32-bytes-long-0123456789", -1);
+        String token = expired.issue("t1", "TEACHER", 7L, 3L);
+        assertThat(expired.isValid(token)).isFalse();
     }
 }
 
