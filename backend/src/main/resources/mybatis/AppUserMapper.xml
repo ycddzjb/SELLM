@@ -9,16 +9,23 @@
         <result column="password_hash" property="passwordHash"/>
         <result column="role" property="role"/>
         <result column="org_id" property="orgId"/>
+        <result column="status" property="status"/>
     </resultMap>
 
     <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO app_user (username, password_hash, role, org_id)
-        VALUES (#{username}, #{passwordHash}, #{role}, #{orgId})
+        INSERT INTO app_user (username, password_hash, role, org_id, status)
+        VALUES (#{username}, #{passwordHash}, #{role}, #{orgId}, #{status})
     </insert>
 
     <select id="findByUsername" parameterType="string" resultMap="userMap">
-        SELECT id, username, password_hash, role, org_id
+        SELECT id, username, password_hash, role, org_id, status
         FROM app_user WHERE username = #{username}
     </select>
+
+    <update id="updateRoleOrgStatus">
+        UPDATE app_user
+        SET role = #{role}, org_id = #{orgId}, status = #{status}
+        WHERE id = #{id}
+    </update>
 
 </mapper>

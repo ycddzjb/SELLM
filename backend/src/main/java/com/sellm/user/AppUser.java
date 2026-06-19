@@ -8,16 +8,23 @@ public class AppUser {
     private String passwordHash;
     private Role role;
     private Long orgId;
+    private String status;
 
     public AppUser() {
     }
 
+    // 兼容旧调用:不带 status 时默认 ACTIVE
     public AppUser(Long id, String username, String passwordHash, Role role, Long orgId) {
+        this(id, username, passwordHash, role, orgId, "ACTIVE");
+    }
+
+    public AppUser(Long id, String username, String passwordHash, Role role, Long orgId, String status) {
         this.id = id;
         this.username = username;
         this.passwordHash = passwordHash;
         this.role = role;
         this.orgId = orgId;
+        this.status = status;
     }
 
     public Long getId() { return id; }
@@ -30,4 +37,6 @@ public class AppUser {
     public void setRole(Role role) { this.role = role; }
     public Long getOrgId() { return orgId; }
     public void setOrgId(Long orgId) { this.orgId = orgId; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

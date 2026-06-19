@@ -19,10 +19,14 @@ public class DevSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // 幂等:已存在则不重复创建
+        // 幂等:admin 不存在则建为超管;已存在但非超管则纠正为 SUPER_ADMIN(无机构,ACTIVE)
         AppUser existing = userRepository.findByUsername("admin");
         if (existing == null) {
-            userRepository.register("admin", "admin123", Role.MANAGER, 1L);
+            userRepository.register("admin", "admin123", Role.SUPER_ADMIN, null, "ACTIVE");
+        } else if (existing.getRole() != Role.SUPER_ADMIN
+                || existing.getOrgId() != null
+                || !"ACTIVE".equals(existing.getStatus())) {
+            userRepository.updateRoleOrgStatus(existing.getId(), Role.SUPER_ADMIN, null, "ACTIVE");
         }
     }
 }
