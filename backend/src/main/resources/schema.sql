@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS organization (
     name    VARCHAR(128) NOT NULL,
     region  VARCHAR(128)
 );
+-- (计划六 Task 2 追加 organization 字段:障碍类型多选/省/市)
+ALTER TABLE organization ADD COLUMN IF NOT EXISTS disorder_types VARCHAR(256);
+ALTER TABLE organization ADD COLUMN IF NOT EXISTS province VARCHAR(64);
+ALTER TABLE organization ADD COLUMN IF NOT EXISTS city VARCHAR(64);
 
 -- (Task 3 追加 app_user 表,表名 app_user 避开 SQL 保留字 user)
 CREATE TABLE IF NOT EXISTS app_user (
