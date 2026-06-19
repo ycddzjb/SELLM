@@ -3,6 +3,7 @@ package com.sellm.user;
 import com.sellm.common.BusinessException;
 import com.sellm.common.ErrorCode;
 import com.sellm.common.Result;
+import com.sellm.org.OrganizationRepository;
 import com.sellm.security.JwtService;
 import com.sellm.security.Role;
 import com.sellm.user.dto.LoginRequest;
@@ -16,10 +17,13 @@ public class AuthController {
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final OrganizationRepository organizationRepository;
 
-    public AuthController(UserRepository userRepository, JwtService jwtService) {
+    public AuthController(UserRepository userRepository, JwtService jwtService,
+                          OrganizationRepository organizationRepository) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.organizationRepository = organizationRepository;
     }
 
     @PostMapping("/register")
@@ -41,6 +45,8 @@ public class AuthController {
         }
         String token = jwtService.issue(
             user.getUsername(), user.getRole().name(), user.getId(), user.getOrgId());
-        return Result.ok(new LoginResponse(token, user.getRole().name()));
+        String orgName = organizationRepository.nameOf(user.getOrgId());
+        return Result.ok(new LoginResponse(
+            token, user.getRole().name(), user.getUsername(), user.getOrgId(), orgName));
     }
 }

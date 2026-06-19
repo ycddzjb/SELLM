@@ -12,7 +12,14 @@
     <el-container>
       <el-header style="display:flex;align-items:center;justify-content:space-between">
         <span>特殊教育评估助手 · 管理端</span>
-        <el-button size="small" @click="onLogout">退出登录({{ auth.role }})</el-button>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="color:#606266;font-size:14px">
+            {{ auth.username }}
+            <el-tag size="small" type="primary" style="margin:0 4px">{{ auth.roleLabel }}</el-tag>
+            <span v-if="auth.orgName" style="color:#909399">· {{ auth.orgName }}</span>
+          </span>
+          <el-button size="small" @click="onLogout">退出登录</el-button>
+        </div>
       </el-header>
       <el-main>
         <router-view />

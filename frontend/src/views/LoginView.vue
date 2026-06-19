@@ -37,7 +37,7 @@ async function onSubmit() {
   loading.value = true
   try {
     const data = await login(username.value, password.value)
-    auth.setAuth(data.token, data.role)
+    auth.setAuth({ token: data.token, role: data.role, username: data.username, orgName: data.orgName })
     ElMessage.success('登录成功')
     router.push('/children')
   } catch (e) {
