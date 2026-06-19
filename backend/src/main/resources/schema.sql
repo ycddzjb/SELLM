@@ -66,6 +66,15 @@ CREATE TABLE IF NOT EXISTS app_user (
 -- (计划五 Task 1 追加 app_user.status 列:账号状态 ACTIVE/PENDING/REJECTED,登录校验用)
 ALTER TABLE app_user ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE';
 
+-- (计划六 Task 4 追加 class_room 表:班级,表名用 class_room 避开 SQL 保留字 class)
+CREATE TABLE IF NOT EXISTS class_room (
+    id             BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name           VARCHAR(128) NOT NULL,
+    org_id         BIGINT NOT NULL,
+    disorder_types VARCHAR(256),
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- (Task 8 追加 assessment 表:评估记录落库)
 CREATE TABLE IF NOT EXISTS assessment (
     id           BIGINT PRIMARY KEY AUTO_INCREMENT,

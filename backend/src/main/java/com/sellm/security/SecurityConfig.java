@@ -49,6 +49,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/orgs/public").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/orgs").hasRole("SUPER_ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/orgs").hasRole("SUPER_ADMIN")
+                // 班级管理:超管/机构管理者(老师后续需读班级时再放开 GET);行级权限在 controller 控制
+                .requestMatchers(HttpMethod.GET, "/api/classes/**").hasAnyRole("SUPER_ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.POST, "/api/classes/**").hasAnyRole("SUPER_ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.PUT, "/api/classes/**").hasAnyRole("SUPER_ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.DELETE, "/api/classes/**").hasAnyRole("SUPER_ADMIN", "MANAGER")
                 // 其余 /api/** 需登录(GET 三角色都可,行级权限在 service 层用 AccessGuard 控制)
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll())
