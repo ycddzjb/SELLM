@@ -29,15 +29,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             if (jwtService.isValid(token)) {
-                String username = jwtService.extractUsername(token);
-                String roleStr = jwtService.extractRole(token);
-                Long uid = jwtService.extractUserId(token);
-                Long org = jwtService.extractOrgId(token);
-                AuthPrincipal principal = new AuthPrincipal(uid, username, Role.valueOf(roleStr), org);
-                var auth = new UsernamePasswordAuthenticationToken(
-                    principal, null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + roleStr)));
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                try {
+                    String username = jwtService.extractUsername(token);
+                    String roleStr = jwtService.extractRole(token);
+                    Long uid = jwtService.extractUserId(token);
+                    Long org = jwtService.extractOrgId(token);
+                    if (username != null && roleStr != null) {
+                        AuthPrincipal principal = new AuthPrincipal(uid, username, Role.valueOf(roleStr), org);
+                        var auth = new UsernamePasswordAuthenticationToken(
+                            principal, null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + roleStr)));
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    }
+                } catch (IllegalArgumentException e) {
+                    // role 非法(枚举值不存在) → 不设置认证,交授权层按未认证处理,避免 500
+                }
             }
         }
         chain.doFilter(request, response);
