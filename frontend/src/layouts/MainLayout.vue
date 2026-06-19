@@ -6,7 +6,7 @@
         <el-menu-item index="/assessment">评估</el-menu-item>
         <el-menu-item index="/report">报告</el-menu-item>
         <el-menu-item index="/iep">IEP</el-menu-item>
-        <el-menu-item v-if="auth.isManager" index="/users">用户管理</el-menu-item>
+        <el-menu-item v-if="auth.isManager || auth.isSuperAdmin" index="/users">用户管理</el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>

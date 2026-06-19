@@ -12,6 +12,9 @@
         <el-button type="primary" style="width:100%" :loading="loading" @click="onSubmit">登录</el-button>
       </el-form>
       <p style="color:#999;font-size:12px;margin-top:12px">dev 种子账号:admin / admin123</p>
+      <p style="text-align:center;margin-top:8px">
+        <router-link to="/register">家长注册</router-link>
+      </p>
     </el-card>
   </div>
 </template>
