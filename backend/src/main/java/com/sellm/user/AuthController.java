@@ -28,12 +28,15 @@ public class AuthController {
 
     @PostMapping("/register")
     public Result<Long> register(@RequestBody RegisterRequest req) {
+        if (req.getOrgId() == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "请选择所属机构");
+        }
         if (userRepository.findByUsername(req.getUsername()) != null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "用户名已存在");
         }
-        // 公开注册一律只产 PARENT、无机构;老师/管理者由 MANAGER 经 /api/users 创建
+        // 公开注册:家长,选机构,待审核
         AppUser saved = userRepository.register(
-            req.getUsername(), req.getPassword(), Role.PARENT, null);
+            req.getUsername(), req.getPassword(), Role.PARENT, req.getOrgId(), "PENDING");
         return Result.ok(saved.getId());
     }
 
@@ -42,6 +45,9 @@ public class AuthController {
         AppUser user = userRepository.findByUsername(req.getUsername());
         if (user == null || !userRepository.matches(req.getPassword(), user.getPasswordHash())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "用户名或密码错误");
+        }
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "账号待审核或已停用,暂不能登录");
         }
         String token = jwtService.issue(
             user.getUsername(), user.getRole().name(), user.getId(), user.getOrgId());

@@ -90,6 +90,9 @@ class UserManagementApiTest {
                 .content(json.writeValueAsString(reg)))
             .andExpect(status().isOk());
 
+        // 公开注册产 PENDING,审核通过(置 ACTIVE)后才能登录;下面验证其仍只是 PARENT、无法越权
+        jdbc.update("UPDATE app_user SET status = 'ACTIVE' WHERE username = 'um_attacker'");
+
         // 登录拿 token,role 应为 PARENT(未提权)
         String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
             "um_attacker", "pw123456", "PARENT", null);
