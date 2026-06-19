@@ -40,3 +40,20 @@ CREATE TABLE IF NOT EXISTS score_band (
     label          VARCHAR(128) NOT NULL,
     interpretation VARCHAR(512)
 );
+
+-- (Task 3 追加 organization 表)
+CREATE TABLE IF NOT EXISTS organization (
+    id      BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name    VARCHAR(128) NOT NULL,
+    region  VARCHAR(128)
+);
+
+-- (Task 3 追加 app_user 表,表名 app_user 避开 SQL 保留字 user)
+CREATE TABLE IF NOT EXISTS app_user (
+    id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username      VARCHAR(64)  NOT NULL UNIQUE,
+    password_hash VARCHAR(128) NOT NULL,
+    role          VARCHAR(16)  NOT NULL,
+    org_id        BIGINT,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

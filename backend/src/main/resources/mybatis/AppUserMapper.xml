@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.user.AppUserMapper">
+
+    <resultMap id="userMap" type="map">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="password_hash" property="passwordHash"/>
+        <result column="role" property="role"/>
+        <result column="org_id" property="orgId"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO app_user (username, password_hash, role, org_id)
+        VALUES (#{username}, #{passwordHash}, #{role}, #{orgId})
+    </insert>
+
+    <select id="findByUsername" parameterType="string" resultMap="userMap">
+        SELECT id, username, password_hash, role, org_id
+        FROM app_user WHERE username = #{username}
+    </select>
+
+</mapper>
