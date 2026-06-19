@@ -55,6 +55,95 @@ class UserManagementApiTest {
     }
 
     @Test
+    void 超管建MANAGER到指定机构成功且ACTIVE() throws Exception {
+        String sa = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
+            "um_super", "pw123456", "SUPER_ADMIN", null);
+
+        String resp = mvc.perform(post("/api/users").header("Authorization", "Bearer " + sa)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of(
+                    "username", "um_new_mgr", "password", "pw123456", "role", "MANAGER", "orgId", 9))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("0"))
+            .andReturn().getResponse().getContentAsString();
+        long newId = json.readTree(resp).path("data").asLong();
+
+        // 归属请求指定机构(9)、角色 MANAGER、状态 ACTIVE
+        Long orgId = jdbc.queryForObject(
+            "SELECT org_id FROM app_user WHERE id = ?", Long.class, newId);
+        org.assertj.core.api.Assertions.assertThat(orgId).isEqualTo(9L);
+        String role = jdbc.queryForObject(
+            "SELECT role FROM app_user WHERE id = ?", String.class, newId);
+        org.assertj.core.api.Assertions.assertThat(role).isEqualTo("MANAGER");
+        String status = jdbc.queryForObject(
+            "SELECT status FROM app_user WHERE id = ?", String.class, newId);
+        org.assertj.core.api.Assertions.assertThat(status).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void 超管未指定机构建账号返回400() throws Exception {
+        String sa = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
+            "um_super2", "pw123456", "SUPER_ADMIN", null);
+        mvc.perform(post("/api/users").header("Authorization", "Bearer " + sa)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of(
+                    "username", "um_no_org", "password", "pw123456", "role", "MANAGER"))))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void MANAGER建PARENT成功且ACTIVE非PENDING() throws Exception {
+        String mgr = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
+            "um_mgr_p", "pw123456", "MANAGER", 7L);
+
+        String resp = mvc.perform(post("/api/users").header("Authorization", "Bearer " + mgr)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of(
+                    "username", "um_new_parent", "password", "pw123456", "role", "PARENT"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("0"))
+            .andReturn().getResponse().getContentAsString();
+        long newId = json.readTree(resp).path("data").asLong();
+
+        String status = jdbc.queryForObject(
+            "SELECT status FROM app_user WHERE id = ?", String.class, newId);
+        org.assertj.core.api.Assertions.assertThat(status).isEqualTo("ACTIVE");
+        Long orgId = jdbc.queryForObject(
+            "SELECT org_id FROM app_user WHERE id = ?", Long.class, newId);
+        org.assertj.core.api.Assertions.assertThat(orgId).isEqualTo(7L);
+    }
+
+    @Test
+    void MANAGER建MANAGER被业务拒403() throws Exception {
+        String mgr = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
+            "um_mgr_x", "pw123456", "MANAGER", 7L);
+        mvc.perform(post("/api/users").header("Authorization", "Bearer " + mgr)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of(
+                    "username", "um_mgr_dup", "password", "pw123456", "role", "MANAGER"))))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void MANAGER传orgId也无法越权到他机构建人() throws Exception {
+        String mgr = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
+            "um_mgr_org", "pw123456", "MANAGER", 7L);
+
+        String resp = mvc.perform(post("/api/users").header("Authorization", "Bearer " + mgr)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of(
+                    "username", "um_cross_org", "password", "pw123456", "role", "TEACHER", "orgId", 99))))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        long newId = json.readTree(resp).path("data").asLong();
+
+        // 忽略请求里的 orgId=99,强制归建者机构(7)
+        Long orgId = jdbc.queryForObject(
+            "SELECT org_id FROM app_user WHERE id = ?", Long.class, newId);
+        org.assertj.core.api.Assertions.assertThat(orgId).isEqualTo(7L);
+    }
+
+    @Test
     void TEACHER调用建账号被拒403() throws Exception {
         String teacher = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
             "um_teacher", "pw123456", "TEACHER", 1L);

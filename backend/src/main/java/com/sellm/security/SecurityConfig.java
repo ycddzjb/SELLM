@@ -36,8 +36,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
                 .requestMatchers(HttpMethod.PUT, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
-                // 建老师/管理者账号:仅 MANAGER
-                .requestMatchers(HttpMethod.POST, "/api/users/**").hasRole("MANAGER")
+                // 建账号:超管(建 MANAGER)+ 机构管理者(建 TEACHER/PARENT);具体角色能建什么由 controller 细分
+                .requestMatchers(HttpMethod.POST, "/api/users/**").hasAnyRole("SUPER_ADMIN", "MANAGER")
                 // 机构端点:公开列表免登录(注册选机构),建机构/看全部限超管
                 .requestMatchers(HttpMethod.GET, "/api/orgs/public").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/orgs").hasRole("SUPER_ADMIN")
