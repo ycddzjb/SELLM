@@ -72,4 +72,10 @@ public class IepAppService {
         recordRepository.finalizePlan(id, content);
         return recordRepository.findById(id);
     }
+
+    public java.util.List<IepRecord> listByChild(Long childId) {
+        Child child = childRepository.findById(childId);
+        accessGuard.checkChildAccess(currentUser.require(), child); // child 为 null → canAccess false → 403
+        return recordRepository.listByChild(childId);
+    }
 }

@@ -1,7 +1,9 @@
 package com.sellm.report;
 
 import org.springframework.stereotype.Repository;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Repository
@@ -33,6 +35,18 @@ public class ReportRecordRepository {
             ((Number) row.get("childId")).longValue(),
             (String) row.get("draft"), (String) row.get("finalizedContent"),
             (String) row.get("status"));
+    }
+
+    public List<ReportRecord> listByChild(Long childId) {
+        List<ReportRecord> out = new ArrayList<>();
+        for (Map<String, Object> row : mapper.findByChildId(childId)) {
+            out.add(new ReportRecord(((Number) row.get("id")).longValue(),
+                ((Number) row.get("assessmentId")).longValue(),
+                ((Number) row.get("childId")).longValue(),
+                (String) row.get("draft"), (String) row.get("finalizedContent"),
+                (String) row.get("status")));
+        }
+        return out;
     }
 
     public boolean finalizeReport(Long id, String content) {

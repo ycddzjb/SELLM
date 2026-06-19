@@ -1,7 +1,9 @@
 package com.sellm.iep;
 
 import org.springframework.stereotype.Repository;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Repository
@@ -33,6 +35,18 @@ public class IepRecordRepository {
             ((Number) row.get("childId")).longValue(),
             (String) row.get("draft"), (String) row.get("finalizedContent"),
             (String) row.get("status"));
+    }
+
+    public List<IepRecord> listByChild(Long childId) {
+        List<IepRecord> out = new ArrayList<>();
+        for (Map<String, Object> row : mapper.findByChildId(childId)) {
+            out.add(new IepRecord(((Number) row.get("id")).longValue(),
+                ((Number) row.get("reportId")).longValue(),
+                ((Number) row.get("childId")).longValue(),
+                (String) row.get("draft"), (String) row.get("finalizedContent"),
+                (String) row.get("status")));
+        }
+        return out;
     }
 
     public boolean finalizePlan(Long id, String content) {

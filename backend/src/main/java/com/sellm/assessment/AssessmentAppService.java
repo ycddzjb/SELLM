@@ -46,4 +46,10 @@ public class AssessmentAppService {
         return assessmentRepository.save(new Assessment(null, childId, scaleId,
             result.getTotalScore(), result.getBandLabel(), result.getInterpretation()));
     }
+
+    public List<Assessment> listByChild(Long childId) {
+        Child child = childRepository.findById(childId);
+        accessGuard.checkChildAccess(currentUser.require(), child); // child 为 null → canAccess false → 403
+        return assessmentRepository.listByChild(childId);
+    }
 }
