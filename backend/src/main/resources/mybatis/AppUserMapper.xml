@@ -22,10 +22,29 @@
         FROM app_user WHERE username = #{username}
     </select>
 
+    <select id="findById" resultMap="userMap">
+        SELECT id, username, password_hash, role, org_id, status
+        FROM app_user WHERE id = #{id}
+    </select>
+
+    <select id="findPendingByOrg" resultMap="userMap">
+        SELECT id, username, password_hash, role, org_id, status
+        FROM app_user WHERE org_id = #{orgId} AND status = 'PENDING'
+        ORDER BY id
+    </select>
+
     <update id="updateRoleOrgStatus">
         UPDATE app_user
         SET role = #{role}, org_id = #{orgId}, status = #{status}
         WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE app_user SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE app_user SET password_hash = #{passwordHash} WHERE id = #{id}
     </update>
 
 </mapper>

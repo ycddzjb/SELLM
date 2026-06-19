@@ -4,7 +4,9 @@ import com.sellm.security.Role;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Repository
@@ -35,7 +37,22 @@ public class UserRepository {
     }
 
     public AppUser findByUsername(String username) {
-        Map<String, Object> row = mapper.findByUsername(username);
+        return toAppUser(mapper.findByUsername(username));
+    }
+
+    public AppUser findById(Long id) {
+        return toAppUser(mapper.findById(id));
+    }
+
+    public List<AppUser> listPendingByOrg(Long orgId) {
+        List<AppUser> result = new ArrayList<>();
+        for (Map<String, Object> row : mapper.findPendingByOrg(orgId)) {
+            result.add(toAppUser(row));
+        }
+        return result;
+    }
+
+    private AppUser toAppUser(Map<String, Object> row) {
         if (row == null) {
             return null;
         }
@@ -47,6 +64,14 @@ public class UserRepository {
 
     public void updateRoleOrgStatus(Long id, Role role, Long orgId, String status) {
         mapper.updateRoleOrgStatus(id, role.name(), orgId, status);
+    }
+
+    public void updateStatus(Long id, String status) {
+        mapper.updateStatus(id, status);
+    }
+
+    public void changePassword(Long userId, String rawPassword) {
+        mapper.updatePassword(userId, passwordEncoder.encode(rawPassword));
     }
 
     public boolean matches(String rawPassword, String passwordHash) {
