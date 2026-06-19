@@ -15,11 +15,20 @@
 
 ## 设计要点与红线衔接
 
-1. **三角色**:`TEACHER`(老师/康复师)、`MANAGER`(管理者)、`PARENT`(家长)。本计划聚焦把链路跑通,RBAC 第一版按"端点级"粗粒度授权(老师/管理者可写评估与 IEP,家长只读),细粒度数据范围(家长只能看自己孩子)留后续。
+1. **三角色**:`TEACHER`(老师/康复师)、`MANAGER`(管理者)、`PARENT`(家长)。授权分两层:① **端点级 RBAC**(粗)——写操作限老师/管理者,家长只读;② **行级数据权限**(细)——见第 6 点。
 2. **AI 红线延续**:报告/IEP 仍只产 DRAFT,经 AiGateway(内部脱敏);REST 层不绕过 service 直连模型。
 3. **加密红线延续**:Child 姓名经 ChildRepository 加密落库;API 出入参用明文 DTO,加解密在 repository 层,controller/DTO 不碰密文。
 4. **业务记录落库**:计划一的 Report/Iep 是内存对象、ReportService/IepService 直接 new 返回。本计划新增 assessment/report/iep 记录表与持久化,REST service 负责"读 Child/Scale → 计分 → 存 Assessment → 生成并存 Report/Iep 草稿"。
 5. **统一返回**:复用计划一 `common.Result`,REST 控制器统一包 `Result<T>`;异常经全局 `@RestControllerAdvice` 转 `Result.error`。
+6. **机构与行级数据权限(本次新增)**:
+   - **Organization 机构表**:`organization(id, name, region)`。AppUser、Child 都挂 `org_id`;报告/IEP 生成时用 Child 所属机构的**真实校名**(不再用占位"学校")。
+   - **JWT 携带身份**:token 除 username/role 外,还带 `uid`(userId)与 `org`(orgId);登录主体 `AuthPrincipal` 持有这些,供行级判定。
+   - **Child 加 `guardian_user_id`**:关联家长账号(一个孩子的家长)。
+   - **AccessGuard 行级判定**(集中单点):
+     - MANAGER:可访问**本机构**(org 相同)的 child 及其下游记录。
+     - TEACHER:第一版同 MANAGER —— 可访问本机构的 child(老师与学生的细粒度任教关系留后续,本次按机构范围)。
+     - PARENT:仅可访问 `guardian_user_id == 自己 uid` 的 child 及其下游(report/iep 经 child 归属判定)。
+   - 违反行级权限统一返回 **403**(经 BusinessException + 全局 advice,用一个新的 `ACCESS_DENIED` 错误码)。
 
 ---
 
@@ -29,49 +38,59 @@
 backend/
   pom.xml                                          # 加 web/security/jjwt 依赖(Task 1)
   src/main/resources/
-    schema.sql                                     # 追加 app_user/assessment/report/iep 表(Task 3/6/8/9)
+    schema.sql                                     # 追加 organization/app_user/child(加列)/assessment/report/iep 表
   src/main/java/com/sellm/
     common/
       GlobalExceptionHandler.java                  # @RestControllerAdvice → Result(Task 2)
+      ErrorCode.java                                # 加 ACCESS_DENIED 码(Task 2)
+    org/
+      Organization.java / OrganizationMapper.java / mybatis/OrganizationMapper.xml
+      OrganizationRepository.java                  # 机构查/建,提供真实校名(Task 3)
     security/
-      JwtService.java                              # 签发/校验 JWT(Task 4)
-      JwtAuthFilter.java                            # 解析 Bearer、设置 SecurityContext(Task 5)
-      SecurityConfig.java                           # 过滤链、端点授权、BCrypt bean(Task 5)
+      JwtService.java                              # 签发/校验 JWT,携带 uid/org/role(Task 4)
+      JwtAuthFilter.java                            # 解析 Bearer、设置 AuthPrincipal(Task 5)
+      SecurityConfig.java                           # 过滤链、端点授权(Task 5)
+      AuthPrincipal.java                            # 当前主体:userId/username/role/orgId(Task 5)
+      CurrentUser.java                              # 从 SecurityContext 取 AuthPrincipal(Task 5)
       Role.java                                     # 枚举 TEACHER/MANAGER/PARENT(Task 3)
+      AccessGuard.java                              # 行级数据权限判定(Task 7)
     user/
       AppUser.java / AppUserMapper.java / mybatis/AppUserMapper.xml
       UserRepository.java                           # 注册/查用户、BCrypt(Task 3)
       AuthController.java                           # /api/auth/register、/login(Task 6)
       dto/RegisterRequest.java / LoginRequest.java / LoginResponse.java
     child/
-      ChildController.java                          # /api/children CRUD(Task 7)
+      Child.java                                    # 加 guardianUserId 字段(Task 7)
+      ChildController.java                          # /api/children CRUD + 行级过滤(Task 7)
       dto/ChildRequest.java / ChildResponse.java
     assessment/
       Assessment.java / AssessmentMapper.java / mybatis/AssessmentMapper.xml
       AssessmentRepository.java                     # 评估记录落库(Task 8)
-      AssessmentAppService.java                     # 读Child/Scale→计分→存(Task 8)
+      AssessmentAppService.java                     # 读Child/Scale→计分→存 + 访问校验(Task 8)
       AssessmentController.java                     # /api/assessments(Task 8)
       dto/SubmitAssessmentRequest.java / AssessmentResponse.java
     report/
       ReportRecordMapper.java / mybatis/ReportRecordMapper.xml
-      ReportAppService.java                         # 基于评估生成并存报告草稿、定稿(Task 9)
+      ReportAppService.java                         # 生成并存报告(真实校名)+ 访问校验(Task 9)
       ReportController.java                         # /api/reports(Task 9)
       dto/...
     iep/
       IepRecordMapper.java / mybatis/IepRecordMapper.xml
-      IepAppService.java                            # 基于报告生成并存IEP草案、定稿(Task 10)
+      IepAppService.java                            # 生成并存IEP(真实校名)+ 访问校验(Task 10)
       IepController.java                            # /api/ieps(Task 10)
       dto/...
   src/test/java/com/sellm/
     security/JwtServiceTest.java                     # 单测(Task 4)
     auth/AuthApiTest.java                            # MockMvc:注册/登录/JWT(Task 6)
-    security/AuthorizationTest.java                  # MockMvc:无token 401、越权 403(Task 11)
-    child/ChildApiTest.java                          # MockMvc CRUD(Task 7)
+    security/AuthorizationTest.java                  # MockMvc:401、角色越权 403、行级越权 403(Task 11)
+    child/ChildApiTest.java                          # MockMvc CRUD + 行级过滤(Task 7)
     assessment/AssessmentApiTest.java                # MockMvc 提交评估(Task 8)
-    flow/FullChainApiTest.java                       # MockMvc 端到端:登录→建档→评估→报告→IEP(Task 11)
+    flow/FullChainApiTest.java                       # MockMvc 端到端(Task 11)
 ```
 
-**为什么这样切:** controller/dto 就近放各业务包(延续职责分包);security/user 独立成包;App-level service(AssessmentAppService 等)区别于计划一的领域 service(ReportService),前者管"持久化+编排",后者管"领域逻辑+AI",避免把持久化塞进领域服务。
+**为什么这样切:** controller/dto 就近放各业务包(延续职责分包);security/user/org 独立成包。Task 3 把 Organization 与 User 一并建(都是身份/租户基础,且 User 挂 org)。行级权限集中在 `AccessGuard` 单点判定,各端点复用,避免散落。App-level service 管"持久化+编排+访问校验",计划一领域 service 管"领域逻辑+AI"。
+
+> **任务编号说明(本计划经一次扩展):** 应你要求新增"机构表"与"行级数据权限",这两项已织入现有任务而非全部重排:Task 3 = Organization + User;JWT(Task 4)携带 uid/org;Task 5 加 AuthPrincipal/CurrentUser;Task 7(Child)加 guardianUserId + AccessGuard 及行级过滤;Task 9/10(报告/IEP)用真实校名并做访问校验;Task 11 测试补行级越权用例。共 11 个任务。
 
 ---
 
@@ -147,15 +166,21 @@ cd "D:/works/test/SELLM" && git add backend/pom.xml backend/src/main/resources/a
 
 ### Task 2: 全局异常处理 → Result
 
-REST 控制器统一返回 `common.Result`;业务/校验异常经全局 advice 转成 `Result.error`,而非抛 500。
+REST 控制器统一返回 `common.Result`;业务/校验异常经全局 advice 转成 `Result.error`,而非抛 500。本任务同时给 `ErrorCode` 补两个通用码:`INVALID_INPUT`(通用输入错误)与 `ACCESS_DENIED`(行级数据权限拒绝,对应 HTTP 403)。
 
 **Files:**
+- Modify: `backend/src/main/java/com/sellm/common/ErrorCode.java`(加 INVALID_INPUT、ACCESS_DENIED)
 - Create: `backend/src/main/java/com/sellm/common/GlobalExceptionHandler.java`
 - Test: `backend/src/test/java/com/sellm/common/GlobalExceptionHandlerTest.java`
 
-- [ ] **Step 1: 复习 common 现状**
+- [ ] **Step 1: 复习 common 现状 + 加错误码**
 
-先 Read `backend/src/main/java/com/sellm/common/Result.java`、`ErrorCode.java`、`BusinessException.java`,确认 `Result.error(ErrorCode)` 与 `BusinessException.getErrorCode()` 签名(计划一已实现)。
+先 Read `backend/src/main/java/com/sellm/common/Result.java`、`ErrorCode.java`、`BusinessException.java`,确认 `Result.error(ErrorCode)`、`BusinessException(ErrorCode)` / `(ErrorCode,String)`、`getErrorCode()` 签名(计划一已实现)。
+在 `ErrorCode` 枚举里追加两个常量(放在现有常量末尾、分号前):
+```java
+    INVALID_INPUT("C001", "输入校验失败"),
+    ACCESS_DENIED("C002", "无权访问该资源");
+```
 
 - [ ] **Step 2: 写 advice**
 
@@ -164,27 +189,33 @@ REST 控制器统一返回 `common.Result`;业务/校验异常经全局 advice �
 package com.sellm.common;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Result<Void> handleBusiness(BusinessException e) {
-        return Result.error(e.getErrorCode());
+    public ResponseEntity<Result<Void>> handleBusiness(BusinessException e) {
+        // 行级权限拒绝 → 403;其余业务异常 → 400
+        HttpStatus status = e.getErrorCode() == ErrorCode.ACCESS_DENIED
+            ? HttpStatus.FORBIDDEN : HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(Result.error(e.getErrorCode()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Result<Void> handleIllegalArgument(IllegalArgumentException e) {
-        return Result.error(ErrorCode.SCORING_INVALID_INPUT);
+    public ResponseEntity<Result<Void>> handleIllegalArgument(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(Result.error(ErrorCode.INVALID_INPUT));
+    }
+
+    @ExceptionHandler(com.sellm.scale.ScoringException.class)
+    public ResponseEntity<Result<Void>> handleScoring(com.sellm.scale.ScoringException e) {
+        return ResponseEntity.badRequest().body(Result.error(ErrorCode.INVALID_INPUT));
     }
 }
 ```
-注:第一版用现有 ErrorCode 枚举映射;后续可细化。`IllegalArgumentException` 暂复用 SCORING_INVALID_INPUT 语义("输入校验失败")——若觉牵强,Task 实现者可在 ErrorCode 加一个 `INVALID_INPUT("C001","输入校验失败")` 通用码并改用之(属合理改进,允许)。
+注:用 `ResponseEntity` 动态决定状态码(ACCESS_DENIED→403,其余→400)。ScoringException(计分校验失败)也在此转 400,Task 8 不必再改本文件。
 
 - [ ] **Step 3: 写测试(纯单元,不起 web)**
 
@@ -193,6 +224,7 @@ public class GlobalExceptionHandler {
 package com.sellm.common;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import static org.assertj.core.api.Assertions.*;
 
 class GlobalExceptionHandlerTest {
@@ -200,16 +232,24 @@ class GlobalExceptionHandlerTest {
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     @Test
-    void 业务异常转为对应错误码Result() {
-        Result<Void> r = handler.handleBusiness(new BusinessException(ErrorCode.ANONYMIZATION_FAILED));
-        assertThat(r.getCode()).isEqualTo(ErrorCode.ANONYMIZATION_FAILED.getCode());
-        assertThat(r.getData()).isNull();
+    void 业务异常转400及对应错误码() {
+        var resp = handler.handleBusiness(new BusinessException(ErrorCode.INVALID_INPUT));
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(resp.getBody().getCode()).isEqualTo(ErrorCode.INVALID_INPUT.getCode());
     }
 
     @Test
-    void 非法参数转为输入校验Result() {
-        Result<Void> r = handler.handleIllegalArgument(new IllegalArgumentException("bad"));
-        assertThat(r.getCode()).isNotEqualTo(ErrorCode.OK.getCode());
+    void 行级权限拒绝转403() {
+        var resp = handler.handleBusiness(new BusinessException(ErrorCode.ACCESS_DENIED));
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(resp.getBody().getCode()).isEqualTo(ErrorCode.ACCESS_DENIED.getCode());
+    }
+
+    @Test
+    void 非法参数转400输入校验() {
+        var resp = handler.handleIllegalArgument(new IllegalArgumentException("bad"));
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(resp.getBody().getCode()).isEqualTo(ErrorCode.INVALID_INPUT.getCode());
     }
 }
 ```
@@ -217,22 +257,183 @@ class GlobalExceptionHandlerTest {
 - [ ] **Step 4: 跑测试 + 提交**
 
 Run: `cd "D:/works/test/SELLM/backend" && ./mvnw -q test -Dtest=GlobalExceptionHandlerTest`
-Expected: 2 PASS。
+Expected: 3 PASS。
 ```bash
-cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/common/GlobalExceptionHandler.java backend/src/test/java/com/sellm/common/GlobalExceptionHandlerTest.java && git commit -q -m "feat(common): 全局异常处理转统一 Result"
+cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/common/ backend/src/test/java/com/sellm/common/GlobalExceptionHandlerTest.java && git commit -q -m "feat(common): 全局异常处理转 Result;加 INVALID_INPUT/ACCESS_DENIED 码(403)"
 ```
 
 ---
-### Task 3: User 实体 + 三角色 + UserRepository(BCrypt 落库,H2 集成)
+### Task 3: Organization 机构 + User 实体 + 三角色 + UserRepository(BCrypt 落库,H2 集成)
+
+先建 Organization(机构)表与 repository——它是租户维度,AppUser/Child 都挂 org_id,报告/IEP 用它取真实校名。再建 User。
 
 **Files:**
-- Modify: `backend/src/main/resources/schema.sql`(追加 app_user 表)
+- Modify: `backend/src/main/resources/schema.sql`(追加 organization、app_user 表)
+- Create: `backend/src/main/java/com/sellm/org/Organization.java`
+- Create: `backend/src/main/java/com/sellm/org/OrganizationMapper.java`
+- Create: `backend/src/main/resources/mybatis/OrganizationMapper.xml`
+- Create: `backend/src/main/java/com/sellm/org/OrganizationRepository.java`
 - Create: `backend/src/main/java/com/sellm/security/Role.java`
 - Create: `backend/src/main/java/com/sellm/user/AppUser.java`
 - Create: `backend/src/main/java/com/sellm/user/AppUserMapper.java`
 - Create: `backend/src/main/resources/mybatis/AppUserMapper.xml`
 - Create: `backend/src/main/java/com/sellm/user/UserRepository.java`
+- Test: `backend/src/test/java/com/sellm/org/OrganizationRepositoryTest.java`
 - Test: `backend/src/test/java/com/sellm/user/UserRepositoryTest.java`
+
+- [ ] **Step 0: schema.sql 追加 organization 表**
+
+在 schema.sql 末尾追加:
+```sql
+CREATE TABLE IF NOT EXISTS organization (
+    id      BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name    VARCHAR(128) NOT NULL,
+    region  VARCHAR(128)
+);
+```
+
+- [ ] **Step 0b: Organization 实体 + Mapper + XML + Repository**
+
+`backend/src/main/java/com/sellm/org/Organization.java`:
+```java
+package com.sellm.org;
+
+public class Organization {
+    private Long id;
+    private String name;
+    private String region;
+
+    public Organization() {}
+
+    public Organization(Long id, String name, String region) {
+        this.id = id;
+        this.name = name;
+        this.region = region;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getRegion() { return region; }
+    public void setRegion(String region) { this.region = region; }
+}
+```
+
+`backend/src/main/java/com/sellm/org/OrganizationMapper.java`:
+```java
+package com.sellm.org;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import java.util.Map;
+
+@Mapper
+public interface OrganizationMapper {
+    void insert(Map<String, Object> row);
+    Map<String, Object> findById(@Param("id") Long id);
+}
+```
+
+`backend/src/main/resources/mybatis/OrganizationMapper.xml`:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.org.OrganizationMapper">
+
+    <resultMap id="orgMap" type="map">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="region" property="region"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO organization (name, region) VALUES (#{name}, #{region})
+    </insert>
+
+    <select id="findById" parameterType="long" resultMap="orgMap">
+        SELECT id, name, region FROM organization WHERE id = #{id}
+    </select>
+
+</mapper>
+```
+
+`backend/src/main/java/com/sellm/org/OrganizationRepository.java`:
+```java
+package com.sellm.org;
+
+import org.springframework.stereotype.Repository;
+import java.util.HashMap;
+import java.util.Map;
+
+@Repository
+public class OrganizationRepository {
+
+    private final OrganizationMapper mapper;
+
+    public OrganizationRepository(OrganizationMapper mapper) {
+        this.mapper = mapper;
+    }
+
+    public Organization save(Organization org) {
+        Map<String, Object> row = new HashMap<>();
+        row.put("name", org.getName());
+        row.put("region", org.getRegion());
+        mapper.insert(row);
+        org.setId(((Number) row.get("id")).longValue());
+        return org;
+    }
+
+    public Organization findById(Long id) {
+        Map<String, Object> row = mapper.findById(id);
+        if (row == null) return null;
+        return new Organization(((Number) row.get("id")).longValue(),
+            (String) row.get("name"), (String) row.get("region"));
+    }
+
+    /** 取机构名;机构不存在时返回兜底名,供报告/IEP 生成时不至于失败 */
+    public String nameOf(Long orgId) {
+        if (orgId == null) return "未知机构";
+        Organization org = findById(orgId);
+        return org == null ? "未知机构" : org.getName();
+    }
+}
+```
+
+- [ ] **Step 0c: OrganizationRepository 测试(H2 集成)**
+
+`backend/src/test/java/com/sellm/org/OrganizationRepositoryTest.java`:
+```java
+package com.sellm.org;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import static org.assertj.core.api.Assertions.*;
+
+@SpringBootTest
+@ActiveProfiles("test")
+class OrganizationRepositoryTest {
+
+    @Autowired
+    private OrganizationRepository repository;
+
+    @Test
+    void 保存后能按id取出机构名() {
+        Organization saved = repository.save(new Organization(null, "阳光小学", "南京"));
+        assertThat(saved.getId()).isNotNull();
+        assertThat(repository.nameOf(saved.getId())).isEqualTo("阳光小学");
+    }
+
+    @Test
+    void 机构不存在返回兜底名() {
+        assertThat(repository.nameOf(999999L)).isEqualTo("未知机构");
+        assertThat(repository.nameOf(null)).isEqualTo("未知机构");
+    }
+}
+```
 
 - [ ] **Step 1: schema.sql 追加 app_user 表**
 
@@ -456,7 +657,7 @@ public class UserRepository {
 - [ ] **Step 9: Commit**
 
 ```bash
-cd "D:/works/test/SELLM" && git add backend/src/main/resources/schema.sql backend/src/main/java/com/sellm/security/Role.java backend/src/main/java/com/sellm/user/ backend/src/main/resources/mybatis/AppUserMapper.xml backend/src/test/java/com/sellm/user/ && git commit -q -m "feat(user): User 实体+三角色+BCrypt 落库"
+cd "D:/works/test/SELLM" && git add backend/src/main/resources/schema.sql backend/src/main/java/com/sellm/org/ backend/src/main/resources/mybatis/OrganizationMapper.xml backend/src/main/java/com/sellm/security/Role.java backend/src/main/java/com/sellm/user/ backend/src/main/resources/mybatis/AppUserMapper.xml backend/src/test/java/com/sellm/org/ backend/src/test/java/com/sellm/user/ && git commit -q -m "feat(org+user): 机构表与 User 实体+三角色+BCrypt 落库"
 ```
 
 ---
@@ -482,21 +683,29 @@ class JwtServiceTest {
         new JwtService("test-jwt-secret-key-at-least-32-bytes-long-0123456789", 120);
 
     @Test
-    void 签发的token能解析出用户名与角色() {
-        String token = jwt.issue("t1", "TEACHER");
+    void 签发的token能解析出用户名角色uid与org() {
+        String token = jwt.issue("t1", "TEACHER", 7L, 3L);
         assertThat(jwt.extractUsername(token)).isEqualTo("t1");
         assertThat(jwt.extractRole(token)).isEqualTo("TEACHER");
+        assertThat(jwt.extractUserId(token)).isEqualTo(7L);
+        assertThat(jwt.extractOrgId(token)).isEqualTo(3L);
+    }
+
+    @Test
+    void orgId可为null() {
+        String token = jwt.issue("t1", "MANAGER", 1L, null);
+        assertThat(jwt.extractOrgId(token)).isNull();
     }
 
     @Test
     void 合法token校验通过() {
-        String token = jwt.issue("t1", "TEACHER");
+        String token = jwt.issue("t1", "TEACHER", 7L, 3L);
         assertThat(jwt.isValid(token)).isTrue();
     }
 
     @Test
     void 篡改的token校验失败() {
-        String token = jwt.issue("t1", "TEACHER");
+        String token = jwt.issue("t1", "TEACHER", 7L, 3L);
         assertThat(jwt.isValid(token + "x")).isFalse();
     }
 
@@ -504,7 +713,7 @@ class JwtServiceTest {
     void 已过期token校验失败() {
         JwtService expired =
             new JwtService("test-jwt-secret-key-at-least-32-bytes-long-0123456789", -1);
-        String token = expired.issue("t1", "TEACHER");
+        String token = expired.issue("t1", "TEACHER", 7L, 3L);
         assertThat(expired.isValid(token)).isFalse();
     }
 }
@@ -543,12 +752,14 @@ public class JwtService {
         this.expirationMinutes = expirationMinutes;
     }
 
-    public String issue(String username, String role) {
+    public String issue(String username, String role, Long userId, Long orgId) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMinutes * 60_000);
         return Jwts.builder()
             .subject(username)
             .claim("role", role)
+            .claim("uid", userId)
+            .claim("org", orgId)
             .issuedAt(now)
             .expiration(exp)
             .signWith(key)
@@ -561,6 +772,16 @@ public class JwtService {
 
     public String extractRole(String token) {
         return parse(token).get("role", String.class);
+    }
+
+    public Long extractUserId(String token) {
+        Number n = parse(token).get("uid", Number.class);
+        return n == null ? null : n.longValue();
+    }
+
+    public Long extractOrgId(String token) {
+        Number n = parse(token).get("org", Number.class);
+        return n == null ? null : n.longValue();
     }
 
     public boolean isValid(String token) {
@@ -579,25 +800,79 @@ public class JwtService {
 }
 ```
 
-- [ ] **Step 4: 跑测试确认通过** — 4 PASS。注:过期测试用 -1 分钟使 token 立即过期。
+- [ ] **Step 4: 跑测试确认通过** — 5 PASS。注:过期测试用 -1 分钟使 token 立即过期;orgId 为 null 时 claim 存 null,解析返回 null。
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/JwtService.java backend/src/test/java/com/sellm/security/JwtServiceTest.java && git commit -q -m "feat(security): JWT 签发与校验(HS256)"
+cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/JwtService.java backend/src/test/java/com/sellm/security/JwtServiceTest.java && git commit -q -m "feat(security): JWT 签发与校验(HS256),携带 uid/org/role"
 ```
 
 ---
 
-### Task 5: SecurityConfig + JwtAuthFilter(过滤链与端点授权)
+### Task 5: AuthPrincipal/CurrentUser + JwtAuthFilter + SecurityConfig(过滤链与端点授权)
 
 **Files:**
+- Create: `backend/src/main/java/com/sellm/security/AuthPrincipal.java`
+- Create: `backend/src/main/java/com/sellm/security/CurrentUser.java`
 - Create: `backend/src/main/java/com/sellm/security/JwtAuthFilter.java`
 - Create: `backend/src/main/java/com/sellm/security/SecurityConfig.java`
 
-- [ ] **Step 1: JwtAuthFilter**
+- [ ] **Step 1: AuthPrincipal(登录主体)**
 
-`JwtAuthFilter.java`(从 Bearer 头解析 token,有效则设置带角色的 Authentication):
+`AuthPrincipal.java`:
+```java
+package com.sellm.security;
+
+public class AuthPrincipal {
+    private final Long userId;
+    private final String username;
+    private final Role role;
+    private final Long orgId;
+
+    public AuthPrincipal(Long userId, String username, Role role, Long orgId) {
+        this.userId = userId;
+        this.username = username;
+        this.role = role;
+        this.orgId = orgId;
+    }
+
+    public Long getUserId() { return userId; }
+    public String getUsername() { return username; }
+    public Role getRole() { return role; }
+    public Long getOrgId() { return orgId; }
+}
+```
+
+- [ ] **Step 2: CurrentUser(从 SecurityContext 取主体)**
+
+`CurrentUser.java`:
+```java
+package com.sellm.security;
+
+import com.sellm.common.BusinessException;
+import com.sellm.common.ErrorCode;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+
+@Component
+public class CurrentUser {
+
+    /** 取当前登录主体;未认证抛 ACCESS_DENIED。 */
+    public AuthPrincipal require() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof AuthPrincipal p)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "未认证");
+        }
+        return p;
+    }
+}
+```
+
+- [ ] **Step 3: JwtAuthFilter(把 AuthPrincipal 作为 principal 放进 Authentication)**
+
+`JwtAuthFilter.java`:
 ```java
 package com.sellm.security;
 
@@ -631,10 +906,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             if (jwtService.isValid(token)) {
                 String username = jwtService.extractUsername(token);
-                String role = jwtService.extractRole(token);
+                String roleStr = jwtService.extractRole(token);
+                Long uid = jwtService.extractUserId(token);
+                Long org = jwtService.extractOrgId(token);
+                AuthPrincipal principal = new AuthPrincipal(uid, username, Role.valueOf(roleStr), org);
                 var auth = new UsernamePasswordAuthenticationToken(
-                    username, null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+                    principal, null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + roleStr)));
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         }
@@ -642,8 +920,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 }
 ```
+注:principal 现在是 `AuthPrincipal`(而非 username 字符串),CurrentUser.require() 据此取 userId/orgId/role 做行级判定。
 
-- [ ] **Step 2: SecurityConfig**
+- [ ] **Step 4: SecurityConfig**
 
 `SecurityConfig.java`:
 ```java
@@ -683,7 +962,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
                 .requestMatchers(HttpMethod.PUT, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
-                // 其余 /api/** 需登录(GET 三角色都可)
+                // 其余 /api/** 需登录(GET 三角色都可,行级权限在 service 层用 AccessGuard 控制)
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -691,13 +970,14 @@ public class SecurityConfig {
     }
 }
 ```
+注:端点级 RBAC 控"谁能调哪类操作";**行级数据权限**(谁能看哪条 child/记录)由各 AppService 调 AccessGuard 实现(Task 7 起),二者叠加。
 
-- [ ] **Step 3: 验证编译 + 全量回归(关键检查点)**
+- [ ] **Step 5: 验证编译 + 全量回归(关键检查点)**
 
 Run: `cd "D:/works/test/SELLM/backend" && ./mvnw -q test`
-Expected: 现有 41 + Task2(2)+ Task3(3)+ Task4(4)= 50 测试全绿。security 配置就位后,@SpringBootTest 上下文应正常启动(STATELESS + 无 controller 时不影响既有非 web 测试)。若 Task 1 Step 3 当时上下文测试受 security 影响失败,此处应恢复正常——确认 ApplicationContextTest/SchemaSmokeTest 仍绿。
+Expected: 现有 41 + Task2(3)+ Task3(机构2+用户3=5)+ Task4(5)= 54 测试全绿。security 配置就位后,@SpringBootTest 上下文应正常启动。确认 ApplicationContextTest/SchemaSmokeTest 仍绿。
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/ && git commit -q -m "feat(security): JWT 过滤链与端点级 RBAC 授权"
@@ -801,7 +1081,7 @@ public class AuthController {
     @PostMapping("/register")
     public Result<Long> register(@RequestBody RegisterRequest req) {
         if (userRepository.findByUsername(req.getUsername()) != null) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "用户名已存在");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "用户名已存在");
         }
         AppUser saved = userRepository.register(
             req.getUsername(), req.getPassword(), req.getRole(), req.getOrgId());
@@ -812,14 +1092,15 @@ public class AuthController {
     public Result<LoginResponse> login(@RequestBody LoginRequest req) {
         AppUser user = userRepository.findByUsername(req.getUsername());
         if (user == null || !userRepository.matches(req.getPassword(), user.getPasswordHash())) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "用户名或密码错误");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "用户名或密码错误");
         }
-        String token = jwtService.issue(user.getUsername(), user.getRole().name());
+        String token = jwtService.issue(
+            user.getUsername(), user.getRole().name(), user.getId(), user.getOrgId());
         return Result.ok(new LoginResponse(token, user.getRole().name()));
     }
 }
 ```
-注:沿用现有 ErrorCode(SCORING_INVALID_INPUT 作通用输入错误)。若 Task 2 已新增通用 `INVALID_INPUT` 码,这里改用之。
+注:`jwtService.issue` 现在签名是 `(username, role, userId, orgId)`(Task 4)。错误码用 Task 2 新增的 `INVALID_INPUT`。
 
 - [ ] **Step 3: 写 MockMvc 测试**
 
@@ -902,17 +1183,50 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/user/ backen
 ```
 
 ---
-### Task 7: ChildController(CRUD,受保护,MockMvc)
+### Task 7: Child 加 guardianUserId + AccessGuard 行级权限 + ChildController(CRUD + 行级过滤,MockMvc)
+
+给 Child 加 `guardianUserId`(关联家长),建 `AccessGuard` 做行级数据权限判定,ChildController 在读/写时按当前登录主体过滤:MANAGER/TEACHER 限本机构,PARENT 限自己监护的孩子。
 
 **Files:**
+- Modify: `backend/src/main/resources/schema.sql`(child 表加 guardian_user_id 列)
+- Modify: `backend/src/main/java/com/sellm/child/Child.java`(加 guardianUserId 字段)
+- Modify: `backend/src/main/java/com/sellm/child/ChildMapper.java`(findAll/update/delete;insert/find 带 guardian_user_id)
+- Modify: `backend/src/main/resources/mybatis/ChildMapper.xml`
+- Modify: `backend/src/main/java/com/sellm/child/ChildRepository.java`(save/find/findAll 带 guardianUserId)
+- Create: `backend/src/main/java/com/sellm/security/AccessGuard.java`
 - Create: `backend/src/main/java/com/sellm/child/dto/ChildRequest.java`
 - Create: `backend/src/main/java/com/sellm/child/dto/ChildResponse.java`
 - Create: `backend/src/main/java/com/sellm/child/ChildController.java`
-- Modify: `backend/src/main/java/com/sellm/child/ChildMapper.java`(加 findAll/update/delete)
-- Modify: `backend/src/main/resources/mybatis/ChildMapper.xml`
-- Modify: `backend/src/main/java/com/sellm/child/ChildRepository.java`(加 findAll/update/delete)
 - Create: `backend/src/test/java/com/sellm/support/AuthTestSupport.java`(测试取 token 辅助)
 - Test: `backend/src/test/java/com/sellm/child/ChildApiTest.java`
+
+> 说明:`Child` 是计划二已有的领域/持久化实体(字段 id/name/disorderType/orgId)。本任务给它加 `guardianUserId`,并让 child 表加一列、Mapper/Repository 同步。Child 的"姓名加密"由计划二的 ChildRepository 负责,本任务不动那部分逻辑,只扩字段。
+
+- [ ] **Step 0: schema.sql 给 child 表加列;Child 实体加字段**
+
+在 schema.sql 的 child 表 `CREATE TABLE` 里**已无法改已建表**(IF NOT EXISTS),故用单独 ALTER 追加(H2 与 MySQL 都支持 `ADD COLUMN IF NOT EXISTS`):
+```sql
+ALTER TABLE child ADD COLUMN IF NOT EXISTS guardian_user_id BIGINT;
+```
+把该 ALTER 放在 child 的 CREATE TABLE 之后。
+
+`Child.java` 加字段 `guardianUserId`(Long)与其 getter/setter,并加一个含 guardianUserId 的全参构造器(保留原 4 参构造器以兼容计划二既有调用,新构造器 5 参):
+```java
+    private Long guardianUserId;
+
+    // 新增 5 参构造器(在原有 4 参构造器旁)
+    public Child(Long id, String name, String disorderType, Long orgId, Long guardianUserId) {
+        this.id = id;
+        this.name = name;
+        this.disorderType = disorderType;
+        this.orgId = orgId;
+        this.guardianUserId = guardianUserId;
+    }
+
+    public Long getGuardianUserId() { return guardianUserId; }
+    public void setGuardianUserId(Long guardianUserId) { this.guardianUserId = guardianUserId; }
+```
+保留原 4 参构造器,其内部可委托新构造器(guardianUserId 传 null),或各自独立赋值——实现者择一,确保计划二既有调用(ChildRepositoryTest 用 4 参)不破。
 
 - [ ] **Step 1: DTOs**
 
@@ -924,6 +1238,7 @@ public class ChildRequest {
     private String name;
     private String disorderType;
     private Long orgId;
+    private Long guardianUserId;   // 可选:家长账号 id
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -931,6 +1246,8 @@ public class ChildRequest {
     public void setDisorderType(String disorderType) { this.disorderType = disorderType; }
     public Long getOrgId() { return orgId; }
     public void setOrgId(Long orgId) { this.orgId = orgId; }
+    public Long getGuardianUserId() { return guardianUserId; }
+    public void setGuardianUserId(Long guardianUserId) { this.guardianUserId = guardianUserId; }
 }
 ```
 
@@ -943,37 +1260,50 @@ public class ChildResponse {
     private final String name;
     private final String disorderType;
     private final Long orgId;
+    private final Long guardianUserId;
 
-    public ChildResponse(Long id, String name, String disorderType, Long orgId) {
+    public ChildResponse(Long id, String name, String disorderType, Long orgId, Long guardianUserId) {
         this.id = id;
         this.name = name;
         this.disorderType = disorderType;
         this.orgId = orgId;
+        this.guardianUserId = guardianUserId;
     }
 
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getDisorderType() { return disorderType; }
     public Long getOrgId() { return orgId; }
+    public Long getGuardianUserId() { return guardianUserId; }
 }
 ```
 
-- [ ] **Step 2: ChildMapper 加 findAll/update/delete**
+- [ ] **Step 2: ChildMapper 加 findAll/update/delete + guardian_user_id 读写**
 
-在 `ChildMapper.java` 接口加:
+把 `ChildMapper.java` 接口补齐(若计划二只有 insert/findById):
 ```java
     java.util.List<java.util.Map<String, Object>> findAll();
     void update(java.util.Map<String, Object> row);
     void deleteById(@org.apache.ibatis.annotations.Param("id") Long id);
 ```
-在 `ChildMapper.xml` 的 `</mapper>` 前加(沿用 childRowMap):
+`ChildMapper.xml`:① 给 childRowMap 加 `<result column="guardian_user_id" property="guardianUserId"/>`;② insert 的列与 values 加 `guardian_user_id`/`#{guardianUserId}`;③ 追加 findAll/update/delete:
 ```xml
+    <!-- childRowMap 内补一行 -->
+    <result column="guardian_user_id" property="guardianUserId"/>
+
+    <!-- insert 改为含 guardian_user_id(替换计划二的 insert) -->
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO child (name_enc, disorder_type, org_id, guardian_user_id)
+        VALUES (#{nameEnc}, #{disorderType}, #{orgId}, #{guardianUserId})
+    </insert>
+
     <select id="findAll" resultMap="childRowMap">
-        SELECT id, name_enc, disorder_type, org_id FROM child ORDER BY id
+        SELECT id, name_enc, disorder_type, org_id, guardian_user_id FROM child ORDER BY id
     </select>
 
     <update id="update" parameterType="map">
-        UPDATE child SET name_enc = #{nameEnc}, disorder_type = #{disorderType}, org_id = #{orgId}
+        UPDATE child SET name_enc = #{nameEnc}, disorder_type = #{disorderType},
+            org_id = #{orgId}, guardian_user_id = #{guardianUserId}
         WHERE id = #{id}
     </update>
 
@@ -981,45 +1311,92 @@ public class ChildResponse {
         DELETE FROM child WHERE id = #{id}
     </delete>
 ```
+findById 的 SELECT 也要补 `guardian_user_id` 列(否则 guardianUserId 读不出)。
 
-- [ ] **Step 3: ChildRepository 加 findAll/update/delete**
+- [ ] **Step 3: ChildRepository 带 guardianUserId 读写 + findAll/update/delete**
 
-在 `ChildRepository.java` 加方法(复用现有 cipher 字段):
+`save`/`findById` 补 guardianUserId(insert row 加 `row.put("guardianUserId", child.getGuardianUserId())`,findById 组装用 5 参构造器);新增:
 ```java
     public java.util.List<Child> findAll() {
         java.util.List<Child> list = new java.util.ArrayList<>();
         for (java.util.Map<String, Object> row : mapper.findAll()) {
-            Long orgId = row.get("orgId") == null ? null : ((Number) row.get("orgId")).longValue();
-            list.add(new Child(((Number) row.get("id")).longValue(),
-                cipher.decrypt((String) row.get("nameEnc")),
-                (String) row.get("disorderType"), orgId));
+            list.add(toChild(row));
         }
         return list;
     }
 
     public boolean update(Child child) {
-        if (mapper.findById(child.getId()) == null) {
-            return false;
-        }
+        if (mapper.findById(child.getId()) == null) return false;
         java.util.Map<String, Object> row = new java.util.HashMap<>();
         row.put("id", child.getId());
         row.put("nameEnc", cipher.encrypt(child.getName()));
         row.put("disorderType", child.getDisorderType());
         row.put("orgId", child.getOrgId());
+        row.put("guardianUserId", child.getGuardianUserId());
         mapper.update(row);
         return true;
     }
 
     public boolean deleteById(Long id) {
-        if (mapper.findById(id) == null) {
-            return false;
-        }
+        if (mapper.findById(id) == null) return false;
         mapper.deleteById(id);
         return true;
     }
+
+    // 抽出公共组装(findById 也改用它)
+    private Child toChild(java.util.Map<String, Object> row) {
+        Long orgId = row.get("orgId") == null ? null : ((Number) row.get("orgId")).longValue();
+        Long guardian = row.get("guardianUserId") == null ? null : ((Number) row.get("guardianUserId")).longValue();
+        return new Child(((Number) row.get("id")).longValue(),
+            cipher.decrypt((String) row.get("nameEnc")),
+            (String) row.get("disorderType"), orgId, guardian);
+    }
 ```
 
-- [ ] **Step 4: ChildController**
+- [ ] **Step 4: AccessGuard(行级权限单点判定)**
+
+`backend/src/main/java/com/sellm/security/AccessGuard.java`:
+```java
+package com.sellm.security;
+
+import com.sellm.child.Child;
+import com.sellm.common.BusinessException;
+import com.sellm.common.ErrorCode;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AccessGuard {
+
+    /** 判定 principal 能否访问该 child;不能则抛 ACCESS_DENIED(→403)。 */
+    public void checkChildAccess(AuthPrincipal principal, Child child) {
+        if (canAccess(principal, child)) {
+            return;
+        }
+        throw new BusinessException(ErrorCode.ACCESS_DENIED, "无权访问该儿童档案");
+    }
+
+    public boolean canAccess(AuthPrincipal principal, Child child) {
+        if (child == null) {
+            return false;
+        }
+        switch (principal.getRole()) {
+            case MANAGER:
+            case TEACHER:
+                // 本机构范围(orgId 相等;principal 无 org 时拒绝)
+                return principal.getOrgId() != null
+                    && principal.getOrgId().equals(child.getOrgId());
+            case PARENT:
+                // 仅自己监护的孩子
+                return principal.getUserId() != null
+                    && principal.getUserId().equals(child.getGuardianUserId());
+            default:
+                return false;
+        }
+    }
+}
+```
+
+- [ ] **Step 5: ChildController(建档绑机构/家长 + 读写行级过滤)**
 
 `ChildController.java`:
 ```java
@@ -1030,6 +1407,9 @@ import com.sellm.child.dto.ChildResponse;
 import com.sellm.common.BusinessException;
 import com.sellm.common.ErrorCode;
 import com.sellm.common.Result;
+import com.sellm.security.AccessGuard;
+import com.sellm.security.AuthPrincipal;
+import com.sellm.security.CurrentUser;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -1040,59 +1420,84 @@ import java.util.List;
 public class ChildController {
 
     private final ChildRepository repository;
+    private final CurrentUser currentUser;
+    private final AccessGuard accessGuard;
 
-    public ChildController(ChildRepository repository) {
+    public ChildController(ChildRepository repository, CurrentUser currentUser, AccessGuard accessGuard) {
         this.repository = repository;
+        this.currentUser = currentUser;
+        this.accessGuard = accessGuard;
     }
 
     @PostMapping
     public Result<Long> create(@RequestBody ChildRequest req) {
-        Child saved = repository.save(new Child(null, req.getName(), req.getDisorderType(), req.getOrgId()));
+        AuthPrincipal me = currentUser.require();
+        // 建档归属:orgId 以创建者所属机构为准(老师/管理者),忽略请求里的 orgId 越权设定
+        Long orgId = me.getOrgId();
+        Child saved = repository.save(new Child(null, req.getName(), req.getDisorderType(),
+            orgId, req.getGuardianUserId()));
         return Result.ok(saved.getId());
     }
 
     @GetMapping("/{id}")
     public Result<ChildResponse> get(@PathVariable Long id) {
+        AuthPrincipal me = currentUser.require();
         Child c = repository.findById(id);
         if (c == null) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "儿童档案不存在");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "儿童档案不存在");
         }
+        accessGuard.checkChildAccess(me, c);   // 越权 → 403
         return Result.ok(toResponse(c));
     }
 
     @GetMapping
     public Result<List<ChildResponse>> list() {
+        AuthPrincipal me = currentUser.require();
         List<ChildResponse> out = new ArrayList<>();
         for (Child c : repository.findAll()) {
-            out.add(toResponse(c));
+            if (accessGuard.canAccess(me, c)) {   // 行级过滤:只返回有权的
+                out.add(toResponse(c));
+            }
         }
         return Result.ok(out);
     }
 
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody ChildRequest req) {
-        boolean ok = repository.update(new Child(id, req.getName(), req.getDisorderType(), req.getOrgId()));
-        if (!ok) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "儿童档案不存在");
+        AuthPrincipal me = currentUser.require();
+        Child existing = repository.findById(id);
+        if (existing == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "儿童档案不存在");
         }
+        accessGuard.checkChildAccess(me, existing);
+        // 保持归属不变(orgId/guardian 沿用现有),只改可编辑字段
+        Child updated = new Child(id, req.getName(), req.getDisorderType(),
+            existing.getOrgId(), existing.getGuardianUserId());
+        repository.update(updated);
         return Result.ok(null);
     }
 
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        if (!repository.deleteById(id)) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "儿童档案不存在");
+        AuthPrincipal me = currentUser.require();
+        Child existing = repository.findById(id);
+        if (existing == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "儿童档案不存在");
         }
+        accessGuard.checkChildAccess(me, existing);
+        repository.deleteById(id);
         return Result.ok(null);
     }
 
     private ChildResponse toResponse(Child c) {
-        return new ChildResponse(c.getId(), c.getName(), c.getDisorderType(), c.getOrgId());
+        return new ChildResponse(c.getId(), c.getName(), c.getDisorderType(),
+            c.getOrgId(), c.getGuardianUserId());
     }
 }
 ```
+注:建档时 orgId 取创建者机构(防越权指定);PARENT 无写权限(SecurityConfig 端点级已拦)。
 
-- [ ] **Step 5: 测试辅助类(取 token)**
+- [ ] **Step 6: 测试辅助类(取 token)**
 
 `backend/src/test/java/com/sellm/support/AuthTestSupport.java`:
 ```java
@@ -1103,6 +1508,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -1111,25 +1517,40 @@ public final class AuthTestSupport {
 
     private AuthTestSupport() {}
 
-    /** 注册(忽略已存在)并登录,返回 JWT。 */
+    /** 注册(忽略已存在)并登录,orgId 默认 1,返回 JWT。 */
     public static String registerAndLogin(MockMvc mvc, ObjectMapper json,
                                           String username, String password, String role) throws Exception {
+        return registerAndLogin(mvc, json, username, password, role, 1L);
+    }
+
+    /** 注册(忽略已存在)并登录,指定 orgId(可为 null),返回 JWT。 */
+    public static String registerAndLogin(MockMvc mvc, ObjectMapper json,
+                                          String username, String password, String role, Long orgId) throws Exception {
+        Map<String, Object> reg = new HashMap<>();
+        reg.put("username", username);
+        reg.put("password", password);
+        reg.put("role", role);
+        reg.put("orgId", orgId);
         mvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(Map.of(
-                    "username", username, "password", password, "role", role, "orgId", 1))));
+                .content(json.writeValueAsString(reg)));
+        Map<String, Object> login = new HashMap<>();
+        login.put("username", username);
+        login.put("password", password);
         String body = mvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(Map.of(
-                    "username", username, "password", password))))
+                .content(json.writeValueAsString(login)))
             .andReturn().getResponse().getContentAsString();
         JsonNode node = json.readTree(body);
         return node.path("data").path("token").asText();
     }
+
+    /** 登录后从响应取 userId 需要解析 token——测试里若需 parent 的 uid,可在注册后查库或解析 JWT。
+     *  本计划测试用"家长注册后用其 token 建档(由老师建、指定 guardianUserId)"的方式构造场景。 */
 }
 ```
 
-- [ ] **Step 6: 写 ChildApiTest**
+- [ ] **Step 7: 写 ChildApiTest(含行级权限)**
 
 `backend/src/test/java/com/sellm/child/ChildApiTest.java`:
 ```java
@@ -1145,6 +1566,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -1162,19 +1584,10 @@ class ChildApiTest {
 
     @Test
     void 老师可建档并按id读出明文姓名() throws Exception {
-        String token = AuthTestSupport.registerAndLogin(mvc, json, "child_teacher", "pw123456", "TEACHER");
+        String token = AuthTestSupport.registerAndLogin(mvc, json, "child_teacher", "pw123456", "TEACHER", 1L);
+        long id = createChild(token, "小明", null);
 
-        String createBody = mvc.perform(post("/api/children")
-                .header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(Map.of(
-                    "name", "小明", "disorderType", "ASD", "orgId", 1))))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-        long id = json.readTree(createBody).path("data").asLong();
-
-        mvc.perform(get("/api/children/" + id)
-                .header("Authorization", "Bearer " + token))
+        mvc.perform(get("/api/children/" + id).header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.name").value("小明"))
             .andExpect(jsonPath("$.data.disorderType").value("ASD"));
@@ -1182,19 +1595,41 @@ class ChildApiTest {
 
     @Test
     void 无token访问受保护端点返回401() throws Exception {
-        mvc.perform(get("/api/children"))
-            .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/children")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 他机构老师访问本机构档案被拒403() throws Exception {
+        String orgAteacher = AuthTestSupport.registerAndLogin(mvc, json, "ca_teacher_A", "pw123456", "TEACHER", 1L);
+        long childId = createChild(orgAteacher, "小明", null);   // 建在 org 1
+
+        String orgBteacher = AuthTestSupport.registerAndLogin(mvc, json, "cb_teacher_B", "pw123456", "TEACHER", 2L);
+        mvc.perform(get("/api/children/" + childId).header("Authorization", "Bearer " + orgBteacher))
+            .andExpect(status().isForbidden());   // org 2 老师无权看 org 1 的孩子
+    }
+
+    private long createChild(String token, String name, Long guardianUserId) throws Exception {
+        Map<String, Object> body = new HashMap<>();
+        body.put("name", name);
+        body.put("disorderType", "ASD");
+        body.put("guardianUserId", guardianUserId);
+        String resp = mvc.perform(post("/api/children").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(body)))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        return json.readTree(resp).path("data").asLong();
     }
 }
 ```
 
-- [ ] **Step 7: 跑测试** — `./mvnw -q test -Dtest=ChildApiTest`，2 PASS。
-注:Spring Security 默认未认证返回 401(无 token 时 SecurityContext 无 Authentication → `authenticated()` 拒绝)。若实际返回 403,在 SecurityConfig 加 `.exceptionHandling(e -> e.authenticationEntryPoint((req,res,ex)->res.sendError(401)))` 明确 401——允许此调整。
+- [ ] **Step 8: 跑测试** — `./mvnw -q test -Dtest=ChildApiTest`，3 PASS。
+注:① 无 token → 401(Spring Security 默认未认证);若实际 403,在 SecurityConfig 加 `.exceptionHandling(e -> e.authenticationEntryPoint((req,res,ex)->res.sendError(401)))` 明确 401(允许)。② 跨机构访问 → AccessGuard 抛 ACCESS_DENIED → 全局 advice 转 403。③ 建档 orgId 取创建者机构,故 org1 老师建的孩子 orgId=1。
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/child/ backend/src/main/resources/mybatis/ChildMapper.xml backend/src/test/java/com/sellm/support/ backend/src/test/java/com/sellm/child/ChildApiTest.java && git commit -q -m "feat(child): Child CRUD REST 端点(受 JWT 保护)"
+cd "D:/works/test/SELLM" && git add backend/src/main/resources/schema.sql backend/src/main/java/com/sellm/child/ backend/src/main/java/com/sellm/security/AccessGuard.java backend/src/main/resources/mybatis/ChildMapper.xml backend/src/test/java/com/sellm/support/ backend/src/test/java/com/sellm/child/ChildApiTest.java && git commit -q -m "feat(child): guardianUserId + AccessGuard 行级权限 + Child CRUD REST(机构/家长范围过滤)"
 ```
 
 ---
@@ -1425,9 +1860,10 @@ import com.sellm.child.ChildRepository;
 import com.sellm.common.BusinessException;
 import com.sellm.common.ErrorCode;
 import com.sellm.scale.*;
+import com.sellm.security.AccessGuard;
+import com.sellm.security.CurrentUser;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -1437,44 +1873,39 @@ public class AssessmentAppService {
     private final ScaleRepository scaleRepository;
     private final ScoringEngine scoringEngine;
     private final AssessmentRepository assessmentRepository;
+    private final CurrentUser currentUser;
+    private final AccessGuard accessGuard;
 
     public AssessmentAppService(ChildRepository childRepository, ScaleRepository scaleRepository,
-                                ScoringEngine scoringEngine, AssessmentRepository assessmentRepository) {
+                                ScoringEngine scoringEngine, AssessmentRepository assessmentRepository,
+                                CurrentUser currentUser, AccessGuard accessGuard) {
         this.childRepository = childRepository;
         this.scaleRepository = scaleRepository;
         this.scoringEngine = scoringEngine;
         this.assessmentRepository = assessmentRepository;
+        this.currentUser = currentUser;
+        this.accessGuard = accessGuard;
     }
 
     public Assessment submit(Long childId, String scaleId, List<Answer> answers) {
         Child child = childRepository.findById(childId);
         if (child == null) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "儿童档案不存在");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "儿童档案不存在");
         }
+        accessGuard.checkChildAccess(currentUser.require(), child);   // 行级权限:越权→403
         Scale scale = scaleRepository.findById(scaleId);
         if (scale == null) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "量表不存在");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "量表不存在");
         }
-        AssessmentResult result = scoringEngine.score(scale, answers); // 校验失败抛 ScoringException
+        AssessmentResult result = scoringEngine.score(scale, answers); // 校验失败抛 ScoringException(全局 advice 转 400)
         return assessmentRepository.save(new Assessment(null, childId, scaleId,
             result.getTotalScore(), result.getBandLabel(), result.getInterpretation()));
     }
 }
 ```
-注:`scoringEngine.score` 在作答不全/规则缺失时抛 `ScoringException`(RuntimeException)。在 GlobalExceptionHandler 加一个对 `com.sellm.scale.ScoringException` 的处理(转 400 + SCORING_INVALID_INPUT)——本任务在 GlobalExceptionHandler 补这个 @ExceptionHandler(允许的小改),否则会变 500。
+注:ScoringException 已在 Task 2 的 GlobalExceptionHandler 处理(转 400),本任务无需再改它。child 访问校验复用 Task 7 的 AccessGuard,实现"老师/管理者只能给本机构孩子提交评估"。
 
-- [ ] **Step 7: 在 GlobalExceptionHandler 加 ScoringException 处理**
-
-在 `GlobalExceptionHandler.java` 加:
-```java
-    @ExceptionHandler(com.sellm.scale.ScoringException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Result<Void> handleScoring(com.sellm.scale.ScoringException e) {
-        return Result.error(ErrorCode.SCORING_INVALID_INPUT);
-    }
-```
-
-- [ ] **Step 8: AssessmentController**
+- [ ] **Step 7: AssessmentController**
 
 `AssessmentController.java`:
 ```java
@@ -1514,7 +1945,7 @@ public class AssessmentController {
 }
 ```
 
-- [ ] **Step 9: 写 MockMvc 测试**
+- [ ] **Step 8: 写 MockMvc 测试**
 
 `backend/src/test/java/com/sellm/assessment/AssessmentApiTest.java`:
 ```java
@@ -1596,12 +2027,12 @@ class AssessmentApiTest {
 }
 ```
 
-- [ ] **Step 10: 跑测试** — `./mvnw -q test -Dtest=AssessmentApiTest`，2 PASS。家长被 RBAC 拒(403)。
+- [ ] **Step 9: 跑测试** — `./mvnw -q test -Dtest=AssessmentApiTest`，2 PASS。家长被端点级 RBAC 拒(403,POST 不允许 PARENT)。
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-cd "D:/works/test/SELLM" && git add backend/src/main/resources/schema.sql backend/src/main/java/com/sellm/assessment/ backend/src/main/resources/mybatis/AssessmentMapper.xml backend/src/main/java/com/sellm/common/GlobalExceptionHandler.java backend/src/test/java/com/sellm/assessment/ && git commit -q -m "feat(assessment): 评估提交端点,计分并落库(RBAC 限老师/管理者)"
+cd "D:/works/test/SELLM" && git add backend/src/main/resources/schema.sql backend/src/main/java/com/sellm/assessment/ backend/src/main/resources/mybatis/AssessmentMapper.xml backend/src/test/java/com/sellm/assessment/ && git commit -q -m "feat(assessment): 评估提交端点,计分并落库(RBAC 限老师/管理者 + 行级校验)"
 ```
 
 ---
@@ -1837,7 +2268,10 @@ import com.sellm.child.Child;
 import com.sellm.child.ChildRepository;
 import com.sellm.common.BusinessException;
 import com.sellm.common.ErrorCode;
+import com.sellm.org.OrganizationRepository;
 import com.sellm.scale.AssessmentResult;
+import com.sellm.security.AccessGuard;
+import com.sellm.security.CurrentUser;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -1847,43 +2281,66 @@ public class ReportAppService {
     private final ChildRepository childRepository;
     private final ReportService reportService;          // 计划一领域服务(RAG+AI)
     private final ReportRecordRepository recordRepository;
+    private final OrganizationRepository organizationRepository;
+    private final CurrentUser currentUser;
+    private final AccessGuard accessGuard;
 
     public ReportAppService(AssessmentRepository assessmentRepository, ChildRepository childRepository,
-                            ReportService reportService, ReportRecordRepository recordRepository) {
+                            ReportService reportService, ReportRecordRepository recordRepository,
+                            OrganizationRepository organizationRepository,
+                            CurrentUser currentUser, AccessGuard accessGuard) {
         this.assessmentRepository = assessmentRepository;
         this.childRepository = childRepository;
         this.reportService = reportService;
         this.recordRepository = recordRepository;
+        this.organizationRepository = organizationRepository;
+        this.currentUser = currentUser;
+        this.accessGuard = accessGuard;
     }
 
     public ReportRecord generate(Long assessmentId) {
         Assessment a = assessmentRepository.findById(assessmentId);
         if (a == null) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "评估记录不存在");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "评估记录不存在");
         }
         Child child = childRepository.findById(a.getChildId());
         if (child == null) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "儿童档案不存在");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "儿童档案不存在");
         }
-        // 用领域服务生成草稿(childName 作脱敏项;schoolName 第一版用占位,后续接机构名)
+        accessGuard.checkChildAccess(currentUser.require(), child);   // 行级权限
+        // 真实校名(Child 所属机构);机构缺失时 OrganizationRepository.nameOf 返回兜底名
+        String schoolName = organizationRepository.nameOf(child.getOrgId());
         AssessmentResult result = new AssessmentResult(
             a.getTotalScore(), a.getBandLabel(), a.getInterpretation());
         Report domain = reportService.generateDraft(
-            child.getName(), "学校", a.getScaleId(), result);
+            child.getName(), schoolName, a.getScaleId(), result);
         // domain.getDraft() 已还原明文,落库
         return recordRepository.save(new ReportRecord(null, assessmentId, a.getChildId(),
             domain.getDraft(), null, "DRAFT"));
     }
 
-    public ReportRecord finalizeReport(Long reportId, String content) {
-        if (!recordRepository.finalizeReport(reportId, content)) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "报告不存在");
+    public ReportRecord get(Long reportId) {
+        ReportRecord r = recordRepository.findById(reportId);
+        if (r == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "报告不存在");
         }
+        Child child = childRepository.findById(r.getChildId());
+        accessGuard.checkChildAccess(currentUser.require(), child);   // 经 child 归属做行级判定
+        return r;
+    }
+
+    public ReportRecord finalizeReport(Long reportId, String content) {
+        ReportRecord existing = recordRepository.findById(reportId);
+        if (existing == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "报告不存在");
+        }
+        accessGuard.checkChildAccess(currentUser.require(), childRepository.findById(existing.getChildId()));
+        recordRepository.finalizeReport(reportId, content);
         return recordRepository.findById(reportId);
     }
 }
 ```
-注:`new AssessmentResult(...)` 需确认计划一 AssessmentResult 有 `(double,String,String)` 公开构造器(计划一 Task4 已定义,有)。`Report` 是计划一 com.sellm.report.Report(领域对象,有 getDraft)。
+注:① 校名用 `OrganizationRepository.nameOf(child.getOrgId())` 取真实机构名;② generate/get/finalize 都经 AccessGuard 做行级校验(报告归属其 child,家长只能看自己孩子的报告);③ AccessGuard.checkChildAccess 对 null child 会判 false→403,故 child 不存在时也安全。`AssessmentResult(double,String,String)` 与 `Report.getDraft` 是计划一已有签名。
 
 - [ ] **Step 7: ReportController**
 
@@ -1915,7 +2372,7 @@ public class ReportController {
 
     @GetMapping("/{id}")
     public Result<ReportResponse> get(@PathVariable Long id) {
-        ReportRecord r = appService.finalizeReportOrGet(id);
+        ReportRecord r = appService.get(id);
         return Result.ok(toResponse(r));
     }
 
@@ -1930,7 +2387,7 @@ public class ReportController {
     }
 }
 ```
-注:上面 GET 用到 `appService.finalizeReportOrGet` 是笔误——GET 应是只读查询。请在 ReportAppService 加一个 `public ReportRecord get(Long id)`(查不到抛 BusinessException),controller 的 GET 调 `appService.get(id)`。实现时按此修正(不要照抄笔误)。
+注:GET/finalize 经 ReportAppService 的行级访问校验(AccessGuard);`get(id)` 已在 Step 6 的 ReportAppService 定义。
 
 - [ ] **Step 8: 写 MockMvc 测试**
 
@@ -2260,8 +2717,11 @@ import com.sellm.child.Child;
 import com.sellm.child.ChildRepository;
 import com.sellm.common.BusinessException;
 import com.sellm.common.ErrorCode;
+import com.sellm.org.OrganizationRepository;
 import com.sellm.report.ReportRecord;
 import com.sellm.report.ReportRecordRepository;
+import com.sellm.security.AccessGuard;
+import com.sellm.security.CurrentUser;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -2271,28 +2731,38 @@ public class IepAppService {
     private final ChildRepository childRepository;
     private final IepService iepService;            // 计划一领域服务
     private final IepRecordRepository recordRepository;
+    private final OrganizationRepository organizationRepository;
+    private final CurrentUser currentUser;
+    private final AccessGuard accessGuard;
 
     public IepAppService(ReportRecordRepository reportRepository, ChildRepository childRepository,
-                         IepService iepService, IepRecordRepository recordRepository) {
+                         IepService iepService, IepRecordRepository recordRepository,
+                         OrganizationRepository organizationRepository,
+                         CurrentUser currentUser, AccessGuard accessGuard) {
         this.reportRepository = reportRepository;
         this.childRepository = childRepository;
         this.iepService = iepService;
         this.recordRepository = recordRepository;
+        this.organizationRepository = organizationRepository;
+        this.currentUser = currentUser;
+        this.accessGuard = accessGuard;
     }
 
     public IepRecord generate(Long reportId) {
         ReportRecord report = reportRepository.findById(reportId);
         if (report == null) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "报告不存在");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "报告不存在");
         }
         Child child = childRepository.findById(report.getChildId());
         if (child == null) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "儿童档案不存在");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "儿童档案不存在");
         }
+        accessGuard.checkChildAccess(currentUser.require(), child);   // 行级权限
+        String schoolName = organizationRepository.nameOf(child.getOrgId());
         // 评估结论:优先用定稿内容,否则用草稿
         String conclusion = report.getFinalizedContent() != null
             ? report.getFinalizedContent() : report.getDraft();
-        Iep domain = iepService.generateDraft(child.getName(), "学校", conclusion);
+        Iep domain = iepService.generateDraft(child.getName(), schoolName, conclusion);
         return recordRepository.save(new IepRecord(null, reportId, report.getChildId(),
             domain.getDraft(), null, "DRAFT"));
     }
@@ -2300,19 +2770,24 @@ public class IepAppService {
     public IepRecord get(Long id) {
         IepRecord r = recordRepository.findById(id);
         if (r == null) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "IEP 不存在");
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "IEP 不存在");
         }
+        accessGuard.checkChildAccess(currentUser.require(), childRepository.findById(r.getChildId()));
         return r;
     }
 
     public IepRecord finalizePlan(Long id, String content) {
-        if (!recordRepository.finalizePlan(id, content)) {
-            throw new BusinessException(ErrorCode.SCORING_INVALID_INPUT, "IEP 不存在");
+        IepRecord existing = recordRepository.findById(id);
+        if (existing == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "IEP 不存在");
         }
+        accessGuard.checkChildAccess(currentUser.require(), childRepository.findById(existing.getChildId()));
+        recordRepository.finalizePlan(id, content);
         return recordRepository.findById(id);
     }
 }
 ```
+注:校名用真实机构名;generate/get/finalize 均经 AccessGuard 行级校验(经 IEP 归属的 child 判定)。
 
 - [ ] **Step 7: IepController**
 
@@ -2584,6 +3059,38 @@ class AuthorizationTest {
         mvc.perform(get("/api/children").header("Authorization","Bearer "+parent))
             .andExpect(status().isOk());
     }
+
+    @Test
+    void 家长读他人孩子档案被行级拒绝403() throws Exception {
+        // 老师(org1)建一个孩子,未绑定任何家长
+        String teacher = AuthTestSupport.registerAndLogin(mvc, json, "authz_teacher_x", "pw123456", "TEACHER", 1L);
+        java.util.Map<String,Object> body = new java.util.HashMap<>();
+        body.put("name", "小明"); body.put("disorderType", "ASD"); body.put("guardianUserId", null);
+        String cb = mvc.perform(post("/api/children").header("Authorization","Bearer "+teacher)
+                .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        long childId = json.readTree(cb).path("data").asLong();
+
+        // 家长(非该孩子监护人)读该档案 → AccessGuard 行级拒绝 403
+        String parent = AuthTestSupport.registerAndLogin(mvc, json, "authz_parent3", "pw123456", "PARENT", 1L);
+        mvc.perform(get("/api/children/" + childId).header("Authorization","Bearer "+parent))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void 他机构管理者读本机构孩子被行级拒绝403() throws Exception {
+        String mgrA = AuthTestSupport.registerAndLogin(mvc, json, "authz_mgr_a", "pw123456", "MANAGER", 1L);
+        java.util.Map<String,Object> body = new java.util.HashMap<>();
+        body.put("name", "小红"); body.put("disorderType", "ASD"); body.put("guardianUserId", null);
+        String cb = mvc.perform(post("/api/children").header("Authorization","Bearer "+mgrA)
+                .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        long childId = json.readTree(cb).path("data").asLong();
+
+        String mgrB = AuthTestSupport.registerAndLogin(mvc, json, "authz_mgr_b", "pw123456", "MANAGER", 2L);
+        mvc.perform(get("/api/children/" + childId).header("Authorization","Bearer "+mgrB))
+            .andExpect(status().isForbidden());
+    }
 }
 ```
 
@@ -2604,20 +3111,22 @@ cd "D:/works/test/SELLM" && git add backend/src/test/java/com/sellm/flow/ backen
 
 ## 后续计划(不在本计划范围)
 
-1. **细粒度数据权限**:家长只能看自己孩子、老师只看本机构;按 orgId/关系做行级过滤(本计划是端点级粗粒度 RBAC)。
-2. **业务记录的列表/查询/分页**:各记录的 list、按 child 聚合、分页。
+1. **更细粒度任教关系**:老师与具体学生的任教绑定(本计划老师按"本机构"范围;真实任教关系表留后续)。
+2. **业务记录的列表/查询/分页**:各记录的 list、按 child 聚合、分页(均需叠加 AccessGuard 行级过滤)。
 3. **进度追踪与反馈**:ProgressRecord/ProgressTrend、Feedback、AIGenerationLog 回流。
 4. **Vue 管理端 / uni-app 小程序家长端**:对接这些 API。
 5. **真实 AI 接入 / 真实向量库**:替换 MockAiModel 与 DbRagRetriever 关键词检索。
-6. **机构(Organization)实体**:目前 orgId 是裸字段无表;补 organization 表与机构维度。
+6. **机构管理 API**:Organization 的 CRUD 与机构维度管理(本计划已建表 + repository,管理端点留后续)。
 7. **运行时配置硬化 / 防御式编程 / 计分引擎硬化 / IEP 实体不可变**:延续前两计划记录的待办。
 
 ---
 
 ## 自检结论
 
-- **Spec/范围覆盖**:认证骨架(User/三角色/JWT/RBAC/BCrypt)、评估→报告→IEP 全链路 REST、业务记录落库(assessment/report/iep)均覆盖。细粒度数据权限、机构表、进度/反馈、前端列入后续。
-- **红线衔接**:报告/IEP 仍只产 DRAFT、经 AiGateway 脱敏(复用计划一服务);Child 姓名加密落库经 ChildRepository(API 只见明文 DTO);写操作经端点级 RBAC 限老师/管理者。全链路测试断言 IEP draft 含还原后的"小明",印证脱敏→还原闭环跨 HTTP 仍成立。
-- **占位符**:无 TBD/TODO。两处**有意标注的实现提示**已写明正确做法:Task9 ReportController 的 GET 笔误已指明改用 `appService.get(id)`;Task2/8 的 ErrorCode 复用已说明可选新增通用码。实现者须按提示修正,不照抄笔误。
-- **类型一致性**:跨任务核对 —— `UserRepository.register/findByUsername/matches`、`JwtService.issue/extractUsername/extractRole/isValid`、`Result.ok/error`、`AssessmentResult(double,String,String)`(复用计划一)、各 AppService→领域 service(ReportService.generateDraft / IepService.generateDraft)签名与计划一一致;记录 Repository 的 save/findById/finalizeXxx 命名一致。
-- **测试策略**:MockMvc + H2,端到端发真实 HTTP 过滤链(JWT 解析、RBAC、controller、service、repository、DB),非 mock 空测;授权矩阵覆盖 401/403/200。延续"测试不依赖外部基础设施"。
+- **Spec/范围覆盖**:认证骨架(User/三角色/JWT/RBAC/BCrypt)、**机构表(Organization)**、评估→报告→IEP 全链路 REST、业务记录落库(assessment/report/iep)、**两层授权(端点级 RBAC + 行级数据权限 AccessGuard)**、报告/IEP 用**真实校名**均覆盖。更细任教关系、记录列表分页、机构管理 API、进度/反馈、前端列入后续。
+- **红线衔接**:报告/IEP 仍只产 DRAFT、经 AiGateway 脱敏(复用计划一服务);Child 姓名加密落库经 ChildRepository(API 只见明文 DTO);写操作经端点级 RBAC 限老师/管理者;读写再经 AccessGuard 行级校验(MANAGER/TEACHER 限本机构、PARENT 限自己监护)。全链路测试断言 IEP draft 含还原后的"小明",印证脱敏→还原闭环跨 HTTP 仍成立。
+- **行级权限设计**:集中在 `AccessGuard.canAccess/checkChildAccess` 单点;各 AppService(child/assessment/report/iep)统一调用,经 child 归属做判定;违规抛 `ACCESS_DENIED` → 全局 advice 转 403。授权矩阵测试覆盖:无 token 401、角色越权 403(家长写)、行级越权 403(家长读他人孩子、跨机构管理者)、放行 200。
+- **占位符**:无 TBD/TODO。Task7 Child 实体扩字段保留原 4 参构造器以兼容计划二既有调用,已写明;各 ErrorCode 用 Task2 新增的 `INVALID_INPUT`/`ACCESS_DENIED`。
+- **类型一致性**:跨任务核对 —— `OrganizationRepository.nameOf/findById/save`、`UserRepository.register/findByUsername/matches`、`JwtService.issue(username,role,userId,orgId)/extractUserId/extractOrgId`、`AuthPrincipal.getUserId/getRole/getOrgId`、`CurrentUser.require`、`AccessGuard.canAccess/checkChildAccess`、`Result.ok/error`、`AssessmentResult(double,String,String)`(复用计划一)、各 AppService→领域 service(ReportService.generateDraft / IepService.generateDraft)签名与计划一一致;记录 Repository 的 save/findById/finalizeXxx 命名一致。Child 5 参构造器(含 guardianUserId)与既有 4 参并存。
+- **测试策略**:MockMvc + H2,端到端发真实 HTTP 过滤链(JWT 解析、端点 RBAC、controller、AppService 行级校验、repository、DB),非 mock 空测;授权矩阵覆盖 401/403/200。延续"测试不依赖外部基础设施"。
+- **任务编号**:经一次扩展(新增机构表 + 行级权限),仍为 11 个任务,编号连续,新增内容织入 Task 3/4/5/7/9/10/11,无重排断点。
