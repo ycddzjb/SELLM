@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/asd_dev;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:seed-dev.sql
+      continue-on-error: true   # 种子幂等(重复启动时 INSERT 冲突忽略)
+  h2:
+    console:
+      enabled: true             # /h2-console 便于调试(dev only)
+
+mybatis:
+  mapper-locations: classpath:mybatis/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+sellm:
+  crypto:
+    aes-key: "dev-aes-key-32bytes-0123456789ab"   # 恰 32 字节(dev 用)
+  jwt:
+    secret: "dev-jwt-secret-key-at-least-32-bytes-long-0123456789"
+    expiration-minutes: 240
