@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.iep.IepRecordMapper">
+
+    <resultMap id="iepMap" type="map">
+        <id column="id" property="id"/>
+        <result column="report_id" property="reportId"/>
+        <result column="child_id" property="childId"/>
+        <result column="draft" property="draft"/>
+        <result column="finalized_content" property="finalizedContent"/>
+        <result column="status" property="status"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO iep (report_id, child_id, draft, finalized_content, status)
+        VALUES (#{reportId}, #{childId}, #{draft}, #{finalizedContent}, #{status})
+    </insert>
+
+    <select id="findById" parameterType="long" resultMap="iepMap">
+        SELECT id, report_id, child_id, draft, finalized_content, status
+        FROM iep WHERE id = #{id}
+    </select>
+
+    <update id="updateFinalized">
+        UPDATE iep SET finalized_content = #{content}, status = 'FINALIZED' WHERE id = #{id}
+    </update>
+
+</mapper>

@@ -5,15 +5,21 @@ public class Child {
     private String name;          // 明文姓名(领域层)
     private String disorderType;
     private Long orgId;
+    private Long guardianUserId;  // 关联家长账号(行级权限用)
 
     public Child() {
     }
 
     public Child(Long id, String name, String disorderType, Long orgId) {
+        this(id, name, disorderType, orgId, null);
+    }
+
+    public Child(Long id, String name, String disorderType, Long orgId, Long guardianUserId) {
         this.id = id;
         this.name = name;
         this.disorderType = disorderType;
         this.orgId = orgId;
+        this.guardianUserId = guardianUserId;
     }
 
     public Long getId() { return id; }
@@ -24,4 +30,6 @@ public class Child {
     public void setDisorderType(String disorderType) { this.disorderType = disorderType; }
     public Long getOrgId() { return orgId; }
     public void setOrgId(Long orgId) { this.orgId = orgId; }
+    public Long getGuardianUserId() { return guardianUserId; }
+    public void setGuardianUserId(Long guardianUserId) { this.guardianUserId = guardianUserId; }
 }

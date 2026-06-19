@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.report.ReportRecordMapper">
+
+    <resultMap id="reportMap" type="map">
+        <id column="id" property="id"/>
+        <result column="assessment_id" property="assessmentId"/>
+        <result column="child_id" property="childId"/>
+        <result column="draft" property="draft"/>
+        <result column="finalized_content" property="finalizedContent"/>
+        <result column="status" property="status"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO report (assessment_id, child_id, draft, finalized_content, status)
+        VALUES (#{assessmentId}, #{childId}, #{draft}, #{finalizedContent}, #{status})
+    </insert>
+
+    <select id="findById" parameterType="long" resultMap="reportMap">
+        SELECT id, assessment_id, child_id, draft, finalized_content, status
+        FROM report WHERE id = #{id}
+    </select>
+
+    <update id="updateFinalized">
+        UPDATE report SET finalized_content = #{content}, status = 'FINALIZED' WHERE id = #{id}
+    </update>
+
+</mapper>

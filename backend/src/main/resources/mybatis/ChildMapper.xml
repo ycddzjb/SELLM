@@ -8,16 +8,31 @@
         <result column="name_enc" property="nameEnc"/>
         <result column="disorder_type" property="disorderType"/>
         <result column="org_id" property="orgId"/>
+        <result column="guardian_user_id" property="guardianUserId"/>
     </resultMap>
 
     <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO child (name_enc, disorder_type, org_id)
-        VALUES (#{nameEnc}, #{disorderType}, #{orgId})
+        INSERT INTO child (name_enc, disorder_type, org_id, guardian_user_id)
+        VALUES (#{nameEnc}, #{disorderType}, #{orgId}, #{guardianUserId})
     </insert>
 
     <select id="findById" parameterType="long" resultMap="childRowMap">
-        SELECT id, name_enc, disorder_type, org_id
+        SELECT id, name_enc, disorder_type, org_id, guardian_user_id
         FROM child WHERE id = #{id}
     </select>
+
+    <select id="findAll" resultMap="childRowMap">
+        SELECT id, name_enc, disorder_type, org_id, guardian_user_id FROM child ORDER BY id
+    </select>
+
+    <update id="update" parameterType="map">
+        UPDATE child SET name_enc = #{nameEnc}, disorder_type = #{disorderType},
+            org_id = #{orgId}, guardian_user_id = #{guardianUserId}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM child WHERE id = #{id}
+    </delete>
 
 </mapper>
