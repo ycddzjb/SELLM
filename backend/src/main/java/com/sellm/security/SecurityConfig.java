@@ -38,6 +38,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
                 // 建老师/管理者账号:仅 MANAGER
                 .requestMatchers(HttpMethod.POST, "/api/users/**").hasRole("MANAGER")
+                // 机构端点:公开列表免登录(注册选机构),建机构/看全部限超管
+                .requestMatchers(HttpMethod.GET, "/api/orgs/public").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/orgs").hasRole("SUPER_ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/orgs").hasRole("SUPER_ADMIN")
                 // 其余 /api/** 需登录(GET 三角色都可,行级权限在 service 层用 AccessGuard 控制)
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll())
