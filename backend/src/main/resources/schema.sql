@@ -70,3 +70,14 @@ CREATE TABLE IF NOT EXISTS assessment (
     interpretation VARCHAR(512),
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- (Task 9 追加 report 表:报告记录落库)
+CREATE TABLE IF NOT EXISTS report (
+    id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+    assessment_id BIGINT NOT NULL,
+    child_id      BIGINT NOT NULL,
+    draft         VARCHAR(8000) NOT NULL,
+    finalized_content VARCHAR(8000),
+    status        VARCHAR(16) NOT NULL,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
