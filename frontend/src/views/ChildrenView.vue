@@ -9,8 +9,9 @@
       <el-table-column prop="name" label="姓名" />
       <el-table-column prop="disorderType" label="障碍类型" />
       <el-table-column prop="guardianUserId" label="监护人(家长ID)" />
-      <el-table-column label="操作" width="280">
+      <el-table-column label="操作" width="340">
         <template #default="{ row }">
+          <el-button size="small" @click="goDetail(row)">详情</el-button>
           <el-button size="small" @click="goAssessment(row)">评估</el-button>
           <el-button size="small" @click="openEdit(row)">编辑</el-button>
           <el-button size="small" type="danger" @click="onDelete(row)">删除</el-button>
@@ -107,5 +108,8 @@ async function onDelete(row) {
 }
 function goAssessment(row) {
   router.push({ path: '/assessment', query: { childId: row.id, childName: row.name } })
+}
+function goDetail(row) {
+  router.push(`/children/${row.id}`)
 }
 </script>
