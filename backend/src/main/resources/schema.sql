@@ -81,3 +81,14 @@ CREATE TABLE IF NOT EXISTS report (
     status        VARCHAR(16) NOT NULL,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- (Task 10 追加 iep 表:IEP 记录落库)
+CREATE TABLE IF NOT EXISTS iep (
+    id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+    report_id     BIGINT NOT NULL,
+    child_id      BIGINT NOT NULL,
+    draft         VARCHAR(8000) NOT NULL,
+    finalized_content VARCHAR(8000),
+    status        VARCHAR(16) NOT NULL,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
