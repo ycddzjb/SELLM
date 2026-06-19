@@ -29,6 +29,18 @@ class UserRepositoryTest {
         // 库里存的是 BCrypt 哈希,不是明文
         assertThat(found.getPasswordHash()).isNotEqualTo("secret123");
         assertThat(found.getPasswordHash()).startsWith("$2");
+        // 旧 4 参 register 默认 status=ACTIVE
+        assertThat(found.getStatus()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void 五参注册能存PENDING并读回() {
+        jdbc.update("DELETE FROM app_user WHERE username = 't3'");
+        repository.register("t3", "pw123456", Role.PARENT, 2L, "PENDING");
+        AppUser found = repository.findByUsername("t3");
+        assertThat(found).isNotNull();
+        assertThat(found.getRole()).isEqualTo(Role.PARENT);
+        assertThat(found.getStatus()).isEqualTo("PENDING");
     }
 
     @Test

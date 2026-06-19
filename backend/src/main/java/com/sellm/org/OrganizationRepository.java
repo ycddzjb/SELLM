@@ -1,7 +1,9 @@
 package com.sellm.org;
 
 import org.springframework.stereotype.Repository;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Repository
@@ -27,6 +29,16 @@ public class OrganizationRepository {
         if (row == null) return null;
         return new Organization(((Number) row.get("id")).longValue(),
             (String) row.get("name"), (String) row.get("region"));
+    }
+
+    /** 所有机构,按 id 升序。供超管列表与注册选机构的公开列表。 */
+    public List<Organization> listAll() {
+        List<Organization> list = new ArrayList<>();
+        for (Map<String, Object> row : mapper.findAll()) {
+            list.add(new Organization(((Number) row.get("id")).longValue(),
+                (String) row.get("name"), (String) row.get("region")));
+        }
+        return list;
     }
 
     /** 取机构名;机构不存在时返回兜底名,供报告/IEP 生成时不至于失败 */

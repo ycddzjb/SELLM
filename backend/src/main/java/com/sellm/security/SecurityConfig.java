@@ -36,8 +36,19 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
                 .requestMatchers(HttpMethod.PUT, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
-                // 建老师/管理者账号:仅 MANAGER
-                .requestMatchers(HttpMethod.POST, "/api/users/**").hasRole("MANAGER")
+                // 建账号:超管(建 MANAGER)+ 机构管理者(建 TEACHER/PARENT);具体角色能建什么由 controller 细分
+                .requestMatchers(HttpMethod.POST, "/api/users/**").hasAnyRole("SUPER_ADMIN", "MANAGER")
+                // 用户列表:超管看全部、管理者看本机构
+                .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole("SUPER_ADMIN", "MANAGER")
+                // 全角色改自己密码(任何登录用户);放在 /api/users/* 通配之前以正确命中
+                .requestMatchers(HttpMethod.PUT, "/api/users/me/password").authenticated()
+                // 机构管理者:看本机构待审家长 + 审核(通过/拒绝)
+                .requestMatchers(HttpMethod.GET, "/api/users/pending").hasRole("MANAGER")
+                .requestMatchers(HttpMethod.PUT, "/api/users/*/approve", "/api/users/*/reject").hasRole("MANAGER")
+                // 机构端点:公开列表免登录(注册选机构),建机构/看全部限超管
+                .requestMatchers(HttpMethod.GET, "/api/orgs/public").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/orgs").hasRole("SUPER_ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/orgs").hasRole("SUPER_ADMIN")
                 // 其余 /api/** 需登录(GET 三角色都可,行级权限在 service 层用 AccessGuard 控制)
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll())

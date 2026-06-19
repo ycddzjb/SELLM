@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth'
 
 const routes = [
   { path: '/login', component: () => import('../views/LoginView.vue') },
+  { path: '/register', component: () => import('../views/RegisterView.vue') },
   {
     path: '/',
     component: () => import('../layouts/MainLayout.vue'),
@@ -22,7 +23,7 @@ const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  if (to.path !== '/login' && !auth.isLoggedIn) {
+  if (to.path !== '/login' && to.path !== '/register' && !auth.isLoggedIn) {
     return '/login'
   }
 })

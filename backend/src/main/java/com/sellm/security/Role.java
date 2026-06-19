@@ -1,7 +1,8 @@
 package com.sellm.security;
 
 public enum Role {
-    TEACHER,   // 老师/康复师
-    MANAGER,   // 管理者
-    PARENT     // 家长
+    SUPER_ADMIN,  // 超级管理者(跨机构)
+    MANAGER,      // 机构管理者
+    TEACHER,      // 老师/康复师
+    PARENT        // 家长
 }
