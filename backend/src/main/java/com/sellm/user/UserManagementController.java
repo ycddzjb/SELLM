@@ -75,7 +75,7 @@ public class UserManagementController {
     @PutMapping("/{id}/approve")
     public Result<Void> approve(@PathVariable Long id) {
         AuthPrincipal me = currentUser.require();
-        requireSameOrgTarget(me, id);
+        requirePendingSameOrgTarget(me, id);
         userRepository.updateStatus(id, "ACTIVE");
         return Result.ok(null);
     }
@@ -84,7 +84,7 @@ public class UserManagementController {
     @PutMapping("/{id}/reject")
     public Result<Void> reject(@PathVariable Long id) {
         AuthPrincipal me = currentUser.require();
-        requireSameOrgTarget(me, id);
+        requirePendingSameOrgTarget(me, id);
         userRepository.updateStatus(id, "REJECTED");
         return Result.ok(null);
     }
@@ -101,12 +101,15 @@ public class UserManagementController {
         return Result.ok(null);
     }
 
-    // 行级校验:目标存在且与当前用户同机构,否则拒绝(防跨机构越权审核)
-    private void requireSameOrgTarget(AuthPrincipal me, Long targetId) {
+    // 行级校验:目标存在、与当前用户同机构、且当前为待审状态(审核只处理 PENDING,防误置 ACTIVE 用户)
+    private void requirePendingSameOrgTarget(AuthPrincipal me, Long targetId) {
         AppUser target = userRepository.findById(targetId);
         if (target == null || me.getOrgId() == null
                 || !me.getOrgId().equals(target.getOrgId())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED, "无权审核该账号");
+        }
+        if (!"PENDING".equals(target.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "该账号不是待审核状态");
         }
     }
 
