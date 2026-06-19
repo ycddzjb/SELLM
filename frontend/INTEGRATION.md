@@ -47,3 +47,40 @@
 ## 联调完毕
 
 后端进程已停,端口 8080 已释放;未起前端 dev server(5173 未占用)。H2 文件库(`backend/data/`)已 gitignore,不提交。
+
+
+---
+
+# 四级权限体系端到端联调结果(Task 9)
+
+日期:2026-06-18 · 分支:`feat/rbac-v2`
+
+后端 dev profile(H2 文件库 `backend/data/asd_dev.mv.db`)起在 `localhost:8080`,用 `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` 启动(日志见 `Tomcat started on port 8080` / `Started SellmApplication`)。DevSeeder 幂等纠正生效:旧库中 admin 启动后即为 SUPER_ADMIN(无机构、ACTIVE)。curl 直连走四级权限关键路径,逐条核对。机构名用英文(StarCenter/Nanjing)规避 Git Bash 中文 UTF-8 编码坑。
+
+## 关键路径逐条结果(全部符合预期)
+
+| # | 路径 | 预期 | 实际 | 结论 |
+|---|------|------|------|------|
+| 1 | 超管登录 `POST /api/auth/login` admin/admin123 | role=SUPER_ADMIN | `role:"SUPER_ADMIN"`,orgId=null,uid=1,签发 token | 通过 |
+| 2 | 超管建机构 `POST /api/orgs` StarCenter/Nanjing | 200 建成功 | `code:0`,data=2(机构 id) | 通过 |
+| 3 | 超管为机构1建 MANAGER `POST /api/users` orgId=1 | 200 建成功 | `code:0`,data=14(用户 id) | 通过 |
+| 4 | MANAGER 登录 + 建 TEACHER | 登录成功 + 建成功 | role=MANAGER orgId=1;建 TEACHER data=15 | 通过 |
+| 5 | MANAGER 建 MANAGER `POST /api/users` role=MANAGER | 403(业务拒) | 403 | 通过 |
+| 6 | 公开机构列表 `GET /api/orgs/public`(免登录) | 200 含机构 | 返回阳光小学(1)、StarCenter(2) | 通过 |
+| 7 | 家长公开注册 `POST /api/auth/register` orgId=1 | 返回 id,PENDING | `code:0`,data=16 | 通过 |
+| 8 | 待审家长登录 | 400(待审核) | 400 | 通过 |
+| 9 | MANAGER 看待审列表 `GET /api/users/pending` | 含 par_dev1 | data=[{id:16,par_dev1,PARENT,orgId:1,status:PENDING}] | 通过 |
+| 10 | MANAGER approve id=16 + 家长再登录 | approve 200 + 登录 200 拿 token | approve=200;登录返回 role=PARENT + token | 通过 |
+| 11 | TEACHER 改自己密码 + 新密码登录 | change 200 + 新密码登录 200 | change=200;tea456 登录=200 | 通过 |
+
+## 安全红线核对
+
+- 端点级 RBAC + 行级双层:MANAGER 建 MANAGER 被业务逻辑拒(403,#5);仅 MANAGER 可见待审列表(#9)。
+- status 强制:公开注册家长落 PENDING、审核前登录被拒(400,#8);approve 转 ACTIVE 后方可登录(#10)。
+- 用户列表/待审列表响应不含 passwordHash(#9 JSON 仅 id/username/role/orgId/status)。
+- 自助改密码改的是 token 持有者本人(#11)。
+- 超管跨机构:admin orgId=null,可建任意机构的 MANAGER(#3)。
+
+## 联调结论
+
+四级权限(SUPER_ADMIN / MANAGER / TEACHER / PARENT)升级后契约全连通,权限拦截正确,11 条关键路径全部符合预期,未发现越权未拦或契约不符。后端进程已停,端口 8080 已释放;未起前端 dev server(5173 未占用)。H2 文件库已 gitignore,不提交。
