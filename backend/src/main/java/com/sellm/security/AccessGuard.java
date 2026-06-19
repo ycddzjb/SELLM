@@ -21,6 +21,8 @@ public class AccessGuard {
             return false;
         }
         switch (principal.getRole()) {
+            case SUPER_ADMIN:
+                return true;  // 超管跨机构,可访问任意 child
             case MANAGER:
             case TEACHER:
                 // 本机构范围(orgId 相等;principal 无 org 时拒绝)
