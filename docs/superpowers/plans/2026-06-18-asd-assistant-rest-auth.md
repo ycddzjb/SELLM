@@ -3109,6 +3109,32 @@ cd "D:/works/test/SELLM" && git add backend/src/test/java/com/sellm/flow/ backen
 
 ---
 
+## 安全修复(最终整体审查发现 — Critical,合并前必修)
+
+最终整体审查发现一个 Critical 越权漏洞:公开的 `/api/auth/register` 直接采信请求里的 `role`/`orgId`,匿名者可注册成 `MANAGER` 越权读取整机构儿童 PII,使行级权限失效。**修复决策(已确认):公开注册一律只能注册为 PARENT;老师/管理者由已登录的 MANAGER 经受保护接口创建。**
+
+### Task 12: 修复注册提权漏洞(TDD)
+
+**Files:**
+- Modify: `backend/src/main/java/com/sellm/user/AuthController.java`(register 强制 PARENT,忽略客户端 role/orgId)
+- Modify: `backend/src/main/java/com/sellm/user/dto/RegisterRequest.java`(去掉 role/orgId,只留 username/password)
+- Create: `backend/src/main/java/com/sellm/user/UserManagementController.java`(`POST /api/users`,仅 MANAGER,在本机构内建老师/管理者)
+- Create: `backend/src/main/java/com/sellm/user/dto/CreateUserRequest.java`(username/password/role)
+- Modify: `backend/src/main/java/com/sellm/security/SecurityConfig.java`(`POST /api/users` 限 hasRole("MANAGER"))
+- Modify: 受影响测试(AuthApiTest/AuthTestSupport 等若依赖 register 传 role)
+- Test: `backend/src/test/java/com/sellm/user/UserManagementApiTest.java`
+
+要点:
+1. `RegisterRequest` 去掉 role/orgId;`AuthController.register` 一律 `userRepository.register(username, password, Role.PARENT, null)`(公开注册只产家长,无机构)。
+2. 老师/管理者创建:`UserManagementController.POST /api/users`,`@RequestBody CreateUserRequest{username,password,role}`;从 `CurrentUser.require()` 取调用者 orgId,新用户的 orgId **强制 = 调用者 orgId**(MANAGER 只能在自己机构内建账号),role 取请求(可建 TEACHER/MANAGER)。
+3. SecurityConfig:`POST /api/users` 限 `hasRole("MANAGER")`(端点级);`/api/auth/**` 仍 permitAll。
+4. **AuthTestSupport 改造**:此前测试用 register 直接造 TEACHER/MANAGER(orgId=1)。register 改造后不行了。改为:测试辅助里造老师/管理者时,走"先有一个 MANAGER 再用它建"或直接用 JdbcTemplate+UserRepository 插入(测试可接受直接插库造种子账号)。**最简方案**:AuthTestSupport 提供 `seedUserAndLogin(...)` 用注入的 UserRepository 直接 `register(username,password,role,orgId)` 造账号再登录(绕过 HTTP register 的 PARENT 限制,因为这是测试造种子,不经公开端点)。家长仍可走公开 register。实现者按此调整,确保 Task 7/8/9/10/11 既有测试仍绿(它们依赖老师/管理者/家长 token)。
+5. 测试 UserManagementApiTest:① MANAGER 建 TEACHER 成功且新账号 orgId=建者机构;② 非 MANAGER(TEACHER/PARENT)调 POST /api/users → 403;③ 公开 register 即使传 role=MANAGER 也只造出 PARENT(登录后只读自己孩子,读他人 403 验证未提权)。
+
+验证:相关测试 + 全量回归全绿。提交 message: `fix(security): 公开注册仅限 PARENT;老师/管理者由 MANAGER 经受保护端点创建(修复越权 C-1)`。
+
+---
+
 ## 后续计划(不在本计划范围)
 
 1. **更细粒度任教关系**:老师与具体学生的任教绑定(本计划老师按"本机构"范围;真实任教关系表留后续)。
