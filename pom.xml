@@ -28,8 +28,13 @@
         <module>backend</module>
         <!-- shared capability stub (P0 placeholder; code extracted in P1) -->
         <module>sellm-common</module>
-        <!-- Task 2: sellm-gateway, sellm-agent-teaching, sellm-agent-research,
-                     sellm-agent-aids, sellm-agent-qa  — added when those dirs exist -->
+        <!-- API Gateway -->
+        <module>sellm-gateway</module>
+        <!-- Agent services -->
+        <module>sellm-agent-teaching</module>
+        <module>sellm-agent-research</module>
+        <module>sellm-agent-aids</module>
+        <module>sellm-agent-qa</module>
     </modules>
 
     <dependencyManagement>
