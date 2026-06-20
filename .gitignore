@@ -26,3 +26,6 @@ Thumbs.db
 
 # dev profile H2 文件库
 backend/data/
+
+# Git worktree (隔离开发工作区)
+dev_workspace/
