@@ -16,6 +16,10 @@ public record AgentEvent(
         Long orgId,
         Map<String, Object> payload
 ) {
+    public AgentEvent {
+        payload = payload != null ? Map.copyOf(payload) : Map.of();
+    }
+
     public static AgentEvent of(String routingKey, Long actorUserId, Long orgId, Map<String, Object> payload) {
         return new AgentEvent(
                 UUID.randomUUID().toString(),
