@@ -1,0 +1,11 @@
+{
+  "pages": [
+    { "path": "pages/index/index", "style": { "navigationBarTitleText": "特教助手" } }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "SELLM",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F8F8F8"
+  }
+}
