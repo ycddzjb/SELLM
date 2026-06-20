@@ -27,3 +27,5 @@ sellm:
     api-key: ${SELLM_AI_API_KEY:}
     model: ${SELLM_AI_MODEL:gpt-4o-mini}
     timeout-seconds: 30
+  pdf:
+    font-path: ${SELLM_PDF_FONT_PATH:}   # CJK TTF 路径(中文 PDF 必需);缺失时英文正常、中文缺字形
