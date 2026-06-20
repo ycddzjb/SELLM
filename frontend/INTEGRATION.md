@@ -301,3 +301,25 @@
 阶段 F 多模态评估最小闭环连通:素材(图片/笔记)上传 → 对象存储(默认本地 noop)→ 多模态模型(默认 Mock,不外联)出各指标评分建议 → 老师采纳填入 → 走现有评估计分。红线:默认不外联(multimodal mock + storage noop);真实 vision/MinIO 需显式配置;图像 PII 风险在配置项/.env.example 显著告知;AI 仅产建议、老师确认;行级权限贯穿。后端全量回归 225 测试全绿(默认 mock+noop)。后端进程已停,端口已释放。
 
 > 真实多模态联调需用户配 SELLM_MULTIMODAL_PROVIDER=openai + base-url + api-key(如通义 qwen-vl-plus),并确认已获监护人对儿童影像出网的知情同意。
+
+---
+
+# 阶段 G(自动匹配量表 + 图像脱敏管线)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/scalematch-imageanon`
+
+后端 dev profile(multimodal=mock + image-anon=noop,默认不外联)。前端 `npm run build` 已通过。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回 | 结论 |
+|---|------|----------|------|
+| 1 | 老师对 ASD 儿童取 recommended-scales | 返回所有 ASD 类量表(cars + 新建) | 按障碍类型推荐正确 |
+| 2 | 无障碍类型儿童取推荐 | data=[] | 空类型空列表 |
+| 3 | 他机构老师取推荐 | HTTP 403 | 行级权限(AccessGuard) |
+
+> 图像脱敏管线由单测覆盖(ImageAnonConfigTest/HttpImageAnonymizerTest/OpenAiVisionModelTest 出网前用脱敏字节断言):默认 multimodal=mock,vision 不触发,e2e 不走真实图像出网,符合默认不外联红线。
+
+## 联调结论
+
+阶段 G 两块连通:(1) 自动匹配量表——评估按儿童障碍类型推荐适配量表(行级、空类型空列表、他机构 403、老师仍可切全部);(2) 图像脱敏管线——抽 ImageAnonymizer 接口默认 Noop(不改图),HttpImageAnonymizer 接外部 CV 打码服务(失败硬阻断),vision 出网前必经脱敏层(单测验证用脱敏后字节出网)。默认双层不外联(multimodal mock + image-anon noop)。后端全量回归 237 测试全绿。后端进程已停,端口已释放。
