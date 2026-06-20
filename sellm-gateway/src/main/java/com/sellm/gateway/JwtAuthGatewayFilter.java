@@ -26,7 +26,8 @@ public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String path = exchange.getRequest().getURI().getPath();
+        // 规范化路径，防止 /api/auth/../teaching/x 形式的路径穿越绕过白名单
+        String path = java.net.URI.create(exchange.getRequest().getURI().getRawPath()).normalize().getPath();
         if (isWhitelisted(path)) {
             return chain.filter(exchange);
         }
