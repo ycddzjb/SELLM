@@ -14,6 +14,12 @@
             :value="s.scaleId"
           />
         </el-select>
+        <div style="margin-top:6px">
+          <el-switch v-model="showAllScales" @change="reloadScales" />
+          <span style="margin-left:8px;color:#909399;font-size:12px">
+            {{ showAllScales ? '显示全部量表' : '仅显示按障碍类型推荐的量表' }}
+          </span>
+        </div>
       </el-form-item>
 
       <template v-if="items.length">
@@ -66,6 +72,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { submitAssessment } from '../api/assessments'
 import { listScales, getScale } from '../api/scales'
+import { recommendedScales } from '../api/children'
 import { uploadMedia, analyzeMedia } from '../api/media'
 import { disorderLabel } from '../api/meta'
 
@@ -75,6 +82,7 @@ const childId = ref(route.query.childId || '')
 
 const scales = ref([])
 const scaleId = ref('')
+const showAllScales = ref(false)
 const items = ref([])
 const answers = reactive({})
 const loading = ref(false)
@@ -125,8 +133,16 @@ function adoptSuggestions() {
   ElMessage.success('已填入评分,可手动调整后提交')
 }
 
-async function loadScales() {
-  try { scales.value = await listScales() } catch (e) {}
+async function reloadScales() {
+  try {
+    if (!showAllScales.value && childId.value) {
+      const rec = await recommendedScales(Number(childId.value))
+      if (rec && rec.length) { scales.value = rec; return }
+      showAllScales.value = true
+      ElMessage.info('该儿童无对应推荐量表,已显示全部')
+    }
+    scales.value = await listScales()
+  } catch (e) { scales.value = [] }
 }
 
 async function onScaleChange(id) {
@@ -163,5 +179,5 @@ function goReport() {
   router.push({ path: '/report', query: { assessmentId: result.value.id } })
 }
 
-onMounted(loadScales)
+onMounted(reloadScales)
 </script>
