@@ -24,6 +24,7 @@
       <div style="margin-top:12px">
         <el-button type="primary" :loading="finLoading" @click="onFinalize">定稿</el-button>
         <el-button v-if="report.status === 'FINALIZED'" type="success" @click="goIep">基于此报告生成 IEP</el-button>
+        <el-button v-if="report.status === 'FINALIZED'" @click="onDownload">下载 PDF</el-button>
       </div>
       <p v-if="report.finalizedContent" style="margin-top:12px;color:#666">
         已定稿内容:{{ report.finalizedContent }}
@@ -36,7 +37,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { generateReport, getReport, finalizeReport } from '../api/reports'
+import { generateReport, getReport, finalizeReport, downloadReportPdf } from '../api/reports'
+import { saveBlob } from '../api/familyIeps'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,5 +82,11 @@ async function onFinalize() {
 }
 function goIep() {
   router.push({ path: '/iep', query: { reportId: report.value.id } })
+}
+async function onDownload() {
+  try {
+    const blob = await downloadReportPdf(report.value.id)
+    saveBlob(blob, `report-${report.value.id}.pdf`)
+  } catch (e) {}
 }
 </script>

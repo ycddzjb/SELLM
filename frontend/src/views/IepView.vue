@@ -23,6 +23,7 @@
                 placeholder="在 AI 草案基础上修改为最终 IEP" />
       <div style="margin-top:12px">
         <el-button type="primary" :loading="finLoading" @click="onFinalize">定稿</el-button>
+        <el-button v-if="iep.status === 'FINALIZED'" @click="onDownload">下载 PDF</el-button>
       </div>
       <p v-if="iep.finalizedContent" style="margin-top:12px;color:#666">
         已定稿内容:{{ iep.finalizedContent }}
@@ -35,7 +36,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { generateIep, getIep, finalizeIep } from '../api/ieps'
+import { generateIep, getIep, finalizeIep, downloadIepPdf } from '../api/ieps'
+import { saveBlob } from '../api/familyIeps'
 
 const route = useRoute()
 const reportId = ref(route.query.reportId || '')
@@ -75,5 +77,11 @@ async function onFinalize() {
     iep.value = await finalizeIep(iep.value.id, finalContent.value)
     ElMessage.success('已定稿')
   } catch (e) {} finally { finLoading.value = false }
+}
+async function onDownload() {
+  try {
+    const blob = await downloadIepPdf(iep.value.id)
+    saveBlob(blob, `iep-${iep.value.id}.pdf`)
+  } catch (e) {}
 }
 </script>

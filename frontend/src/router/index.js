@@ -16,6 +16,7 @@ const routes = [
       { path: 'assessment', component: () => import('../views/AssessmentView.vue') },
       { path: 'report', component: () => import('../views/ReportView.vue') },
       { path: 'iep', component: () => import('../views/IepView.vue') },
+      { path: 'family-iep', component: () => import('../views/FamilyIepView.vue') },
       { path: 'users', component: () => import('../views/UsersView.vue') }
     ]
   }

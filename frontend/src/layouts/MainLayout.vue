@@ -13,6 +13,9 @@
         <el-menu-item v-if="auth.isTeacher" index="/iep">IEP</el-menu-item>
         <!-- 用户管理:超管/管理员/老师 -->
         <el-menu-item v-if="auth.isSuperAdmin || auth.isManager || auth.isTeacher" index="/users">用户管理</el-menu-item>
+        <!-- 家长:家庭 IEP + 个人(改密码在用户管理页,这里给家庭IEP入口) -->
+        <el-menu-item v-if="auth.isParent" index="/family-iep">家庭 IEP</el-menu-item>
+        <el-menu-item v-if="auth.isParent" index="/children">我的孩子</el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
