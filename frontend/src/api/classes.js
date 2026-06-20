@@ -5,3 +5,4 @@ export const listClasses = (orgId) =>
 export const createClass = (payload) => http.post('/classes', payload)
 export const updateClass = (id, payload) => http.put(`/classes/${id}`, payload)
 export const deleteClass = (id) => http.delete(`/classes/${id}`)
+export const publicClassTeachers = (classId) => http.get(`/classes/public/${classId}/teachers`)

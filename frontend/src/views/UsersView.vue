@@ -121,26 +121,6 @@
       </el-card>
 
       <el-card style="margin-bottom:24px">
-        <template #header><span>待审核家长</span></template>
-        <el-table :data="pending" size="small">
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="username" label="用户名" />
-          <el-table-column label="状态">
-            <template #default="{ row }">
-              <el-tag size="small" type="warning">{{ statusLabel(row.status) }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="200">
-            <template #default="{ row }">
-              <el-button size="small" type="success" @click="onApprove(row.id)">通过</el-button>
-              <el-button size="small" type="danger" @click="onReject(row.id)">拒绝</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <el-empty v-if="!pending.length" description="暂无待审核家长" :image-size="60" />
-      </el-card>
-
-      <el-card style="margin-bottom:24px">
         <template #header><span>本机构用户</span></template>
         <el-table :data="users" size="small">
           <el-table-column prop="id" label="ID" width="80" />
@@ -159,16 +139,40 @@
       <el-card>
         <template #header><span>本机构家长</span></template>
         <el-table :data="parents" size="small">
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="username" label="用户名" />
-          <el-table-column label="状态">
+          <el-table-column prop="username" label="账号" />
+          <el-table-column prop="name" label="家长姓名" />
+          <el-table-column prop="childName" label="儿童姓名" />
+          <el-table-column prop="relationshipLabel" label="关系" width="80" />
+          <el-table-column prop="className" label="班级" />
+          <el-table-column label="状态" width="90">
             <template #default="{ row }">
               <el-tag size="small" :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
             </template>
           </el-table-column>
         </el-table>
         <el-empty v-if="!parents.length" description="暂无家长" :image-size="60" />
-        <p style="color:#999;font-size:12px;margin-top:8px">家长完整信息(姓名/儿童/关系/班级)将在家长注册改造后展示。</p>
+        <p style="color:#999;font-size:12px;margin-top:8px">家长注册后由所选老师审核;此处展示已注册家长信息。</p>
+      </el-card>
+    </template>
+
+    <!-- ============ TEACHER ============ -->
+    <template v-else-if="auth.isTeacher">
+      <el-card>
+        <template #header><span>待审核家长(分派给我)</span></template>
+        <el-table :data="pending" size="small">
+          <el-table-column prop="username" label="账号" />
+          <el-table-column prop="name" label="家长姓名" />
+          <el-table-column prop="childName" label="儿童姓名" />
+          <el-table-column prop="relationshipLabel" label="关系" width="80" />
+          <el-table-column label="操作" width="180">
+            <template #default="{ row }">
+              <el-button size="small" type="success" @click="onApprove(row.id)">通过</el-button>
+              <el-button size="small" type="danger" @click="onReject(row.id)">拒绝</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-if="!pending.length" description="暂无待审核家长" :image-size="60" />
+        <p style="color:#999;font-size:12px;margin-top:8px">审核通过后将自动为该家长建立儿童档案,家长即可登录。</p>
       </el-card>
     </template>
   </div>
@@ -320,7 +324,7 @@ async function onApprove(id) {
   try {
     await approveUser(id)
     ElMessage.success('已通过审核')
-    await Promise.all([loadPending(), loadUsers()])
+    await loadPending()
   } catch (e) {}
 }
 async function onReject(id) {
@@ -336,10 +340,11 @@ onMounted(() => {
     loadOrgs()
     loadUsers()
   } else if (auth.isManager) {
-    loadPending()
     loadUsers()
     loadParents()
     loadClasses()
+  } else if (auth.isTeacher) {
+    loadPending()
   }
 })
 </script>
