@@ -19,9 +19,4 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> handleIllegalArgument(IllegalArgumentException e) {
         return ResponseEntity.badRequest().body(Result.error(ErrorCode.INVALID_INPUT));
     }
-
-    @ExceptionHandler(com.sellm.scale.ScoringException.class)
-    public ResponseEntity<Result<Void>> handleScoring(com.sellm.scale.ScoringException e) {
-        return ResponseEntity.badRequest().body(Result.error(ErrorCode.INVALID_INPUT));
-    }
 }
