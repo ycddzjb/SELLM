@@ -276,3 +276,28 @@
 阶段 E 的真实大模型接入端到端验证通过:可切换适配器在配置真实 provider 后,报告/IEP/家庭IEP 全部由通义千问真实生成,脱敏出网+还原链路正确,人工定稿+PDF 下载红线不变。修复后全量回归 205 测试全绿(默认 mock 不受影响)。
 
 > 安全提醒:联调用的 API key 已出现在协作记录中,建议轮换。生产用 SELLM_AI_* 环境变量注入,key 不入库不入代码。
+
+---
+
+# 阶段 F(多模态评估)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/multimodal-eval`
+
+后端 dev profile(multimodal=mock + 存储=noop,**默认不外联、不依赖 MinIO**)起在 `localhost:8080`。前端 `npm run build` 已通过。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回 | 结论 |
+|---|------|----------|------|
+| 1 | 老师上传训练笔记(NOTE) | mediaId 返回 | 上传落库 |
+| 2 | analyze 识别 | 每指标 Mock 建议(q1/q2 各 2.0 + 理由) | 多模态识别闭环(默认 Mock) |
+| 3 | 采纳建议分提交正式评估 | totalScore=4,bandLabel=轻-中度 | 建议→现有计分链路打通 |
+| 4 | 他机构老师上传 | HTTP 403 | 行级权限(AccessGuard) |
+
+> 图片文件上传经 MockMvc `MockMultipartFile` 测试验证(存储 noop 往返 + analyze 出建议);curl 直传图片受 Windows Git Bash multipart 编码限制未走通,非后端问题。
+
+## 联调结论
+
+阶段 F 多模态评估最小闭环连通:素材(图片/笔记)上传 → 对象存储(默认本地 noop)→ 多模态模型(默认 Mock,不外联)出各指标评分建议 → 老师采纳填入 → 走现有评估计分。红线:默认不外联(multimodal mock + storage noop);真实 vision/MinIO 需显式配置;图像 PII 风险在配置项/.env.example 显著告知;AI 仅产建议、老师确认;行级权限贯穿。后端全量回归 225 测试全绿(默认 mock+noop)。后端进程已停,端口已释放。
+
+> 真实多模态联调需用户配 SELLM_MULTIMODAL_PROVIDER=openai + base-url + api-key(如通义 qwen-vl-plus),并确认已获监护人对儿童影像出网的知情同意。
