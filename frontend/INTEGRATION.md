@@ -84,3 +84,29 @@
 ## 联调结论
 
 四级权限(SUPER_ADMIN / MANAGER / TEACHER / PARENT)升级后契约全连通,权限拦截正确,11 条关键路径全部符合预期,未发现越权未拦或契约不符。后端进程已停,端口 8080 已释放;未起前端 dev server(5173 未占用)。H2 文件库已 gitignore,不提交。
+
+---
+
+# 阶段 A(组织模型 + 班级)端到端联调结果(计划六 Task 7)
+
+日期:2026-06-20 · 分支:`feat/org-class`
+
+后端 dev profile(H2 文件库,已含 teacher_class 新表,种子 admin/admin123)起在 `localhost:8080`,curl 直连走阶段 A 完整链路。前端 `npm run build` 已通过(Task 6)。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回(摘要) | 结论 |
+|---|------|------------------|------|
+| 1 | 超管登录 `POST /api/auth/login` | `code:"0"`,JWT token(190 字符) | 符合 |
+| 2 | 超管一体建机构+管理员 `POST /api/orgs`(disorderTypes=ASD,ADHD / province=Jiangsu / city=Nanjing / managerUsername+managerPassword) | `code:"0"`,`data:2`(orgId) | 符合 |
+| 3 | 管理员登录 | `code:"0"`,`role:"MANAGER"`,`orgId:2`,`orgName:"E2E Special Edu Center"` | 一体创建的管理员可登录,机构正确 |
+| 4 | 管理员建班级 `POST /api/classes`(disorderTypes=ASD,LANGUAGE) | `code:"0"`,`data:1`(classId) | 符合 |
+| 5 | 班级列表 `GET /api/classes` | `[{id:1,name:"E2E Class A",orgId:2,disorderTypes:"ASD,LANGUAGE"}]` | orgId 自动本机构,多选障碍类型存取一致 |
+| 6 | 管理员建老师绑班级 `POST /api/users`(role=TEACHER,classIds=[1]) | `code:"0"`,`data:7`(teacherId) | 老师绑班级成功 |
+| 7 | 本机构家长列表 `GET /api/users/parents` | `[{id:8,username:parent_...,role:PARENT,orgId:2,status:ACTIVE}]` | 只返回本机构 PARENT |
+| 8 | 越权:建老师绑他机构班级 classIds=[99999] | HTTP **403**,且 hacker_t 未落库 | 行级校验生效,@Transactional 回滚 |
+| 9 | 老师调 `GET /api/users/parents` | HTTP **403** | 端点级拦截(仅 MANAGER) |
+
+## 联调结论
+
+阶段 A(组织模型 + 班级)契约全连通:一体建机构+管理员(orgId 自动归属)、班级 CRUD(orgId 自动本机构、障碍类型多选)、老师绑班级(本机构校验、越权 403 且事务回滚)、管理员查本机构家长(仅 PARENT、老师越权 403)。9 条路径全部符合预期。后端进程已停,端口 8080 已释放;H2 文件库已 gitignore,不提交。
