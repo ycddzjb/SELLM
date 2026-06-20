@@ -49,9 +49,24 @@ public class IepAppService {
         // 评估结论:优先用定稿内容,否则用草稿
         String conclusion = report.getFinalizedContent() != null
             ? report.getFinalizedContent() : report.getDraft();
-        Iep domain = iepService.generateDraft(child.getName(), schoolName, conclusion);
+        Iep domain = iepService.generateDraft(child.getName(), schoolName, conclusion, profileContext(child));
         return recordRepository.save(new IepRecord(null, reportId, report.getChildId(),
             domain.getDraft(), null, "DRAFT"));
+    }
+
+    /** 把儿童档案扩展字段拼成模型可用上下文(非 PII)。 */
+    private String profileContext(Child child) {
+        StringBuilder sb = new StringBuilder();
+        if (child.getAnnualIepSummary() != null && !child.getAnnualIepSummary().isBlank()) {
+            sb.append("年度 IEP 方案: ").append(child.getAnnualIepSummary()).append("\n");
+        }
+        if (child.getMonthlyGoal() != null && !child.getMonthlyGoal().isBlank()) {
+            sb.append("月度干预目标: ").append(child.getMonthlyGoal()).append("\n");
+        }
+        if (child.getInterventionProgress() != null && !child.getInterventionProgress().isBlank()) {
+            sb.append("干预进度: ").append(child.getInterventionProgress()).append("\n");
+        }
+        return sb.toString();
     }
 
     public IepRecord get(Long id) {
