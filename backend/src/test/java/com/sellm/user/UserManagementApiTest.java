@@ -168,12 +168,16 @@ class UserManagementApiTest {
     @Test
     void 公开注册即使传role为MANAGER也只产PARENT无法越权读他人孩子() throws Exception {
         jdbc.update("DELETE FROM app_user WHERE username = 'um_attacker'");
+        // 注册需指派本机构老师;造一个 org1 老师
+        long umTeacherId = userRepository.register("um_attacker_t", "secret123",
+            com.sellm.security.Role.TEACHER, 1L, "ACTIVE").getId();
         // 攻击者公开注册,试图自选 role=MANAGER、orgId=1 提权
         Map<String, Object> reg = new HashMap<>();
         reg.put("username", "um_attacker");
         reg.put("password", "pw123456");
         reg.put("role", "MANAGER");
         reg.put("orgId", 1);
+        reg.put("assignedTeacherId", umTeacherId);
         mvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(reg)))

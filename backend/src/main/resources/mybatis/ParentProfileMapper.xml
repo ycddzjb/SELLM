@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.parent.ParentProfileMapper">
+
+    <resultMap id="profileMap" type="map">
+        <id column="user_id" property="userId"/>
+        <result column="name_enc" property="nameEnc"/>
+        <result column="relationship" property="relationship"/>
+        <result column="assigned_teacher_id" property="assignedTeacherId"/>
+        <result column="child_name_enc" property="childNameEnc"/>
+        <result column="child_disorder_type" property="childDisorderType"/>
+        <result column="class_id" property="classId"/>
+        <result column="child_id" property="childId"/>
+    </resultMap>
+
+    <!-- 列表行:profile + app_user(username/status) + class_room(班级名) -->
+    <resultMap id="profileRowMap" type="map">
+        <id column="user_id" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="status" property="status"/>
+        <result column="name_enc" property="nameEnc"/>
+        <result column="relationship" property="relationship"/>
+        <result column="assigned_teacher_id" property="assignedTeacherId"/>
+        <result column="child_name_enc" property="childNameEnc"/>
+        <result column="child_disorder_type" property="childDisorderType"/>
+        <result column="class_id" property="classId"/>
+        <result column="class_name" property="className"/>
+        <result column="child_id" property="childId"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map">
+        INSERT INTO parent_profile
+            (user_id, name_enc, relationship, assigned_teacher_id,
+             child_name_enc, child_disorder_type, class_id, child_id)
+        VALUES
+            (#{userId}, #{nameEnc}, #{relationship}, #{assignedTeacherId},
+             #{childNameEnc}, #{childDisorderType}, #{classId}, #{childId})
+    </insert>
+
+    <select id="findByUserId" parameterType="long" resultMap="profileMap">
+        SELECT user_id, name_enc, relationship, assigned_teacher_id,
+               child_name_enc, child_disorder_type, class_id, child_id
+        FROM parent_profile WHERE user_id = #{userId}
+    </select>
+
+    <update id="updateChildId">
+        UPDATE parent_profile SET child_id = #{childId} WHERE user_id = #{userId}
+    </update>
+
+    <select id="findByOrg" parameterType="long" resultMap="profileRowMap">
+        SELECT p.user_id, u.username, u.status,
+               p.name_enc, p.relationship, p.assigned_teacher_id,
+               p.child_name_enc, p.child_disorder_type, p.class_id, c.name AS class_name, p.child_id
+        FROM parent_profile p
+        JOIN app_user u ON u.id = p.user_id
+        LEFT JOIN class_room c ON c.id = p.class_id
+        WHERE u.org_id = #{orgId} AND u.role = 'PARENT'
+        ORDER BY p.user_id
+    </select>
+
+    <select id="findPendingByTeacher" parameterType="long" resultMap="profileRowMap">
+        SELECT p.user_id, u.username, u.status,
+               p.name_enc, p.relationship, p.assigned_teacher_id,
+               p.child_name_enc, p.child_disorder_type, p.class_id, c.name AS class_name, p.child_id
+        FROM parent_profile p
+        JOIN app_user u ON u.id = p.user_id
+        LEFT JOIN class_room c ON c.id = p.class_id
+        WHERE p.assigned_teacher_id = #{teacherId} AND u.status = 'PENDING'
+        ORDER BY p.user_id
+    </select>
+
+</mapper>

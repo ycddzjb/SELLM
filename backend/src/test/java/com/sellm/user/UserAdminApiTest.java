@@ -32,10 +32,16 @@ class UserAdminApiTest {
 
     /** 公开注册一个家长到指定机构(产 PENDING),返回其 id。 */
     private long registerPendingParent(String username, String password, long orgId) throws Exception {
+        // 注册需指派本机构老师作为审核人,先造一个
+        com.sellm.user.AppUser teacher = userRepository.findByUsername(username + "_t");
+        long teacherId = (teacher != null) ? teacher.getId()
+            : userRepository.register(username + "_t", "secret123",
+                com.sellm.security.Role.TEACHER, orgId, "ACTIVE").getId();
         Map<String, Object> reg = new HashMap<>();
         reg.put("username", username);
         reg.put("password", password);
         reg.put("orgId", orgId);
+        reg.put("assignedTeacherId", teacherId);
         String body = mvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(reg)))
