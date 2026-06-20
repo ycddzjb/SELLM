@@ -7,18 +7,23 @@
         <id column="id" property="id"/>
         <result column="name" property="name"/>
         <result column="region" property="region"/>
+        <result column="disorder_types" property="disorderTypes"/>
+        <result column="province" property="province"/>
+        <result column="city" property="city"/>
     </resultMap>
 
     <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO organization (name, region) VALUES (#{name}, #{region})
+        INSERT INTO organization (name, region, disorder_types, province, city)
+        VALUES (#{name}, #{region}, #{disorderTypes}, #{province}, #{city})
     </insert>
 
     <select id="findById" parameterType="long" resultMap="orgMap">
-        SELECT id, name, region FROM organization WHERE id = #{id}
+        SELECT id, name, region, disorder_types, province, city FROM organization WHERE id = #{id}
     </select>
 
     <select id="findAll" resultMap="orgMap">
-        SELECT id, name, region FROM organization ORDER BY id
+        SELECT id, name, region, disorder_types, province, city FROM organization ORDER BY id
     </select>
 
 </mapper>
+

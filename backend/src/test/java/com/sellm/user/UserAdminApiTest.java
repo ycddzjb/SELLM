@@ -30,18 +30,37 @@ class UserAdminApiTest {
     @Autowired
     private UserRepository userRepository;
 
-    /** 公开注册一个家长到指定机构(产 PENDING),返回其 id。 */
+    /** 公开注册一个家长到指定机构(产 PENDING),返回其 id。审核老师用户名固定为 username + "_t"。 */
     private long registerPendingParent(String username, String password, long orgId) throws Exception {
+        // 注册需指派本机构老师作为审核人,先造一个(用户名 username_t,密码 secret123)
+        com.sellm.user.AppUser teacher = userRepository.findByUsername(username + "_t");
+        long teacherId = (teacher != null) ? teacher.getId()
+            : userRepository.register(username + "_t", "secret123",
+                com.sellm.security.Role.TEACHER, orgId, "ACTIVE").getId();
         Map<String, Object> reg = new HashMap<>();
         reg.put("username", username);
         reg.put("password", password);
         reg.put("orgId", orgId);
+        reg.put("assignedTeacherId", teacherId);
+        reg.put("childName", username + "_child");
         String body = mvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(reg)))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
         return json.readTree(body).path("data").asLong();
+    }
+
+    /** 登录该家长对应的审核老师(username + "_t" / secret123),返回 token。 */
+    private String loginAssignedTeacher(String parentUsername) throws Exception {
+        Map<String, Object> login = new HashMap<>();
+        login.put("username", parentUsername + "_t");
+        login.put("password", "secret123");
+        String body = mvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(login)))
+            .andReturn().getResponse().getContentAsString();
+        return json.readTree(body).path("data").path("token").asText();
     }
 
     private int loginStatus(String username, String password) throws Exception {
@@ -55,13 +74,12 @@ class UserAdminApiTest {
     }
 
     @Test
-    void MANAGER看本机构待审家长列表含新注册家长() throws Exception {
+    void 被指派老师看待审列表含新注册家长() throws Exception {
         long orgId = 31L;
         long pid = registerPendingParent("ua_pending1", "pw123456", orgId);
-        String mgr = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
-            "ua_mgr1", "pw123456", "MANAGER", orgId);
+        String teacher = loginAssignedTeacher("ua_pending1");
 
-        String body = mvc.perform(get("/api/users/pending").header("Authorization", "Bearer " + mgr))
+        String body = mvc.perform(get("/api/users/pending").header("Authorization", "Bearer " + teacher))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("0"))
             .andReturn().getResponse().getContentAsString();
@@ -81,16 +99,15 @@ class UserAdminApiTest {
     }
 
     @Test
-    void MANAGER审核通过后家长可登录() throws Exception {
+    void 被指派老师审核通过后家长可登录() throws Exception {
         long orgId = 32L;
         long pid = registerPendingParent("ua_pending2", "pw123456", orgId);
-        String mgr = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
-            "ua_mgr2", "pw123456", "MANAGER", orgId);
+        String teacher = loginAssignedTeacher("ua_pending2");
 
         // 通过前不能登录
         assertThat(loginStatus("ua_pending2", "pw123456")).isEqualTo(400);
 
-        mvc.perform(put("/api/users/" + pid + "/approve").header("Authorization", "Bearer " + mgr))
+        mvc.perform(put("/api/users/" + pid + "/approve").header("Authorization", "Bearer " + teacher))
             .andExpect(status().isOk());
 
         // 通过后能登录
@@ -98,30 +115,28 @@ class UserAdminApiTest {
     }
 
     @Test
-    void MANAGER拒绝后家长仍不能登录() throws Exception {
+    void 被指派老师拒绝后家长仍不能登录() throws Exception {
         long orgId = 33L;
         long pid = registerPendingParent("ua_pending3", "pw123456", orgId);
-        String mgr = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
-            "ua_mgr3", "pw123456", "MANAGER", orgId);
+        String teacher = loginAssignedTeacher("ua_pending3");
 
-        mvc.perform(put("/api/users/" + pid + "/reject").header("Authorization", "Bearer " + mgr))
+        mvc.perform(put("/api/users/" + pid + "/reject").header("Authorization", "Bearer " + teacher))
             .andExpect(status().isOk());
 
         assertThat(loginStatus("ua_pending3", "pw123456")).isEqualTo(400);
     }
 
     @Test
-    void 跨机构MANAGER审核他机构待审家长被拒403() throws Exception {
+    void 非指派老师审核他人待审家长被拒403() throws Exception {
         long orgA = 41L;
-        long orgB = 42L;
         long pidA = registerPendingParent("ua_pending_a", "pw123456", orgA);
-        // 机构B 的 MANAGER 试图审核机构A 的待审家长
-        String mgrB = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
-            "ua_mgr_b", "pw123456", "MANAGER", orgB);
+        // 同机构另一个老师(非指派)试图审核
+        String otherTeacher = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
+            "ua_teacher_other", "pw123456", "TEACHER", orgA);
 
-        mvc.perform(put("/api/users/" + pidA + "/approve").header("Authorization", "Bearer " + mgrB))
+        mvc.perform(put("/api/users/" + pidA + "/approve").header("Authorization", "Bearer " + otherTeacher))
             .andExpect(status().isForbidden());
-        mvc.perform(put("/api/users/" + pidA + "/reject").header("Authorization", "Bearer " + mgrB))
+        mvc.perform(put("/api/users/" + pidA + "/reject").header("Authorization", "Bearer " + otherTeacher))
             .andExpect(status().isForbidden());
 
         // 越权失败后,该家长仍是 PENDING,不能登录
@@ -163,10 +178,12 @@ class UserAdminApiTest {
     }
 
     @Test
-    void TEACHER访问待审列表被拒403() throws Exception {
+    void 老师访问待审列表无分派时返回空() throws Exception {
         String teacher = AuthTestSupport.registerAndLogin(mvc, json, userRepository,
             "ua_teacher_pend", "pw123456", "TEACHER", 53L);
         mvc.perform(get("/api/users/pending").header("Authorization", "Bearer " + teacher))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("0"))
+            .andExpect(jsonPath("$.data").isArray());
     }
 }

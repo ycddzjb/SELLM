@@ -1,5 +1,25 @@
 <template>
   <div>
+    <el-card v-if="reminders.length" style="margin-bottom:16px">
+      <template #header>
+        <span>到期提醒(30 天内 / 已逾期)</span>
+      </template>
+      <el-table :data="reminders" border size="small" @row-click="goDetailById">
+        <el-table-column prop="name" label="姓名" />
+        <el-table-column label="类型" width="120">
+          <template #default="{ row }">{{ reminderTypeLabel(row.reminderType) }}</template>
+        </el-table-column>
+        <el-table-column prop="dueDate" label="到期日" width="140" />
+        <el-table-column label="剩余" width="140">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.overdue ? 'danger' : 'warning'">
+              {{ row.overdue ? `已逾期${-row.daysLeft}天` : `${row.daysLeft}天后` }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
     <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
       <h3>儿童档案</h3>
       <el-button type="primary" @click="openCreate">新建档案</el-button>
@@ -43,9 +63,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listChildren, createChild, updateChild, deleteChild } from '../api/children'
+import { listChildren, createChild, updateChild, deleteChild, listReminders } from '../api/children'
 
 const rows = ref([])
+const reminders = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const editing = ref(false)
@@ -53,15 +74,23 @@ const editId = ref(null)
 const form = reactive({ name: '', disorderType: '', guardianUserId: '' })
 const router = useRouter()
 
+const REMINDER_TYPE_LABELS = { REASSESS: '复评提醒', IEP_DUE: 'IEP到期' }
+const reminderTypeLabel = (t) => REMINDER_TYPE_LABELS[t] || t
+
 async function load() {
   loading.value = true
   try {
     rows.value = await listChildren()
+    try { reminders.value = await listReminders() } catch (e) { reminders.value = [] }
   } finally {
     loading.value = false
   }
 }
 onMounted(load)
+
+function goDetailById(row) {
+  router.push(`/children/${row.childId}`)
+}
 
 function openCreate() {
   editing.value = false

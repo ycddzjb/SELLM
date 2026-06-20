@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.user.TeacherClassMapper">
+
+    <insert id="insert">
+        INSERT INTO teacher_class (teacher_user_id, class_id)
+        VALUES (#{teacherUserId}, #{classId})
+    </insert>
+
+    <select id="findClassIdsByTeacher" resultType="long">
+        SELECT class_id FROM teacher_class WHERE teacher_user_id = #{teacherUserId} ORDER BY class_id
+    </select>
+
+    <select id="findTeacherIdsByClass" resultType="long">
+        SELECT teacher_user_id FROM teacher_class WHERE class_id = #{classId} ORDER BY teacher_user_id
+    </select>
+
+    <delete id="deleteByTeacher">
+        DELETE FROM teacher_class WHERE teacher_user_id = #{teacherUserId}
+    </delete>
+
+</mapper>

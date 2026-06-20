@@ -19,6 +19,11 @@ public class IepService {
     }
 
     public Iep generateDraft(String childName, String schoolName, String assessmentConclusion) {
+        return generateDraft(childName, schoolName, assessmentConclusion, null);
+    }
+
+    public Iep generateDraft(String childName, String schoolName, String assessmentConclusion,
+                             String profileContext) {
         List<KnowledgeDoc> docs = ragRetriever.retrieve(
             "ASD IEP 干预 " + assessmentConclusion, 3);
 
@@ -27,13 +32,18 @@ public class IepService {
             knowledge.append(doc.getContent()).append("\n");
         }
 
-        String prompt = "请为 " + childName + "(" + schoolName + ")生成 IEP 草案,"
-            + "包含长短期目标与干预活动建议。\n"
-            + "评估结论: " + assessmentConclusion + "\n"
-            + "可参考的范例与策略:\n" + knowledge;
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("你是特殊教育 IEP 规划专家。请为 ").append(childName)
+            .append("(").append(schoolName).append(")生成 IEP 草案,")
+            .append("包含【长期目标】【短期目标】【干预活动建议】三部分,供教师编辑定稿。\n");
+        prompt.append("评估结论: ").append(assessmentConclusion).append("\n");
+        if (profileContext != null && !profileContext.isBlank()) {
+            prompt.append("既往档案:\n").append(profileContext).append("\n");
+        }
+        prompt.append("可参考的范例与策略:\n").append(knowledge);
 
         String draft = aiGateway.generate(
-            new PromptRequest(prompt, List.of(childName), List.of(schoolName)));
+            new PromptRequest(prompt.toString(), List.of(childName), List.of(schoolName)));
 
         return new Iep(childName, draft);
     }

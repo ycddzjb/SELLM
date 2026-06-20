@@ -1,5 +1,6 @@
 package com.sellm.org;
 
+import com.sellm.common.DisorderType;
 import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,9 +17,15 @@ public class OrganizationRepository {
     }
 
     public Organization save(Organization org) {
+        // 校验障碍类型码
+        DisorderType.validateCsv(org.getDisorderTypes());
+
         Map<String, Object> row = new HashMap<>();
         row.put("name", org.getName());
         row.put("region", org.getRegion());
+        row.put("disorderTypes", org.getDisorderTypes());
+        row.put("province", org.getProvince());
+        row.put("city", org.getCity());
         mapper.insert(row);
         org.setId(((Number) row.get("id")).longValue());
         return org;
@@ -28,7 +35,8 @@ public class OrganizationRepository {
         Map<String, Object> row = mapper.findById(id);
         if (row == null) return null;
         return new Organization(((Number) row.get("id")).longValue(),
-            (String) row.get("name"), (String) row.get("region"));
+            (String) row.get("name"), (String) row.get("region"),
+            (String) row.get("disorderTypes"), (String) row.get("province"), (String) row.get("city"));
     }
 
     /** 所有机构,按 id 升序。供超管列表与注册选机构的公开列表。 */
@@ -36,7 +44,8 @@ public class OrganizationRepository {
         List<Organization> list = new ArrayList<>();
         for (Map<String, Object> row : mapper.findAll()) {
             list.add(new Organization(((Number) row.get("id")).longValue(),
-                (String) row.get("name"), (String) row.get("region")));
+                (String) row.get("name"), (String) row.get("region"),
+                (String) row.get("disorderTypes"), (String) row.get("province"), (String) row.get("city")));
         }
         return list;
     }
@@ -48,3 +57,4 @@ public class OrganizationRepository {
         return org == null ? "未知机构" : org.getName();
     }
 }
+

@@ -51,10 +51,25 @@ public class ReportAppService {
         AssessmentResult result = new AssessmentResult(
             a.getTotalScore(), a.getBandLabel(), a.getInterpretation());
         Report domain = reportService.generateDraft(
-            child.getName(), schoolName, a.getScaleId(), result);
+            child.getName(), schoolName, a.getScaleId(), result, profileContext(child));
         // domain.getDraft() 已还原明文,落库
         return recordRepository.save(new ReportRecord(null, assessmentId, a.getChildId(),
             domain.getDraft(), null, "DRAFT"));
+    }
+
+    /** 把儿童档案扩展字段拼成模型可用的上下文(非 PII 概要)。 */
+    private String profileContext(Child child) {
+        StringBuilder sb = new StringBuilder();
+        if (child.getBaselineSummary() != null && !child.getBaselineSummary().isBlank()) {
+            sb.append("基线评估: ").append(child.getBaselineSummary()).append("\n");
+        }
+        if (child.getMonthlyGoal() != null && !child.getMonthlyGoal().isBlank()) {
+            sb.append("月度干预目标: ").append(child.getMonthlyGoal()).append("\n");
+        }
+        if (child.getInterventionProgress() != null && !child.getInterventionProgress().isBlank()) {
+            sb.append("干预进度: ").append(child.getInterventionProgress()).append("\n");
+        }
+        return sb.toString();
     }
 
     public ReportRecord get(Long reportId) {

@@ -84,3 +84,167 @@
 ## 联调结论
 
 四级权限(SUPER_ADMIN / MANAGER / TEACHER / PARENT)升级后契约全连通,权限拦截正确,11 条关键路径全部符合预期,未发现越权未拦或契约不符。后端进程已停,端口 8080 已释放;未起前端 dev server(5173 未占用)。H2 文件库已 gitignore,不提交。
+
+---
+
+# 阶段 A(组织模型 + 班级)端到端联调结果(计划六 Task 7)
+
+日期:2026-06-20 · 分支:`feat/org-class`
+
+后端 dev profile(H2 文件库,已含 teacher_class 新表,种子 admin/admin123)起在 `localhost:8080`,curl 直连走阶段 A 完整链路。前端 `npm run build` 已通过(Task 6)。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回(摘要) | 结论 |
+|---|------|------------------|------|
+| 1 | 超管登录 `POST /api/auth/login` | `code:"0"`,JWT token(190 字符) | 符合 |
+| 2 | 超管一体建机构+管理员 `POST /api/orgs`(disorderTypes=ASD,ADHD / province=Jiangsu / city=Nanjing / managerUsername+managerPassword) | `code:"0"`,`data:2`(orgId) | 符合 |
+| 3 | 管理员登录 | `code:"0"`,`role:"MANAGER"`,`orgId:2`,`orgName:"E2E Special Edu Center"` | 一体创建的管理员可登录,机构正确 |
+| 4 | 管理员建班级 `POST /api/classes`(disorderTypes=ASD,LANGUAGE) | `code:"0"`,`data:1`(classId) | 符合 |
+| 5 | 班级列表 `GET /api/classes` | `[{id:1,name:"E2E Class A",orgId:2,disorderTypes:"ASD,LANGUAGE"}]` | orgId 自动本机构,多选障碍类型存取一致 |
+| 6 | 管理员建老师绑班级 `POST /api/users`(role=TEACHER,classIds=[1]) | `code:"0"`,`data:7`(teacherId) | 老师绑班级成功 |
+| 7 | 本机构家长列表 `GET /api/users/parents` | `[{id:8,username:parent_...,role:PARENT,orgId:2,status:ACTIVE}]` | 只返回本机构 PARENT |
+| 8 | 越权:建老师绑他机构班级 classIds=[99999] | HTTP **403**,且 hacker_t 未落库 | 行级校验生效,@Transactional 回滚 |
+| 9 | 老师调 `GET /api/users/parents` | HTTP **403** | 端点级拦截(仅 MANAGER) |
+
+## 联调结论
+
+阶段 A(组织模型 + 班级)契约全连通:一体建机构+管理员(orgId 自动归属)、班级 CRUD(orgId 自动本机构、障碍类型多选)、老师绑班级(本机构校验、越权 403 且事务回滚)、管理员查本机构家长(仅 PARENT、老师越权 403)。9 条路径全部符合预期。后端进程已停,端口 8080 已释放;H2 文件库已 gitignore,不提交。
+
+---
+
+# 阶段 B(量表库管理)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/org-class`
+
+后端 dev profile(H2 文件库,scale/scale_item 已 ALTER 新增列)起在 `localhost:8080`,curl 走量表库 CRUD + 动态量表评估全链路。前端 `npm run build` 已通过(Task 5/6)。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回(摘要) | 结论 |
+|---|------|------------------|------|
+| 1 | 超管创建量表 `POST /api/scales`(感统,3题+2分段) | `code:"0"`,`data` 返回 scaleId | 符合 |
+| 2 | 按品类过滤 `GET /api/scales?disorderType=SENSORY_INTEGRATION` | 含新建 scaleId | 符合 |
+| 3 | 详情 `GET /api/scales/{id}` | items 数=3 | 符合 |
+| 4 | 更新 `PUT /api/scales/{id}`(改名 v2 + 加第4题) | HTTP 200,items 数变 4 | 整体替换正确 |
+| 5 | 老师/管理员 `GET /api/scales` 与详情 | HTTP 200 | authenticated 可读(评估需要) |
+| 6 | 老师 `POST /api/assessments`(用新量表4题各2分=8) | `code:"0"`,totalScore=8,bandLabel="dysfunction" | 动态量表计分正确 |
+| 7 | 超管 `DELETE /api/scales/{id}` | HTTP 200 | 符合 |
+| 8 | MANAGER `POST /api/scales` | HTTP 403 | 端点级拦截(写仅超管) |
+
+## 联调结论
+
+阶段 B(量表库管理)契约全连通:超管对量表的增删改查(含题目/分段整体替换)、按品类过滤、已登录用户可读量表定义、老师用动态创建的量表完成评估并正确计分、写操作仅超管。8 条路径全部符合预期。后端进程已停,端口 8080 已释放;H2 文件库已 gitignore,不提交。
+
+---
+
+# 阶段 C(家长注册改造 + 老师审核)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/org-class`
+
+后端 dev profile(H2 文件库,已新增 parent_profile 表、放开 child.name_enc 非空)起在 `localhost:8080`,curl 走家长注册→老师审核→建儿童全链路。前端 `npm run build` 已通过(Task 6)。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回(摘要) | 结论 |
+|---|------|------------------|------|
+| 1 | 超管建机构+管理员 | orgId=5 | 符合 |
+| 2 | 管理员建班级 | classId=2 | 符合 |
+| 3 | 管理员建老师绑班级 | teacherId=15,绑 class 2 | 符合 |
+| 4 | 公开查机构班级 `GET /orgs/public/{id}/classes` | 含 class 2(免登录) | 符合 |
+| 5 | 公开查班级老师 `GET /classes/public/{id}/teachers` | 含该老师(免登录,仅 id+username) | 符合 |
+| 6 | 家长注册(指派该老师) | `code:"0"`,parentId=16 | 落 app_user+parent_profile |
+| 7 | 家长审核前登录 | HTTP 400 | PENDING 不能登录 |
+| 8 | 老师看待审 `GET /users/pending` | 含该家长,带姓名/儿童/关系标签(母子)/班级名 | 行级:仅分派给自己的 |
+| 9 | 超管 approve | HTTP 403 | 端点级仅 TEACHER |
+| 10 | 非指派老师 approve | HTTP 403 | 行级:仅指派老师 |
+| 11 | 指派老师 approve | `code:"0"` | 审核通过 |
+| 12 | 家长审核后登录 | HTTP 200 | ACTIVE 可登录 |
+| 13 | 家长看自己孩子 `GET /children` | Child(name=ChildA,orgId=5,guardianUserId=16) | 通过时建档案+guardian 关联,行级可见 |
+| 14 | 管理员看本机构家长 `GET /users/parents` | 完整字段(姓名/儿童/关系标签/班级名) | 符合 |
+
+> 注:Chinese PII 加密/解密由后端单元测试覆盖(curl 联调用 ASCII 名避开 Windows Git Bash 的 UTF-8 编码坑)。
+
+## 联调结论
+
+阶段 C(家长注册改造 + 老师审核)契约全连通:公开级联查询(机构→班级→老师)、家长注册落两表(姓名/儿童姓名加密)、审核归口到注册所选老师(端点级 TEACHER + 行级指派校验,超管/非指派老师均 403)、审核通过自动建儿童档案并关联监护家长、家长审核后可登录并按行级权限看到自己孩子、管理员查看本机构家长完整信息。14 条路径全部符合预期。后端进程已停,端口 8080 已释放;H2 文件库已 gitignore,不提交。
+
+---
+
+# 阶段 D 批一(儿童档案扩展 + 成长记录)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/org-class`
+
+后端 dev profile(H2,child 加 6 列、放开 name_enc 非空、新增 child_log 表)起在 `localhost:8080`。前端 `npm run build` 已通过(Task 4)。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回(摘要) | 结论 |
+|---|------|------------------|------|
+| 1 | 老师建档带扩展字段 | childId=3 | 符合 |
+| 2 | 读回档案 | baseline/monthlyGoal/reassessDate(2026-10-01)/iepDueDate/进度 全回显 | 扩展字段持久化正确 |
+| 3 | 改档(加年度IEP+改复评) | HTTP 200,annualIepSummary=annual-X | 整体替换更新(未传字段置空) |
+| 4 | 加三类记录 | 共 3 条 | 符合 |
+| 5 | 按 type 过滤 | CLASSROOM_TRACK 1 条,logTypeLabel=课堂追踪 | 过滤 + 中文标签正确 |
+| 6 | 他机构老师加记录 | HTTP 403 | 行级(AccessGuard) |
+| 7 | 非法 logType | HTTP 400 | 校验生效 |
+| 8 | 家长(审核建档)的孩子 id | =4 | 审核建档关联正确 |
+| 9 | 家长对自己孩子加记录 | HTTP 200 | 家长可写自己孩子 |
+| 10 | 家长对别人孩子加记录 | HTTP 403 | 行级拦截 |
+| 11 | 老师删本机构儿童记录 | HTTP 200 | 符合 |
+
+## 联调结论
+
+阶段 D 批一(儿童档案扩展字段 + 成长记录)契约全连通:儿童档案 6 个结构化扩展字段(基线/年度IEP/月度目标/复评时间/IEP到期/干预进度)建档与改档读回一致;child_log 三类记录(课堂追踪/家校沟通/阶段复盘)CRUD + type 过滤 + 中文标签;记录读写复用 AccessGuard 行级(他机构老师 403、家长仅限自己孩子、非法类型 400)。11 条路径全部符合预期。后端进程已停,端口 8080 已释放;H2 文件库已 gitignore,不提交。
+
+> 注:儿童姓名仍 AES 加密落库(扩展字段为非 PII 概要,明文);中文 PII 加密由后端单元测试覆盖,curl 用 ASCII 名避开 Windows Git Bash UTF-8 编码坑。
+
+---
+
+# 阶段 D 批二(到期提醒)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/org-class`
+
+后端 dev profile 起在 `localhost:8080`,curl 验证到期提醒计算与行级过滤。前端 `npm run build` 已通过(Task 2)。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回(摘要) | 结论 |
+|---|------|------------------|------|
+| 1 | 老师建 4 档:近期复评(+15天)/逾期IEP(-8天)/超窗(+50天)/无日期 | 建档成功 | — |
+| 2 | GET /api/children/reminders | 仅 2 条:OverdueKid(IEP_DUE,daysLeft=-8,overdue=true)排首、NearKid(REASSESS,daysLeft=15,overdue=false) | 临期+逾期纳入、超窗/无日期排除、按 daysLeft 升序 |
+| 3 | 他机构老师 GET reminders | data=[] | 行级过滤(AccessGuard)生效 |
+
+## 联调结论
+
+阶段 D 批二(到期提醒)契约连通:后端正确算出 30 天内(含已逾期)需复评/IEP到期的儿童,逾期 overdue=true 且 daysLeft 为负,超窗与无日期不纳入,按紧急度(daysLeft 升序)排序;行级权限复用 AccessGuard,他机构老师看不到。3 条路径全符合预期。后端进程已停,端口 8080 已释放。
+
+至此**阶段 D(儿童档案大扩展)全部完成**(批一档案字段+成长记录,批二到期提醒)。
+
+---
+
+# 阶段 E(真实大模型接入 + PDF + 家庭 IEP)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/org-class`
+
+后端 dev profile(provider=mock,**不外联**)起在 `localhost:8080`。前端 `npm run build` 已通过(Task 5)。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回(摘要) | 结论 |
+|---|------|------------------|------|
+| 1 | 老师 评估 | assessment id | — |
+| 2 | 生成报告 | 草稿含 `[AI草稿]` 前缀 | Mock 模型生效(默认不外联) |
+| 3 | 报告未定稿下载 PDF | HTTP 400 | 仅定稿可下载 |
+| 4 | 报告定稿后下载 PDF | HTTP 200,application/pdf,`%PDF` | PDF 导出正确 |
+| 5 | 基于定稿报告生成 IEP | 草稿含 `[AI草稿]` | Mock 生效 |
+| 6 | IEP 定稿后下载 PDF | HTTP 200,`%PDF` | 符合 |
+| 7 | 家长家庭IEP(报告未定稿) | HTTP 400 | 需先有定稿评估报告 |
+| 8 | 家长对自己孩子家庭IEP(已定稿报告) | status=DRAFT | 取最新定稿报告生成成功 |
+| 9 | 家长对别人孩子家庭IEP | HTTP 403 | 行级(AccessGuard) |
+
+## 联调结论
+
+阶段 E 契约全连通:可切换 AI 适配器默认 Mock(provider=mock,不外联,真实模型需显式配置 api-key 才启用,出网内容经网关脱敏);报告/IEP 仍走"AI 草稿→人工定稿"红线;定稿后可下载 PDF(未定稿 400);家长家庭 IEP 取该儿童最新定稿评估报告 + 家长目标生成,行级仅限自己孩子(无定稿报告 400、他人孩子 403)。9 条路径全部符合预期。后端进程已停,端口 8080 已释放。
+
+**至此路线图 A→B→C→D→E 全部完成。** 真实模型联调需在用户自有环境配置 SELLM_AI_PROVIDER=openai + SELLM_AI_BASE_URL + SELLM_AI_API_KEY 后验证(本期交付可切换骨架,Mock 全绿)。多模态识别为后续独立阶段。

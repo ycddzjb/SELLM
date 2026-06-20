@@ -21,6 +21,11 @@ public class ReportService {
 
     public Report generateDraft(String childName, String schoolName,
                                 String scaleName, AssessmentResult result) {
+        return generateDraft(childName, schoolName, scaleName, result, null);
+    }
+
+    public Report generateDraft(String childName, String schoolName,
+                                String scaleName, AssessmentResult result, String profileContext) {
         List<KnowledgeDoc> docs = ragRetriever.retrieve(
             scaleName + " " + result.getBandLabel() + " 解读", 3);
 
@@ -29,14 +34,21 @@ public class ReportService {
             knowledge.append(doc.getContent()).append("\n");
         }
 
-        String prompt = "请基于以下信息为 " + childName + "(" + schoolName + ")生成评估报告草稿。\n"
-            + "量表: " + scaleName + "\n"
-            + "总分: " + result.getTotalScore() + ",分段: " + result.getBandLabel() + "\n"
-            + "解读参考: " + result.getInterpretation() + "\n"
-            + "知识库召回:\n" + knowledge;
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("你是特殊教育评估专家。请基于以下信息为 ").append(childName)
+            .append("(").append(schoolName).append(")生成一份结构化的评估报告草案,")
+            .append("分为【基本情况】【评估结果】【优势与困难】【教育建议】四节,供教师编辑定稿。\n");
+        prompt.append("量表: ").append(scaleName).append("\n");
+        prompt.append("总分: ").append(result.getTotalScore())
+            .append(",分段: ").append(result.getBandLabel()).append("\n");
+        prompt.append("解读参考: ").append(result.getInterpretation()).append("\n");
+        if (profileContext != null && !profileContext.isBlank()) {
+            prompt.append("既往档案:\n").append(profileContext).append("\n");
+        }
+        prompt.append("知识库召回:\n").append(knowledge);
 
         String draft = aiGateway.generate(
-            new PromptRequest(prompt, List.of(childName), List.of(schoolName)));
+            new PromptRequest(prompt.toString(), List.of(childName), List.of(schoolName)));
 
         return new Report(childName, draft);
     }

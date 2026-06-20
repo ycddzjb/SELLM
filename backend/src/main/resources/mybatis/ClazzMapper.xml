@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.clazz.ClazzMapper">
+
+    <resultMap id="clazzRowMap" type="map">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="org_id" property="orgId"/>
+        <result column="disorder_types" property="disorderTypes"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO class_room (name, org_id, disorder_types)
+        VALUES (#{name}, #{orgId}, #{disorderTypes})
+    </insert>
+
+    <select id="findById" parameterType="long" resultMap="clazzRowMap">
+        SELECT id, name, org_id, disorder_types FROM class_room WHERE id = #{id}
+    </select>
+
+    <select id="findByOrg" parameterType="long" resultMap="clazzRowMap">
+        SELECT id, name, org_id, disorder_types FROM class_room WHERE org_id = #{orgId} ORDER BY id
+    </select>
+
+    <update id="update" parameterType="map">
+        UPDATE class_room SET name = #{name}, org_id = #{orgId}, disorder_types = #{disorderTypes}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM class_room WHERE id = #{id}
+    </delete>
+
+</mapper>
