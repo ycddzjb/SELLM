@@ -95,16 +95,13 @@ public class UserManagementController {
         return Result.ok(map(users));
     }
 
-    // 机构管理者:本机构家长列表(只读;完整字段待阶段 C)
+    // 机构管理者:本机构家长列表(完整字段:姓名/儿童/关系/班级;无 profile 的旧家长退化为基础字段)
     @GetMapping("/parents")
     public Result<List<ParentResponse>> parents() {
         AuthPrincipal me = currentUser.require();
         List<ParentResponse> result = new ArrayList<>();
-        for (AppUser u : userRepository.listByOrg(me.getOrgId())) {
-            if (u.getRole() == Role.PARENT) {
-                result.add(new ParentResponse(u.getId(), u.getUsername(), u.getRole(),
-                    u.getOrgId(), u.getStatus()));
-            }
+        for (ParentProfileRow row : parentProfileRepository.listByOrg(me.getOrgId())) {
+            result.add(ParentResponse.full(row));
         }
         return Result.ok(result);
     }
