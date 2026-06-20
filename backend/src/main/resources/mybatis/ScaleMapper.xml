@@ -40,4 +40,48 @@
         FROM score_band WHERE scale_id = #{scaleId}
     </select>
 
+    <!-- ===== 阶段 B 量表库 CRUD ===== -->
+
+    <select id="findAllScales" resultMap="scaleHeadMap">
+        SELECT scale_id, name, version, disorder_type, description FROM scale ORDER BY scale_id
+    </select>
+
+    <select id="findScalesByDisorderType" parameterType="string" resultMap="scaleHeadMap">
+        SELECT scale_id, name, version, disorder_type, description
+        FROM scale WHERE disorder_type = #{disorderType} ORDER BY scale_id
+    </select>
+
+    <insert id="insertScale" parameterType="map">
+        INSERT INTO scale (scale_id, name, version, disorder_type, description)
+        VALUES (#{scaleId}, #{name}, #{version}, #{disorderType}, #{description})
+    </insert>
+
+    <update id="updateScale" parameterType="map">
+        UPDATE scale SET name = #{name}, version = #{version},
+            disorder_type = #{disorderType}, description = #{description}
+        WHERE scale_id = #{scaleId}
+    </update>
+
+    <delete id="deleteScale" parameterType="string">
+        DELETE FROM scale WHERE scale_id = #{scaleId}
+    </delete>
+
+    <insert id="insertItem" parameterType="map">
+        INSERT INTO scale_item (scale_id, item_id, stem, dimension, sort_order, max_score)
+        VALUES (#{scaleId}, #{itemId}, #{stem}, #{dimension}, #{sortOrder}, #{maxScore})
+    </insert>
+
+    <insert id="insertBand" parameterType="map">
+        INSERT INTO score_band (scale_id, lower_bound, upper_bound, label, interpretation)
+        VALUES (#{scaleId}, #{lowerBound}, #{upperBound}, #{label}, #{interpretation})
+    </insert>
+
+    <delete id="deleteItemsByScale" parameterType="string">
+        DELETE FROM scale_item WHERE scale_id = #{scaleId}
+    </delete>
+
+    <delete id="deleteBandsByScale" parameterType="string">
+        DELETE FROM score_band WHERE scale_id = #{scaleId}
+    </delete>
+
 </mapper>

@@ -17,6 +17,8 @@ public class ScoreBand {
         return score >= lower && score <= upper;
     }
 
+    public double getLower() { return lower; }
+    public double getUpper() { return upper; }
     public String getLabel() { return label; }
     public String getInterpretation() { return interpretation; }
 }
