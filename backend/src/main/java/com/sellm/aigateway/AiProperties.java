@@ -9,7 +9,7 @@ public class AiProperties {
     private String baseUrl = "";        // 如 https://api.openai.com 或兼容服务地址
     private String apiKey = "";
     private String model = "gpt-4o-mini";
-    private int timeoutSeconds = 30;
+    private int timeoutSeconds = 60;    // 整体请求超时;大模型生成长报告常需 20-40s
 
     public String getProvider() { return provider; }
     public void setProvider(String provider) { this.provider = provider; }

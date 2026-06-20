@@ -24,8 +24,11 @@ public class OpenAiCompatibleModel implements AiModel {
 
     public OpenAiCompatibleModel(AiProperties props) {
         this.props = props;
+        // 强制 HTTP/1.1:JDK HttpClient 默认 HTTP/2,与部分网关(如 dashscope)协商时会卡死导致请求超时。
+        // connectTimeout 仅管 TCP 连接(固定 10s);整体生成超时由请求级 .timeout() 用 timeoutSeconds 控制。
         this.httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(props.getTimeoutSeconds()))
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(10))
             .build();
     }
 
