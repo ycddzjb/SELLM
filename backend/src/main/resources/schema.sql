@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS child (
 );
 -- (Task 7 追加 child.guardian_user_id 列:关联家长账号,行级权限用)
 ALTER TABLE child ADD COLUMN IF NOT EXISTS guardian_user_id BIGINT;
+-- (阶段 C:审核通过建档案时儿童姓名可能暂缺,放开 name_enc 非空约束)
+ALTER TABLE child ALTER COLUMN name_enc DROP NOT NULL;
+ALTER TABLE child ALTER COLUMN disorder_type DROP NOT NULL;
 -- (Task 6 追加 knowledge_doc 表)
 CREATE TABLE IF NOT EXISTS knowledge_doc (
     id        BIGINT PRIMARY KEY AUTO_INCREMENT,

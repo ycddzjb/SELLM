@@ -20,7 +20,7 @@ public class ChildRepository {
 
     public Child save(Child child) {
         Map<String, Object> row = new HashMap<>();
-        row.put("nameEnc", cipher.encrypt(child.getName()));
+        row.put("nameEnc", child.getName() == null ? null : cipher.encrypt(child.getName()));
         row.put("disorderType", child.getDisorderType());
         row.put("orgId", child.getOrgId());
         row.put("guardianUserId", child.getGuardianUserId());
@@ -71,8 +71,9 @@ public class ChildRepository {
     private Child toChild(Map<String, Object> row) {
         Long orgId = row.get("orgId") == null ? null : ((Number) row.get("orgId")).longValue();
         Long guardian = row.get("guardianUserId") == null ? null : ((Number) row.get("guardianUserId")).longValue();
+        Object nameEnc = row.get("nameEnc");
         return new Child(((Number) row.get("id")).longValue(),
-            cipher.decrypt((String) row.get("nameEnc")),
+            nameEnc == null ? null : cipher.decrypt((String) nameEnc),
             (String) row.get("disorderType"), orgId, guardian);
     }
 }
