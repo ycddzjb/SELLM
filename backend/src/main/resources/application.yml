@@ -29,3 +29,10 @@ sellm:
     timeout-seconds: ${SELLM_AI_TIMEOUT:60}   # 大模型生成长报告/IEP 常需 20-40s
   pdf:
     font-path: ${SELLM_PDF_FONT_PATH:}   # CJK TTF 路径(中文 PDF 必需);缺失时英文正常、中文缺字形
+  minio:
+    provider: ${SELLM_MINIO_PROVIDER:noop}   # noop(默认,本地落盘,不外联) | minio
+    endpoint: ${SELLM_MINIO_ENDPOINT:}
+    access-key: ${SELLM_MINIO_ACCESS_KEY:}
+    secret-key: ${SELLM_MINIO_SECRET_KEY:}
+    bucket: ${SELLM_MINIO_BUCKET:sellm-media}
+    local-dir: ${SELLM_MINIO_LOCAL_DIR:data/media}
