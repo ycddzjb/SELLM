@@ -26,3 +26,5 @@ sellm:
   jwt:
     secret: "dev-jwt-secret-key-at-least-32-bytes-long-0123456789"
     expiration-minutes: 240
+  ai:
+    provider: mock   # dev 默认 Mock,不外联

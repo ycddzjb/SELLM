@@ -21,3 +21,9 @@ sellm:
   jwt:
     secret: ${SELLM_JWT_SECRET:}
     expiration-minutes: 120
+  ai:
+    provider: ${SELLM_AI_PROVIDER:mock}   # mock(默认,不外联) | openai
+    base-url: ${SELLM_AI_BASE_URL:}
+    api-key: ${SELLM_AI_API_KEY:}
+    model: ${SELLM_AI_MODEL:gpt-4o-mini}
+    timeout-seconds: 30
