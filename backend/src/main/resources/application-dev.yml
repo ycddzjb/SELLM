@@ -16,7 +16,7 @@ spring:
       enabled: true             # /h2-console 便于调试(dev only)
 
 mybatis:
-  mapper-locations: classpath:mybatis/*.xml
+  mapper-locations: classpath*:mybatis/*.xml
   configuration:
     map-underscore-to-camel-case: true
 
