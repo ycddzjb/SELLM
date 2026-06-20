@@ -26,15 +26,40 @@ public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        // 规范化路径，防止 /api/auth/../teaching/x 形式的路径穿越绕过白名单
-        String path = java.net.URI.create(exchange.getRequest().getURI().getRawPath()).normalize().getPath();
+        // Fix(defense-in-depth): 在入口无条件剥离客户端可能伪造的用户上下文头，
+        // 防止白名单路径上的 header 注入攻击。认证通过后下方代码会从 JWT claims 重新写入。
+        ServerWebExchange cleaned = exchange.mutate()
+                .request(exchange.getRequest().mutate()
+                        .headers(h -> {
+                            h.remove("X-User-Id");
+                            h.remove("X-User-Name");
+                            h.remove("X-User-Role");
+                            h.remove("X-Org-Id");
+                        })
+                        .build())
+                .build();
+
+        // Fix(path-traversal): 先解码原始路径中的百分比编码（包括 %2e%2e），再做 normalize，
+        // 防止 /api/auth/%2e%2e/teaching/x 绕过白名单（getPath().value() 返回 raw 路径，
+        // URI.normalize() 不处理编码点；必须先解码再规范化）。
+        String rawPath = cleaned.getRequest().getURI().getRawPath();
+        String path;
+        try {
+            // URI(scheme,host,path,fragment) 构造器接受已解码的 path；getRawPath 的百分比序列
+            // 经 URI.create("http://h" + rawPath).getPath() 还原为 Unicode，再重建 URI 执行 normalize。
+            String decodedPath = java.net.URI.create("http://h" + rawPath).getPath();
+            path = new java.net.URI(null, null, decodedPath, null).normalize().getPath();
+        } catch (Exception ex) {
+            // 路径格式异常时拒绝
+            return unauthorized(cleaned);
+        }
         if (isWhitelisted(path)) {
-            return chain.filter(exchange);
+            return chain.filter(cleaned);
         }
 
-        String auth = exchange.getRequest().getHeaders().getFirst("Authorization");
+        String auth = cleaned.getRequest().getHeaders().getFirst("Authorization");
         if (auth == null || !auth.startsWith("Bearer ")) {
-            return unauthorized(exchange);
+            return unauthorized(cleaned);
         }
         String token = auth.substring(7);
 
@@ -43,15 +68,15 @@ public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
             Claims claims = Jwts.parser().verifyWith(key).build()
                     .parseSignedClaims(token).getPayload();
 
-            ServerHttpRequest mutated = exchange.getRequest().mutate()
+            ServerHttpRequest mutated = cleaned.getRequest().mutate()
                     .header("X-User-Id", claims.get("uid") == null ? "" : String.valueOf(claims.get("uid")))
                     .header("X-User-Name", claims.getSubject() == null ? "" : claims.getSubject())
                     .header("X-User-Role", claims.get("role") == null ? "" : String.valueOf(claims.get("role")))
                     .header("X-Org-Id", claims.get("org") == null ? "" : String.valueOf(claims.get("org")))
                     .build();
-            return chain.filter(exchange.mutate().request(mutated).build());
+            return chain.filter(cleaned.mutate().request(mutated).build());
         } catch (Exception e) {
-            return unauthorized(exchange);
+            return unauthorized(cleaned);
         }
     }
 

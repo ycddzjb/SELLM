@@ -43,7 +43,7 @@ management:
 sellm:
   gateway:
     jwt:
-      secret: ${SELLM_JWT_SECRET:dev-secret-key-please-change-in-prod-32b}
+      secret: ${SELLM_JWT_SECRET:dev-jwt-secret-key-at-least-32-bytes-long-0123456789}
       whitelist:
         - /api/auth/
         - /actuator/health
