@@ -198,3 +198,25 @@
 阶段 D 批一(儿童档案扩展字段 + 成长记录)契约全连通:儿童档案 6 个结构化扩展字段(基线/年度IEP/月度目标/复评时间/IEP到期/干预进度)建档与改档读回一致;child_log 三类记录(课堂追踪/家校沟通/阶段复盘)CRUD + type 过滤 + 中文标签;记录读写复用 AccessGuard 行级(他机构老师 403、家长仅限自己孩子、非法类型 400)。11 条路径全部符合预期。后端进程已停,端口 8080 已释放;H2 文件库已 gitignore,不提交。
 
 > 注:儿童姓名仍 AES 加密落库(扩展字段为非 PII 概要,明文);中文 PII 加密由后端单元测试覆盖,curl 用 ASCII 名避开 Windows Git Bash UTF-8 编码坑。
+
+---
+
+# 阶段 D 批二(到期提醒)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/org-class`
+
+后端 dev profile 起在 `localhost:8080`,curl 验证到期提醒计算与行级过滤。前端 `npm run build` 已通过(Task 2)。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回(摘要) | 结论 |
+|---|------|------------------|------|
+| 1 | 老师建 4 档:近期复评(+15天)/逾期IEP(-8天)/超窗(+50天)/无日期 | 建档成功 | — |
+| 2 | GET /api/children/reminders | 仅 2 条:OverdueKid(IEP_DUE,daysLeft=-8,overdue=true)排首、NearKid(REASSESS,daysLeft=15,overdue=false) | 临期+逾期纳入、超窗/无日期排除、按 daysLeft 升序 |
+| 3 | 他机构老师 GET reminders | data=[] | 行级过滤(AccessGuard)生效 |
+
+## 联调结论
+
+阶段 D 批二(到期提醒)契约连通:后端正确算出 30 天内(含已逾期)需复评/IEP到期的儿童,逾期 overdue=true 且 daysLeft 为负,超窗与无日期不纳入,按紧急度(daysLeft 升序)排序;行级权限复用 AccessGuard,他机构老师看不到。3 条路径全符合预期。后端进程已停,端口 8080 已释放。
+
+至此**阶段 D(儿童档案大扩展)全部完成**(批一档案字段+成长记录,批二到期提醒)。
