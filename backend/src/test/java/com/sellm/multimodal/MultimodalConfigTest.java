@@ -6,10 +6,11 @@ import static org.assertj.core.api.Assertions.*;
 class MultimodalConfigTest {
 
     private final MultimodalConfig config = new MultimodalConfig();
+    private final ImageAnonymizer anon = new NoopImageAnonymizer();
 
     @Test
     void 默认provider为mock装配Mock() {
-        assertThat(config.multimodalModel(new MultimodalProperties()))
+        assertThat(config.multimodalModel(new MultimodalProperties(), anon))
             .isInstanceOf(MockMultimodalModel.class);
     }
 
@@ -18,7 +19,7 @@ class MultimodalConfigTest {
         MultimodalProperties p = new MultimodalProperties();
         p.setProvider("openai");
         p.setApiKey("");
-        assertThat(config.multimodalModel(p)).isInstanceOf(MockMultimodalModel.class);
+        assertThat(config.multimodalModel(p, anon)).isInstanceOf(MockMultimodalModel.class);
     }
 
     @Test
@@ -27,6 +28,6 @@ class MultimodalConfigTest {
         p.setProvider("openai");
         p.setBaseUrl("https://fake.local");
         p.setApiKey("sk-test");
-        assertThat(config.multimodalModel(p)).isInstanceOf(OpenAiVisionModel.class);
+        assertThat(config.multimodalModel(p, anon)).isInstanceOf(OpenAiVisionModel.class);
     }
 }

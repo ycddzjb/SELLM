@@ -13,10 +13,10 @@ import org.springframework.context.annotation.Configuration;
 public class MultimodalConfig {
 
     @Bean
-    public MultimodalModel multimodalModel(MultimodalProperties props) {
+    public MultimodalModel multimodalModel(MultimodalProperties props, ImageAnonymizer imageAnonymizer) {
         if ("openai".equalsIgnoreCase(props.getProvider())
                 && props.getApiKey() != null && !props.getApiKey().isBlank()) {
-            return new OpenAiVisionModel(props);
+            return new OpenAiVisionModel(props, imageAnonymizer);
         }
         return new MockMultimodalModel();
     }

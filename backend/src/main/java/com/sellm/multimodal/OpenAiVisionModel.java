@@ -25,9 +25,11 @@ public class OpenAiVisionModel implements MultimodalModel {
     private final MultimodalProperties props;
     private final ObjectMapper json = new ObjectMapper();
     private final HttpClient httpClient;
+    private final ImageAnonymizer imageAnonymizer;
 
-    public OpenAiVisionModel(MultimodalProperties props) {
+    public OpenAiVisionModel(MultimodalProperties props, ImageAnonymizer imageAnonymizer) {
         this.props = props;
+        this.imageAnonymizer = imageAnonymizer;
         this.httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)   // 同 OpenAiCompatibleModel:避 HTTP/2 协商卡死
             .connectTimeout(Duration.ofSeconds(10))
@@ -37,7 +39,9 @@ public class OpenAiVisionModel implements MultimodalModel {
     @Override
     public List<ItemSuggestion> analyze(byte[] media, String noteText, List<ScaleItem> items) {
         try {
-            String body = buildRequestBody(media, noteText, items);
+            // 出网前对图像脱敏(默认 Noop 不改图;配 http 则外部打码,失败硬阻断)
+            byte[] safeMedia = imageAnonymizer.sanitize(media);
+            String body = buildRequestBody(safeMedia, noteText, items);
             String resp = send(body);
             return parseSuggestions(resp, items);
         } catch (RuntimeException e) {

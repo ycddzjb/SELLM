@@ -43,3 +43,9 @@ sellm:
     api-key: ${SELLM_MULTIMODAL_API_KEY:}
     model: ${SELLM_MULTIMODAL_MODEL:qwen-vl-plus}
     timeout-seconds: ${SELLM_MULTIMODAL_TIMEOUT:90}
+  image-anon:
+    # vision 出网前的图像脱敏:noop(默认,不改图) | http(POST 图片到外部 CV 打码服务)
+    provider: ${SELLM_IMAGE_ANON_PROVIDER:noop}
+    endpoint: ${SELLM_IMAGE_ANON_ENDPOINT:}
+    api-key: ${SELLM_IMAGE_ANON_API_KEY:}
+    timeout-seconds: ${SELLM_IMAGE_ANON_TIMEOUT:30}
