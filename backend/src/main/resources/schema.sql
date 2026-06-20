@@ -88,6 +88,19 @@ CREATE TABLE IF NOT EXISTS teacher_class (
     PRIMARY KEY (teacher_user_id, class_id)
 );
 
+-- (阶段 C 追加 parent_profile 表:家长扩展信息 + 待建儿童暂存,姓名加密)
+CREATE TABLE IF NOT EXISTS parent_profile (
+    user_id              BIGINT PRIMARY KEY,
+    name_enc             VARCHAR(512),
+    relationship         VARCHAR(32),
+    assigned_teacher_id  BIGINT,
+    child_name_enc       VARCHAR(512),
+    child_disorder_type  VARCHAR(64),
+    class_id             BIGINT,
+    child_id             BIGINT,
+    created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- (Task 8 追加 assessment 表:评估记录落库)
 CREATE TABLE IF NOT EXISTS assessment (
     id           BIGINT PRIMARY KEY AUTO_INCREMENT,
