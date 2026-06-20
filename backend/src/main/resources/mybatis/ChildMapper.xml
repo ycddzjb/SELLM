@@ -9,25 +9,43 @@
         <result column="disorder_type" property="disorderType"/>
         <result column="org_id" property="orgId"/>
         <result column="guardian_user_id" property="guardianUserId"/>
+        <result column="baseline_summary" property="baselineSummary"/>
+        <result column="annual_iep_summary" property="annualIepSummary"/>
+        <result column="monthly_goal" property="monthlyGoal"/>
+        <result column="reassess_date" property="reassessDate"/>
+        <result column="iep_due_date" property="iepDueDate"/>
+        <result column="intervention_progress" property="interventionProgress"/>
     </resultMap>
 
+    <sql id="allColumns">
+        id, name_enc, disorder_type, org_id, guardian_user_id,
+        baseline_summary, annual_iep_summary, monthly_goal,
+        reassess_date, iep_due_date, intervention_progress
+    </sql>
+
     <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO child (name_enc, disorder_type, org_id, guardian_user_id)
-        VALUES (#{nameEnc}, #{disorderType}, #{orgId}, #{guardianUserId})
+        INSERT INTO child (name_enc, disorder_type, org_id, guardian_user_id,
+            baseline_summary, annual_iep_summary, monthly_goal,
+            reassess_date, iep_due_date, intervention_progress)
+        VALUES (#{nameEnc}, #{disorderType}, #{orgId}, #{guardianUserId},
+            #{baselineSummary}, #{annualIepSummary}, #{monthlyGoal},
+            #{reassessDate}, #{iepDueDate}, #{interventionProgress})
     </insert>
 
     <select id="findById" parameterType="long" resultMap="childRowMap">
-        SELECT id, name_enc, disorder_type, org_id, guardian_user_id
-        FROM child WHERE id = #{id}
+        SELECT <include refid="allColumns"/> FROM child WHERE id = #{id}
     </select>
 
     <select id="findAll" resultMap="childRowMap">
-        SELECT id, name_enc, disorder_type, org_id, guardian_user_id FROM child ORDER BY id
+        SELECT <include refid="allColumns"/> FROM child ORDER BY id
     </select>
 
     <update id="update" parameterType="map">
         UPDATE child SET name_enc = #{nameEnc}, disorder_type = #{disorderType},
-            org_id = #{orgId}, guardian_user_id = #{guardianUserId}
+            org_id = #{orgId}, guardian_user_id = #{guardianUserId},
+            baseline_summary = #{baselineSummary}, annual_iep_summary = #{annualIepSummary},
+            monthly_goal = #{monthlyGoal}, reassess_date = #{reassessDate},
+            iep_due_date = #{iepDueDate}, intervention_progress = #{interventionProgress}
         WHERE id = #{id}
     </update>
 

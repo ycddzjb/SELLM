@@ -32,8 +32,10 @@ public class ChildController {
         AuthPrincipal me = currentUser.require();
         // 建档归属:orgId 以创建者所属机构为准(老师/管理者),忽略请求里的 orgId 越权设定
         Long orgId = me.getOrgId();
-        Child saved = repository.save(new Child(null, req.getName(), req.getDisorderType(),
-            orgId, req.getGuardianUserId()));
+        Child child = new Child(null, req.getName(), req.getDisorderType(),
+            orgId, req.getGuardianUserId());
+        applyExtended(child, req);
+        Child saved = repository.save(child);
         return Result.ok(saved.getId());
     }
 
@@ -71,6 +73,7 @@ public class ChildController {
         // 保持归属不变(orgId/guardian 沿用现有),只改可编辑字段
         Child updated = new Child(id, req.getName(), req.getDisorderType(),
             existing.getOrgId(), existing.getGuardianUserId());
+        applyExtended(updated, req);
         repository.update(updated);
         return Result.ok(null);
     }
@@ -88,7 +91,16 @@ public class ChildController {
     }
 
     private ChildResponse toResponse(Child c) {
-        return new ChildResponse(c.getId(), c.getName(), c.getDisorderType(),
-            c.getOrgId(), c.getGuardianUserId());
+        return ChildResponse.of(c);
+    }
+
+    /** 把请求里的扩展字段装配到 Child(create/update 复用)。 */
+    private void applyExtended(Child child, ChildRequest req) {
+        child.setBaselineSummary(req.getBaselineSummary());
+        child.setAnnualIepSummary(req.getAnnualIepSummary());
+        child.setMonthlyGoal(req.getMonthlyGoal());
+        child.setReassessDate(req.getReassessDate());
+        child.setIepDueDate(req.getIepDueDate());
+        child.setInterventionProgress(req.getInterventionProgress());
     }
 }

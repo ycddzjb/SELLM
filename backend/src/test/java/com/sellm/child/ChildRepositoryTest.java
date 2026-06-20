@@ -41,4 +41,36 @@ class ChildRepositoryTest {
     void 查不到返回null() {
         assertThat(repository.findById(999999L)).isNull();
     }
+
+    @Test
+    void 扩展字段保存后读回一致() {
+        Child c = new Child(null, "小华", "ADHD", 1L);
+        c.setBaselineSummary("基线:社交弱");
+        c.setAnnualIepSummary("年度:提升表达");
+        c.setMonthlyGoal("月度:每日跟读");
+        c.setReassessDate("2026-09-01");
+        c.setIepDueDate("2026-12-31");
+        c.setInterventionProgress("进行中");
+        Child saved = repository.save(c);
+
+        Child loaded = repository.findById(saved.getId());
+        assertThat(loaded.getBaselineSummary()).isEqualTo("基线:社交弱");
+        assertThat(loaded.getAnnualIepSummary()).isEqualTo("年度:提升表达");
+        assertThat(loaded.getMonthlyGoal()).isEqualTo("月度:每日跟读");
+        assertThat(loaded.getReassessDate()).isEqualTo("2026-09-01");
+        assertThat(loaded.getIepDueDate()).isEqualTo("2026-12-31");
+        assertThat(loaded.getInterventionProgress()).isEqualTo("进行中");
+    }
+
+    @Test
+    void update可改扩展字段() {
+        Child saved = repository.save(new Child(null, "小强", "ASD", 1L));
+        saved.setMonthlyGoal("改后目标");
+        saved.setReassessDate("2027-01-15");
+        repository.update(saved);
+
+        Child loaded = repository.findById(saved.getId());
+        assertThat(loaded.getMonthlyGoal()).isEqualTo("改后目标");
+        assertThat(loaded.getReassessDate()).isEqualTo("2027-01-15");
+    }
 }
