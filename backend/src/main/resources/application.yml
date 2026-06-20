@@ -36,3 +36,10 @@ sellm:
     secret-key: ${SELLM_MINIO_SECRET_KEY:}
     bucket: ${SELLM_MINIO_BUCKET:sellm-media}
     local-dir: ${SELLM_MINIO_LOCAL_DIR:data/media}
+  multimodal:
+    # ⚠️ openai 会把含儿童面部的图片发往第三方,无法脱敏;启用即代表已获监护人知情同意并自担合规风险
+    provider: ${SELLM_MULTIMODAL_PROVIDER:mock}   # mock(默认,不外联) | openai
+    base-url: ${SELLM_MULTIMODAL_BASE_URL:}
+    api-key: ${SELLM_MULTIMODAL_API_KEY:}
+    model: ${SELLM_MULTIMODAL_MODEL:qwen-vl-plus}
+    timeout-seconds: ${SELLM_MULTIMODAL_TIMEOUT:90}
