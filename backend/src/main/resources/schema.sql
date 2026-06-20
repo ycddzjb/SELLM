@@ -31,6 +31,18 @@ CREATE TABLE IF NOT EXISTS child_log (
     author_user_id BIGINT,
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- (阶段 E:家长家庭 IEP,家长设目标→大模型按最新定稿报告出家庭训练计划)
+CREATE TABLE IF NOT EXISTS family_iep (
+    id                BIGINT PRIMARY KEY AUTO_INCREMENT,
+    child_id          BIGINT NOT NULL,
+    parent_user_id    BIGINT NOT NULL,
+    parent_goal       VARCHAR(1024),
+    draft             VARCHAR(8192),
+    finalized_content VARCHAR(8192),
+    status            VARCHAR(16) NOT NULL,
+    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 -- (Task 6 追加 knowledge_doc 表)
 CREATE TABLE IF NOT EXISTS knowledge_doc (
     id        BIGINT PRIMARY KEY AUTO_INCREMENT,
