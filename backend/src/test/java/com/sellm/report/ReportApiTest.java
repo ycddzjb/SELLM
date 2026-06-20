@@ -41,13 +41,20 @@ class ReportApiTest {
         jdbc.update("INSERT INTO score_band(scale_id,lower_bound,upper_bound,label,interpretation) VALUES ('cars',4,7,'轻-中度','建议进一步评估')");
     }
 
+    private long createChild(String token, String name) throws Exception {
+        String cb = mvc.perform(post("/api/children").header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("name",name,"disorderType","ASD","orgId",1))))
+            .andReturn().getResponse().getContentAsString();
+        return json.readTree(cb).path("data").asLong();
+    }
+
     @Test
     void 生成报告草稿并定稿() throws Exception {
         String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository, "rep_teacher", "pw123456", "TEACHER");
         long childId = createChild(token, "小明");
         long assessmentId = submitAssessment(token, childId);
 
-        // 生成报告草稿
         String rb = mvc.perform(post("/api/reports").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of("assessmentId", assessmentId))))
@@ -57,7 +64,6 @@ class ReportApiTest {
             .andReturn().getResponse().getContentAsString();
         long reportId = json.readTree(rb).path("data").path("id").asLong();
 
-        // 定稿
         mvc.perform(put("/api/reports/" + reportId + "/finalize").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(Map.of("content", "老师定稿内容"))))
@@ -66,12 +72,35 @@ class ReportApiTest {
             .andExpect(jsonPath("$.data.finalizedContent").value("老师定稿内容"));
     }
 
-    private long createChild(String token, String name) throws Exception {
-        String cb = mvc.perform(post("/api/children").header("Authorization","Bearer "+token)
+    @Test
+    void 未定稿下载PDF返回400定稿后返回PDF() throws Exception {
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository, "rep_pdf_teacher", "pw123456", "TEACHER");
+        long childId = createChild(token, "小红");
+        long assessmentId = submitAssessment(token, childId);
+        String rb = mvc.perform(post("/api/reports").header("Authorization","Bearer "+token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(Map.of("name",name,"disorderType","ASD","orgId",1))))
+                .content(json.writeValueAsString(Map.of("assessmentId", assessmentId))))
             .andReturn().getResponse().getContentAsString();
-        return json.readTree(cb).path("data").asLong();
+        long reportId = json.readTree(rb).path("data").path("id").asLong();
+
+        // 未定稿下载 → 400
+        mvc.perform(get("/api/reports/" + reportId + "/pdf").header("Authorization","Bearer "+token))
+            .andExpect(status().isBadRequest());
+
+        // 定稿
+        mvc.perform(put("/api/reports/" + reportId + "/finalize").header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("content", "Finalized report content"))))
+            .andExpect(status().isOk());
+
+        // 定稿后下载 → 200 + application/pdf + %PDF
+        byte[] pdf = mvc.perform(get("/api/reports/" + reportId + "/pdf").header("Authorization","Bearer "+token))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type", "application/pdf"))
+            .andReturn().getResponse().getContentAsByteArray();
+        org.assertj.core.api.Assertions.assertThat(pdf).isNotEmpty();
+        org.assertj.core.api.Assertions.assertThat(
+            new String(pdf, 0, 4, java.nio.charset.StandardCharsets.US_ASCII)).isEqualTo("%PDF");
     }
 
     private long submitAssessment(String token, long childId) throws Exception {
