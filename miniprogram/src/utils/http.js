@@ -2,7 +2,7 @@
  * uni-app 封装 request — 统一拦截、JWT 注入、错误处理。
  * 基地址通过环境变量或 manifest.json 注入(P0 占位)。
  */
-const BASE_URL = 'http://localhost:9000' // 网关地址(dev)
+const BASE_URL = 'http://localhost:8888' // 网关地址(dev)
 
 import { useUserStore } from '../store/user'
 

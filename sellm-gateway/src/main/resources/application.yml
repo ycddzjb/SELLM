@@ -1,13 +1,16 @@
+# TODO(P1): JWT 鉴权过滤器 + Redis 限流过滤器尚未接入;P0 仅静态路由透传。各 Agent 暂各自 Spring Security 自管。
 spring:
   application:
     name: sellm-gateway
   cloud:
     gateway:
       routes:
+        # 评估干预 Agent(现有 backend 单体,端口 8080)— 路由现有真实路径前缀
+        # 注:Spec §5.1 规划的 /api/{agent}/ 前缀方案是 P1 迁移目标;P0 路由当前实际路径
         - id: agent-assessment
           uri: http://localhost:8080
           predicates:
-            - Path=/api/assessment/**,/api/auth/**,/api/admin/**
+            - Path=/api/auth/**,/api/orgs/**,/api/classes/**,/api/children/**,/api/scales/**,/api/reports/**,/api/ieps/**,/api/family-ieps/**,/api/assessments/**,/api/users/**
         - id: agent-teaching
           uri: http://localhost:8081
           predicates:
@@ -25,8 +28,9 @@ spring:
           predicates:
             - Path=/api/qa/**
 
+# 端口分配:gateway 8888 | assessment 8080 | teaching 8081 | research 8082 | aids 8083 | qa 8084 | minio 9000/9001
 server:
-  port: 9000
+  port: 8888
 
 management:
   endpoints:
