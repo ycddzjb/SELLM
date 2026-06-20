@@ -14,6 +14,23 @@ ALTER TABLE child ADD COLUMN IF NOT EXISTS guardian_user_id BIGINT;
 -- (阶段 C:审核通过建档案时儿童姓名可能暂缺,放开 name_enc 非空约束)
 ALTER TABLE child ALTER COLUMN name_enc DROP NOT NULL;
 ALTER TABLE child ALTER COLUMN disorder_type DROP NOT NULL;
+-- (阶段 D 批一:儿童档案扩展字段,非 PII 概要文本明文存)
+ALTER TABLE child ADD COLUMN IF NOT EXISTS baseline_summary VARCHAR(1024);
+ALTER TABLE child ADD COLUMN IF NOT EXISTS annual_iep_summary VARCHAR(1024);
+ALTER TABLE child ADD COLUMN IF NOT EXISTS monthly_goal VARCHAR(1024);
+ALTER TABLE child ADD COLUMN IF NOT EXISTS reassess_date DATE;
+ALTER TABLE child ADD COLUMN IF NOT EXISTS iep_due_date DATE;
+ALTER TABLE child ADD COLUMN IF NOT EXISTS intervention_progress VARCHAR(128);
+
+-- (阶段 D 批一:儿童成长记录,单表 + log_type 区分课堂追踪/家校沟通/阶段复盘)
+CREATE TABLE IF NOT EXISTS child_log (
+    id             BIGINT PRIMARY KEY AUTO_INCREMENT,
+    child_id       BIGINT NOT NULL,
+    log_type       VARCHAR(32) NOT NULL,
+    content        VARCHAR(2048),
+    author_user_id BIGINT,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 -- (Task 6 追加 knowledge_doc 表)
 CREATE TABLE IF NOT EXISTS knowledge_doc (
     id        BIGINT PRIMARY KEY AUTO_INCREMENT,
