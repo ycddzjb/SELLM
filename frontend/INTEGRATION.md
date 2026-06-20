@@ -110,3 +110,28 @@
 ## 联调结论
 
 阶段 A(组织模型 + 班级)契约全连通:一体建机构+管理员(orgId 自动归属)、班级 CRUD(orgId 自动本机构、障碍类型多选)、老师绑班级(本机构校验、越权 403 且事务回滚)、管理员查本机构家长(仅 PARENT、老师越权 403)。9 条路径全部符合预期。后端进程已停,端口 8080 已释放;H2 文件库已 gitignore,不提交。
+
+---
+
+# 阶段 B(量表库管理)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/org-class`
+
+后端 dev profile(H2 文件库,scale/scale_item 已 ALTER 新增列)起在 `localhost:8080`,curl 走量表库 CRUD + 动态量表评估全链路。前端 `npm run build` 已通过(Task 5/6)。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回(摘要) | 结论 |
+|---|------|------------------|------|
+| 1 | 超管创建量表 `POST /api/scales`(感统,3题+2分段) | `code:"0"`,`data` 返回 scaleId | 符合 |
+| 2 | 按品类过滤 `GET /api/scales?disorderType=SENSORY_INTEGRATION` | 含新建 scaleId | 符合 |
+| 3 | 详情 `GET /api/scales/{id}` | items 数=3 | 符合 |
+| 4 | 更新 `PUT /api/scales/{id}`(改名 v2 + 加第4题) | HTTP 200,items 数变 4 | 整体替换正确 |
+| 5 | 老师/管理员 `GET /api/scales` 与详情 | HTTP 200 | authenticated 可读(评估需要) |
+| 6 | 老师 `POST /api/assessments`(用新量表4题各2分=8) | `code:"0"`,totalScore=8,bandLabel="dysfunction" | 动态量表计分正确 |
+| 7 | 超管 `DELETE /api/scales/{id}` | HTTP 200 | 符合 |
+| 8 | MANAGER `POST /api/scales` | HTTP 403 | 端点级拦截(写仅超管) |
+
+## 联调结论
+
+阶段 B(量表库管理)契约全连通:超管对量表的增删改查(含题目/分段整体替换)、按品类过滤、已登录用户可读量表定义、老师用动态创建的量表完成评估并正确计分、写操作仅超管。8 条路径全部符合预期。后端进程已停,端口 8080 已释放;H2 文件库已 gitignore,不提交。
