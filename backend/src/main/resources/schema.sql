@@ -75,6 +75,13 @@ CREATE TABLE IF NOT EXISTS class_room (
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- (计划六 Task 5 追加 teacher_class 关联表:老师多对多绑定班级)
+CREATE TABLE IF NOT EXISTS teacher_class (
+    teacher_user_id BIGINT NOT NULL,
+    class_id        BIGINT NOT NULL,
+    PRIMARY KEY (teacher_user_id, class_id)
+);
+
 -- (Task 8 追加 assessment 表:评估记录落库)
 CREATE TABLE IF NOT EXISTS assessment (
     id           BIGINT PRIMARY KEY AUTO_INCREMENT,

@@ -40,6 +40,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/users/**").hasAnyRole("SUPER_ADMIN", "MANAGER")
                 // 用户列表:超管看全部、管理者看本机构
                 .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole("SUPER_ADMIN", "MANAGER")
+                // 机构管理者:看本机构家长列表(比 /api/users 更具体,放其后但 path 不同不冲突)
+                .requestMatchers(HttpMethod.GET, "/api/users/parents").hasRole("MANAGER")
                 // 全角色改自己密码(任何登录用户);放在 /api/users/* 通配之前以正确命中
                 .requestMatchers(HttpMethod.PUT, "/api/users/me/password").authenticated()
                 // 机构管理者:看本机构待审家长 + 审核(通过/拒绝)

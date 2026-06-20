@@ -1,5 +1,7 @@
 package com.sellm.user;
 
+import com.sellm.clazz.Clazz;
+import com.sellm.clazz.ClazzRepository;
 import com.sellm.common.BusinessException;
 import com.sellm.common.ErrorCode;
 import com.sellm.common.Result;
@@ -8,7 +10,9 @@ import com.sellm.security.CurrentUser;
 import com.sellm.security.Role;
 import com.sellm.user.dto.ChangePasswordRequest;
 import com.sellm.user.dto.CreateUserRequest;
+import com.sellm.user.dto.ParentResponse;
 import com.sellm.user.dto.UserResponse;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -20,13 +24,19 @@ public class UserManagementController {
 
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
+    private final ClazzRepository clazzRepository;
+    private final TeacherClassMapper teacherClassMapper;
 
-    public UserManagementController(UserRepository userRepository, CurrentUser currentUser) {
+    public UserManagementController(UserRepository userRepository, CurrentUser currentUser,
+                                    ClazzRepository clazzRepository, TeacherClassMapper teacherClassMapper) {
         this.userRepository = userRepository;
         this.currentUser = currentUser;
+        this.clazzRepository = clazzRepository;
+        this.teacherClassMapper = teacherClassMapper;
     }
 
     @PostMapping
+    @Transactional
     public Result<Long> create(@RequestBody CreateUserRequest req) {
         AuthPrincipal me = currentUser.require();
         if (userRepository.findByUsername(req.getUsername()) != null) {
@@ -52,6 +62,16 @@ public class UserManagementController {
         // 上级亲手创建的账号一律 ACTIVE(无需审核)
         AppUser saved = userRepository.register(
             req.getUsername(), req.getPassword(), targetRole, targetOrg, "ACTIVE");
+        // 建老师时绑定班级(多选);校验每个班级都属目标机构,防越权绑他机构班级
+        if (targetRole == Role.TEACHER && req.getClassIds() != null) {
+            for (Long classId : req.getClassIds()) {
+                Clazz clazz = clazzRepository.findById(classId);
+                if (clazz == null || !targetOrg.equals(clazz.getOrgId())) {
+                    throw new BusinessException(ErrorCode.ACCESS_DENIED, "班级不属于本机构");
+                }
+                teacherClassMapper.insert(saved.getId(), classId);
+            }
+        }
         return Result.ok(saved.getId());
     }
 
@@ -62,6 +82,20 @@ public class UserManagementController {
             ? userRepository.listAll()
             : userRepository.listByOrg(me.getOrgId());
         return Result.ok(map(users));
+    }
+
+    // 机构管理者:本机构家长列表(只读;完整字段待阶段 C)
+    @GetMapping("/parents")
+    public Result<List<ParentResponse>> parents() {
+        AuthPrincipal me = currentUser.require();
+        List<ParentResponse> result = new ArrayList<>();
+        for (AppUser u : userRepository.listByOrg(me.getOrgId())) {
+            if (u.getRole() == Role.PARENT) {
+                result.add(new ParentResponse(u.getId(), u.getUsername(), u.getRole(),
+                    u.getOrgId(), u.getStatus()));
+            }
+        }
+        return Result.ok(result);
     }
 
     // 机构管理者:本机构待审家长列表
