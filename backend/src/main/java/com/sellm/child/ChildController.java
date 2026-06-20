@@ -5,6 +5,9 @@ import com.sellm.child.dto.ChildResponse;
 import com.sellm.common.BusinessException;
 import com.sellm.common.ErrorCode;
 import com.sellm.common.Result;
+import com.sellm.scale.Scale;
+import com.sellm.scale.ScaleRepository;
+import com.sellm.scale.dto.ScaleResponse;
 import com.sellm.security.AccessGuard;
 import com.sellm.security.AuthPrincipal;
 import com.sellm.security.CurrentUser;
@@ -20,11 +23,14 @@ public class ChildController {
     private final ChildRepository repository;
     private final CurrentUser currentUser;
     private final AccessGuard accessGuard;
+    private final ScaleRepository scaleRepository;
 
-    public ChildController(ChildRepository repository, CurrentUser currentUser, AccessGuard accessGuard) {
+    public ChildController(ChildRepository repository, CurrentUser currentUser, AccessGuard accessGuard,
+                           ScaleRepository scaleRepository) {
         this.repository = repository;
         this.currentUser = currentUser;
         this.accessGuard = accessGuard;
+        this.scaleRepository = scaleRepository;
     }
 
     @PostMapping
@@ -48,6 +54,25 @@ public class ChildController {
         }
         accessGuard.checkChildAccess(me, c);   // 越权 → 403
         return Result.ok(toResponse(c));
+    }
+
+    /** 按儿童障碍类型推荐适配量表(老师仍可手选全部)。行级权限。 */
+    @GetMapping("/{id}/recommended-scales")
+    public Result<List<ScaleResponse>> recommendedScales(@PathVariable Long id) {
+        AuthPrincipal me = currentUser.require();
+        Child c = repository.findById(id);
+        if (c == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "儿童档案不存在");
+        }
+        accessGuard.checkChildAccess(me, c);
+        List<ScaleResponse> out = new ArrayList<>();
+        String type = c.getDisorderType();
+        if (type != null && !type.isBlank()) {
+            for (Scale s : scaleRepository.listByDisorderType(type)) {
+                out.add(ScaleResponse.of(s, false));
+            }
+        }
+        return Result.ok(out);
     }
 
     @GetMapping
