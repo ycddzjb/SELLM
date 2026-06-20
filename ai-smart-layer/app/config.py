@@ -1,8 +1,10 @@
 """配置:全部走环境变量,默认 Mock 不外联。"""
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="SELLM_", env_file=".env")
+
     # LLM
     ai_provider: str = "mock"  # mock | openai
     ai_base_url: str = ""
@@ -17,10 +19,6 @@ class Settings(BaseSettings):
     # Java 业务层 gRPC/REST
     assessment_service_url: str = "http://localhost:8080"
     teaching_service_url: str = "http://localhost:8081"
-
-    class Config:
-        env_prefix = "SELLM_"
-        env_file = ".env"
 
 
 settings = Settings()
