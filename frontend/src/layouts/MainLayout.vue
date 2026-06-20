@@ -4,8 +4,8 @@
       <el-menu :default-active="$route.path" router>
         <!-- 儿童档案:超管/管理员/老师可见 -->
         <el-menu-item v-if="auth.isSuperAdmin || auth.isManager || auth.isTeacher" index="/children">儿童档案</el-menu-item>
-        <!-- 量表库管理:超管(阶段 B 实现实页,先占位禁用) -->
-        <el-menu-item v-if="auth.isSuperAdmin" index="/scale-library" disabled>量表库管理</el-menu-item>
+        <!-- 量表库管理:超管 -->
+        <el-menu-item v-if="auth.isSuperAdmin" index="/scale-library">量表库管理</el-menu-item>
         <!-- 班级管理:机构管理员 -->
         <el-menu-item v-if="auth.isManager" index="/classes">班级管理</el-menu-item>
         <!-- 评估 / IEP:仅老师/康复师 -->

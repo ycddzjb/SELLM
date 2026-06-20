@@ -12,6 +12,7 @@ const routes = [
       { path: 'children', component: () => import('../views/ChildrenView.vue') },
       { path: 'children/:id', component: () => import('../views/ChildDetailView.vue') },
       { path: 'classes', component: () => import('../views/ClassesView.vue') },
+      { path: 'scale-library', component: () => import('../views/ScaleLibraryView.vue') },
       { path: 'assessment', component: () => import('../views/AssessmentView.vue') },
       { path: 'report', component: () => import('../views/ReportView.vue') },
       { path: 'iep', component: () => import('../views/IepView.vue') },
