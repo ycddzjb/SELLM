@@ -26,3 +26,10 @@ export const RELATIONSHIPS = [
 
 export const relationshipLabel = (code) =>
   (RELATIONSHIPS.find((r) => r.code === code) || {}).label || code
+
+// 成长记录类型(与后端 com.sellm.common.LogType 对齐)
+export const LOG_TYPES = [
+  { code: 'CLASSROOM_TRACK', label: '课堂追踪' },
+  { code: 'HOME_COMMUNICATION', label: '家校沟通' },
+  { code: 'STAGE_REVIEW', label: '阶段复盘' }
+]
