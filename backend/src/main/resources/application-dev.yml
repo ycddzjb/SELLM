@@ -28,3 +28,5 @@ sellm:
     expiration-minutes: 240
   ai:
     provider: mock   # dev 默认 Mock,不外联
+  pdf:
+    font-path: ${SELLM_PDF_FONT_PATH:C:/Windows/Fonts/simhei.ttf}   # dev 默认黑体;环境变量可覆盖
