@@ -43,6 +43,19 @@ CREATE TABLE IF NOT EXISTS family_iep (
     status            VARCHAR(16) NOT NULL,
     created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- (阶段 F:评估媒体,多模态素材上传记录;对象本体存对象存储,库里只存 object_key)
+CREATE TABLE IF NOT EXISTS evaluation_media (
+    id               BIGINT PRIMARY KEY AUTO_INCREMENT,
+    child_id         BIGINT NOT NULL,
+    scale_id         VARCHAR(64),
+    media_type       VARCHAR(16) NOT NULL,   -- IMAGE / VIDEO / NOTE
+    object_key       VARCHAR(256),           -- 对象存储 key;NOTE 类型可空
+    note_text        VARCHAR(2048),
+    uploader_user_id BIGINT,
+    status           VARCHAR(16) NOT NULL,   -- UPLOADED / ANALYZED
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 -- (Task 6 追加 knowledge_doc 表)
 CREATE TABLE IF NOT EXISTS knowledge_doc (
     id        BIGINT PRIMARY KEY AUTO_INCREMENT,
