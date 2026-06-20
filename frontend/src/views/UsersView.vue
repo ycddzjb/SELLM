@@ -17,16 +17,31 @@
     <!-- ============ SUPER_ADMIN ============ -->
     <template v-if="auth.isSuperAdmin">
       <el-card style="max-width:520px;margin-bottom:24px">
-        <template #header><span>创建机构</span></template>
+        <template #header><span>创建机构(含机构管理员)</span></template>
         <el-form label-width="100px">
           <el-form-item label="机构名称">
             <el-input v-model="orgForm.name" />
           </el-form-item>
-          <el-form-item label="地区">
-            <el-input v-model="orgForm.region" />
+          <el-form-item label="障碍类型">
+            <el-select v-model="orgForm.disorderCodes" multiple placeholder="可多选" style="width:100%">
+              <el-option v-for="d in DISORDER_TYPES" :key="d.code" :label="d.label" :value="d.code" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="省份">
+            <el-input v-model="orgForm.province" />
+          </el-form-item>
+          <el-form-item label="地市">
+            <el-input v-model="orgForm.city" />
+          </el-form-item>
+          <el-form-item label="管理员账号">
+            <el-input v-model="orgForm.managerUsername" />
+          </el-form-item>
+          <el-form-item label="管理员密码">
+            <el-input v-model="orgForm.managerPassword" type="password" show-password />
           </el-form-item>
           <el-button type="primary" :loading="orgLoading" @click="onCreateOrg">创建机构</el-button>
         </el-form>
+        <p style="color:#999;font-size:12px;margin-top:8px">创建机构会同时创建该机构的管理员账号(即可登录)。</p>
       </el-card>
 
       <el-card style="margin-bottom:24px">
@@ -34,7 +49,11 @@
         <el-table :data="orgs" size="small">
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column prop="name" label="名称" />
-          <el-table-column prop="region" label="地区" />
+          <el-table-column label="障碍类型">
+            <template #default="{ row }">{{ disorderCsvToLabels(row.disorderTypes) }}</template>
+          </el-table-column>
+          <el-table-column prop="province" label="省份" width="100" />
+          <el-table-column prop="city" label="地市" width="100" />
         </el-table>
       </el-card>
 
@@ -91,6 +110,11 @@
               <el-option label="家长 (PARENT)" value="PARENT" />
             </el-select>
           </el-form-item>
+          <el-form-item v-if="userForm.role === 'TEACHER'" label="所属班级">
+            <el-select v-model="userForm.classIds" multiple placeholder="可多选(本机构班级)" style="width:100%">
+              <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
+            </el-select>
+          </el-form-item>
           <el-button type="primary" :loading="userLoading" @click="onCreateUser">创建账号</el-button>
         </el-form>
         <p style="color:#999;font-size:12px;margin-top:8px">新账号自动归属你所在机构,创建后即可登录。</p>
@@ -116,7 +140,7 @@
         <el-empty v-if="!pending.length" description="暂无待审核家长" :image-size="60" />
       </el-card>
 
-      <el-card>
+      <el-card style="margin-bottom:24px">
         <template #header><span>本机构用户</span></template>
         <el-table :data="users" size="small">
           <el-table-column prop="id" label="ID" width="80" />
@@ -131,6 +155,21 @@
           </el-table-column>
         </el-table>
       </el-card>
+
+      <el-card>
+        <template #header><span>本机构家长</span></template>
+        <el-table :data="parents" size="small">
+          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column prop="username" label="用户名" />
+          <el-table-column label="状态">
+            <template #default="{ row }">
+              <el-tag size="small" :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-if="!parents.length" description="暂无家长" :image-size="60" />
+        <p style="color:#999;font-size:12px;margin-top:8px">家长完整信息(姓名/儿童/关系/班级)将在家长注册改造后展示。</p>
+      </el-card>
     </template>
   </div>
 </template>
@@ -139,9 +178,11 @@
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  listUsers, createUser, listPendingParents, approveUser, rejectUser, changeMyPassword
+  listUsers, createUser, listPendingParents, listParents, approveUser, rejectUser, changeMyPassword
 } from '../api/users'
 import { listOrgs, createOrg } from '../api/orgs'
+import { listClasses } from '../api/classes'
+import { DISORDER_TYPES, disorderCsvToLabels } from '../api/meta'
 import { useAuthStore } from '../stores/auth'
 
 const ROLE_LABELS = {
@@ -182,7 +223,10 @@ async function loadUsers() {
 
 // ---- 超管 ----
 const orgs = ref([])
-const orgForm = reactive({ name: '', region: '' })
+const orgForm = reactive({
+  name: '', disorderCodes: [], province: '', city: '',
+  managerUsername: '', managerPassword: ''
+})
 const orgLoading = ref(false)
 const mgrForm = reactive({ username: '', password: '', orgId: null })
 const mgrLoading = ref(false)
@@ -192,12 +236,27 @@ async function loadOrgs() {
 }
 async function onCreateOrg() {
   if (!orgForm.name) { ElMessage.warning('请填写机构名称'); return }
+  if (!orgForm.managerUsername || !orgForm.managerPassword) {
+    ElMessage.warning('请填写机构管理员账号和密码')
+    return
+  }
   orgLoading.value = true
   try {
-    const id = await createOrg({ name: orgForm.name, region: orgForm.region })
+    const id = await createOrg({
+      name: orgForm.name,
+      disorderTypes: orgForm.disorderCodes.join(','),
+      province: orgForm.province,
+      city: orgForm.city,
+      managerUsername: orgForm.managerUsername,
+      managerPassword: orgForm.managerPassword
+    })
     ElMessage.success(`机构创建成功(id=${id})`)
     orgForm.name = ''
-    orgForm.region = ''
+    orgForm.disorderCodes = []
+    orgForm.province = ''
+    orgForm.city = ''
+    orgForm.managerUsername = ''
+    orgForm.managerPassword = ''
     await loadOrgs()
   } catch (e) {} finally { orgLoading.value = false }
 }
@@ -221,12 +280,20 @@ async function onCreateManager() {
 }
 
 // ---- 管理者 ----
-const userForm = reactive({ username: '', password: '', role: 'TEACHER' })
+const userForm = reactive({ username: '', password: '', role: 'TEACHER', classIds: [] })
 const userLoading = ref(false)
 const pending = ref([])
+const parents = ref([])
+const classes = ref([])
 
 async function loadPending() {
   try { pending.value = await listPendingParents() } catch (e) {}
+}
+async function loadParents() {
+  try { parents.value = await listParents() } catch (e) {}
+}
+async function loadClasses() {
+  try { classes.value = await listClasses() } catch (e) {}
 }
 async function onCreateUser() {
   if (!userForm.username || !userForm.password || !userForm.role) {
@@ -235,11 +302,18 @@ async function onCreateUser() {
   }
   userLoading.value = true
   try {
-    const id = await createUser({ ...userForm })
+    const payload = {
+      username: userForm.username, password: userForm.password, role: userForm.role
+    }
+    if (userForm.role === 'TEACHER' && userForm.classIds.length) {
+      payload.classIds = userForm.classIds
+    }
+    const id = await createUser(payload)
     ElMessage.success(`账号创建成功(id=${id})`)
     userForm.username = ''
     userForm.password = ''
-    await loadUsers()
+    userForm.classIds = []
+    await Promise.all([loadUsers(), loadParents()])
   } catch (e) {} finally { userLoading.value = false }
 }
 async function onApprove(id) {
@@ -264,6 +338,8 @@ onMounted(() => {
   } else if (auth.isManager) {
     loadPending()
     loadUsers()
+    loadParents()
+    loadClasses()
   }
 })
 </script>

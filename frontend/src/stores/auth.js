@@ -21,6 +21,8 @@ export const useAuthStore = defineStore('auth', {
     isLoggedIn: (s) => !!s.token,
     isManager: (s) => s.role === 'MANAGER',
     isSuperAdmin: (s) => s.role === 'SUPER_ADMIN',
+    isTeacher: (s) => s.role === 'TEACHER',
+    isParent: (s) => s.role === 'PARENT',
     roleLabel: (s) => ROLE_LABELS[s.role] || s.role,
     // 顶栏机构名:超管显示学院名;其余显示真实机构名(无则空)
     orgLabel: (s) => {
