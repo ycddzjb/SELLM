@@ -2,12 +2,16 @@ package com.sellm.clazz;
 
 import com.sellm.clazz.dto.ClazzRequest;
 import com.sellm.clazz.dto.ClazzResponse;
+import com.sellm.clazz.dto.TeacherOption;
 import com.sellm.common.BusinessException;
 import com.sellm.common.ErrorCode;
 import com.sellm.common.Result;
 import com.sellm.security.AuthPrincipal;
 import com.sellm.security.CurrentUser;
 import com.sellm.security.Role;
+import com.sellm.user.AppUser;
+import com.sellm.user.TeacherClassMapper;
+import com.sellm.user.UserRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -19,10 +23,28 @@ public class ClazzController {
 
     private final ClazzRepository repository;
     private final CurrentUser currentUser;
+    private final TeacherClassMapper teacherClassMapper;
+    private final UserRepository userRepository;
 
-    public ClazzController(ClazzRepository repository, CurrentUser currentUser) {
+    public ClazzController(ClazzRepository repository, CurrentUser currentUser,
+                           TeacherClassMapper teacherClassMapper, UserRepository userRepository) {
         this.repository = repository;
         this.currentUser = currentUser;
+        this.teacherClassMapper = teacherClassMapper;
+        this.userRepository = userRepository;
+    }
+
+    /** 公开:某班级下的老师选项(注册页选审核老师用,免登录;仅 id+username)。 */
+    @GetMapping("/public/{classId}/teachers")
+    public Result<List<TeacherOption>> publicTeachers(@PathVariable Long classId) {
+        List<TeacherOption> out = new ArrayList<>();
+        for (Long teacherId : teacherClassMapper.findTeacherIdsByClass(classId)) {
+            AppUser u = userRepository.findById(teacherId);
+            if (u != null && u.getRole() == Role.TEACHER) {
+                out.add(new TeacherOption(u.getId(), u.getUsername()));
+            }
+        }
+        return Result.ok(out);
     }
 
     @PostMapping

@@ -12,5 +12,7 @@ public interface TeacherClassMapper {
 
     List<Long> findClassIdsByTeacher(@Param("teacherUserId") Long teacherUserId);
 
+    List<Long> findTeacherIdsByClass(@Param("classId") Long classId);
+
     void deleteByTeacher(@Param("teacherUserId") Long teacherUserId);
 }

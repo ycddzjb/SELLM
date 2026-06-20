@@ -12,6 +12,10 @@
         SELECT class_id FROM teacher_class WHERE teacher_user_id = #{teacherUserId} ORDER BY class_id
     </select>
 
+    <select id="findTeacherIdsByClass" resultType="long">
+        SELECT teacher_user_id FROM teacher_class WHERE class_id = #{classId} ORDER BY teacher_user_id
+    </select>
+
     <delete id="deleteByTeacher">
         DELETE FROM teacher_class WHERE teacher_user_id = #{teacherUserId}
     </delete>
