@@ -43,6 +43,12 @@ CREATE TABLE IF NOT EXISTS score_band (
     interpretation VARCHAR(512)
 );
 
+-- (阶段 B 追加 scale/scale_item 字段:量表品类/简介、题目排序/每题最高分)
+ALTER TABLE scale ADD COLUMN IF NOT EXISTS disorder_type VARCHAR(32);
+ALTER TABLE scale ADD COLUMN IF NOT EXISTS description VARCHAR(512);
+ALTER TABLE scale_item ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
+ALTER TABLE scale_item ADD COLUMN IF NOT EXISTS max_score DOUBLE DEFAULT 4;
+
 -- (Task 3 追加 organization 表)
 CREATE TABLE IF NOT EXISTS organization (
     id      BIGINT PRIMARY KEY AUTO_INCREMENT,
