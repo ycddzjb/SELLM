@@ -1,4 +1,4 @@
-# TODO(P1): JWT 鉴权过滤器 + Redis 限流过滤器尚未接入;P0 仅静态路由透传。各 Agent 暂各自 Spring Security 自管。
+# TODO(P1): JWT 鉴权已接入;限流过滤器待 P2。
 spring:
   application:
     name: sellm-gateway
@@ -39,3 +39,11 @@ management:
     web:
       exposure:
         include: health,gateway
+
+sellm:
+  gateway:
+    jwt:
+      secret: ${SELLM_JWT_SECRET:dev-secret-key-please-change-in-prod-32b}
+      whitelist:
+        - /api/auth/
+        - /actuator/health
