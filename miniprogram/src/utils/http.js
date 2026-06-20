@@ -4,8 +4,9 @@
  */
 const BASE_URL = 'http://localhost:9000' // 网关地址(dev)
 
+import { useUserStore } from '../store/user'
+
 export function request(options) {
-  const { useUserStore } = require('../store/user')
   const userStore = useUserStore()
 
   return new Promise((resolve, reject) => {
