@@ -21,6 +21,30 @@
         <el-form-item v-for="item in items" :key="item.itemId" :label="item.stem">
           <el-rate v-model="answers[item.itemId]" :max="item.maxScore || 4" show-score />
         </el-form-item>
+
+        <el-divider>AI 辅助评分(可选)</el-divider>
+        <el-alert type="warning" :closable="false" show-icon style="margin-bottom:12px"
+          title="AI 建议仅供参考,须教师确认。上传含儿童影像请确保已获监护人同意。" />
+        <el-form-item label="训练笔记">
+          <el-input v-model="aiNote" type="textarea" :rows="2" placeholder="描述课堂/干预表现(可选)" />
+        </el-form-item>
+        <el-form-item label="上传素材">
+          <input type="file" @change="onFilePick" />
+          <span v-if="aiFile" style="margin-left:8px;color:#909399">{{ aiFile.name }}</span>
+        </el-form-item>
+        <el-button :loading="aiLoading" @click="onAnalyze">获取 AI 评分建议</el-button>
+        <div v-if="suggestions.length" style="margin-top:12px">
+          <el-table :data="suggestions" size="small" border>
+            <el-table-column label="指标">
+              <template #default="{ row }">{{ stemOf(row.itemId) }}</template>
+            </el-table-column>
+            <el-table-column prop="suggestedScore" label="建议分" width="90" />
+            <el-table-column prop="reason" label="理由" />
+          </el-table>
+          <el-button type="primary" link style="margin-top:8px" @click="adoptSuggestions">采纳建议填入评分</el-button>
+        </div>
+
+        <el-divider />
         <el-button type="primary" :loading="loading" @click="onSubmit">提交评估</el-button>
       </template>
       <el-empty v-else-if="scaleId" description="该量表暂无题目" :image-size="60" />
@@ -42,6 +66,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { submitAssessment } from '../api/assessments'
 import { listScales, getScale } from '../api/scales'
+import { uploadMedia, analyzeMedia } from '../api/media'
 import { disorderLabel } from '../api/meta'
 
 const route = useRoute()
@@ -54,6 +79,51 @@ const items = ref([])
 const answers = reactive({})
 const loading = ref(false)
 const result = ref(null)
+
+// AI 辅助评分
+const aiNote = ref('')
+const aiFile = ref(null)
+const aiLoading = ref(false)
+const suggestions = ref([])
+
+function onFilePick(e) {
+  aiFile.value = e.target.files && e.target.files[0] ? e.target.files[0] : null
+}
+
+function stemOf(itemId) {
+  const it = items.value.find((i) => i.itemId === itemId)
+  return it ? it.stem : itemId
+}
+
+async function onAnalyze() {
+  if (!childId.value) { ElMessage.warning('请填写儿童ID'); return }
+  if (!scaleId.value) { ElMessage.warning('请先选择量表'); return }
+  if (!aiFile.value && !aiNote.value.trim()) { ElMessage.warning('请上传素材或填写训练笔记'); return }
+  aiLoading.value = true
+  try {
+    const fd = new FormData()
+    if (aiFile.value) {
+      fd.append('file', aiFile.value)
+      fd.append('mediaType', aiFile.value.type.startsWith('video') ? 'VIDEO' : 'IMAGE')
+    } else {
+      fd.append('mediaType', 'NOTE')
+    }
+    if (aiNote.value.trim()) fd.append('noteText', aiNote.value.trim())
+    fd.append('scaleId', scaleId.value)
+    const mediaId = await uploadMedia(Number(childId.value), fd)
+    suggestions.value = await analyzeMedia(Number(childId.value), mediaId)
+    ElMessage.success('已生成 AI 建议,请确认后采纳')
+  } catch (e) { /* 拦截器已提示 */ } finally {
+    aiLoading.value = false
+  }
+}
+
+function adoptSuggestions() {
+  suggestions.value.forEach((s) => {
+    if (s.itemId in answers) answers[s.itemId] = s.suggestedScore
+  })
+  ElMessage.success('已填入评分,可手动调整后提交')
+}
 
 async function loadScales() {
   try { scales.value = await listScales() } catch (e) {}

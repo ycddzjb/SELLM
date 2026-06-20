@@ -30,3 +30,8 @@ sellm:
     provider: mock   # dev 默认 Mock,不外联
   pdf:
     font-path: ${SELLM_PDF_FONT_PATH:C:/Windows/Fonts/simhei.ttf}   # dev 默认黑体;环境变量可覆盖
+  minio:
+    provider: noop   # dev 默认本地落盘,不连 MinIO
+    local-dir: data/media
+  multimodal:
+    provider: mock   # dev 默认 Mock,不外联(图像 PII 红线)

@@ -36,6 +36,8 @@ public class SecurityConfig {
                 // 须放在 /api/children/** 通配规则之前,否则会被 child 的 TEACHER/MANAGER 规则覆盖
                 .requestMatchers(HttpMethod.POST, "/api/children/*/logs/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/children/*/logs/**").authenticated()
+                // 评估媒体:上传/识别所有已登录用户(含家长传自己孩子),行级在 controller;放 child 通配前
+                .requestMatchers(HttpMethod.POST, "/api/children/*/evaluation-media/**").authenticated()
                 // 写 child:TEACHER、MANAGER
                 .requestMatchers(HttpMethod.POST, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
                 .requestMatchers(HttpMethod.PUT, "/api/children/**").hasAnyRole("TEACHER", "MANAGER")
