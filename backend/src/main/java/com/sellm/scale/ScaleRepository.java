@@ -25,7 +25,9 @@ public class ScaleRepository {
             items.add(new ScaleItem(
                 (String) row.get("itemId"),
                 (String) row.get("stem"),
-                (String) row.get("dimension")));
+                (String) row.get("dimension"),
+                row.get("sortOrder") == null ? 0 : ((Number) row.get("sortOrder")).intValue(),
+                row.get("maxScore") == null ? 4 : ((Number) row.get("maxScore")).doubleValue()));
         }
 
         List<ScoreBand> bands = new ArrayList<>();
@@ -42,6 +44,8 @@ public class ScaleRepository {
             (String) head.get("scaleId"),
             (String) head.get("name"),
             (String) head.get("version"),
+            (String) head.get("disorderType"),
+            (String) head.get("description"),
             items, rule);
     }
 }

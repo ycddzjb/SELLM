@@ -22,7 +22,13 @@ class ScaleRepositoryTest {
         Scale cars = repository.findById("cars");
         assertThat(cars).isNotNull();
         assertThat(cars.getName()).isEqualTo("CARS");
+        assertThat(cars.getDisorderType()).isEqualTo("ASD");
+        assertThat(cars.getDescription()).isEqualTo("儿童孤独症评定量表");
         assertThat(cars.getItems()).hasSize(2);
+        // 题目按 sort_order 排序,且带每题最高分
+        assertThat(cars.getItems().get(0).getItemId()).isEqualTo("q1");
+        assertThat(cars.getItems().get(0).getSortOrder()).isEqualTo(1);
+        assertThat(cars.getItems().get(0).getMaxScore()).isEqualTo(4);
         assertThat(cars.getScoringRule()).isNotNull();
         assertThat(cars.getScoringRule().getBands()).hasSize(2);
     }

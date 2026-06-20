@@ -7,12 +7,16 @@
         <id column="scale_id" property="scaleId"/>
         <result column="name" property="name"/>
         <result column="version" property="version"/>
+        <result column="disorder_type" property="disorderType"/>
+        <result column="description" property="description"/>
     </resultMap>
 
     <resultMap id="itemRowMap" type="map">
         <result column="item_id" property="itemId"/>
         <result column="stem" property="stem"/>
         <result column="dimension" property="dimension"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="max_score" property="maxScore"/>
     </resultMap>
 
     <resultMap id="bandRowMap" type="map">
@@ -23,11 +27,12 @@
     </resultMap>
 
     <select id="findScaleById" parameterType="string" resultMap="scaleHeadMap">
-        SELECT scale_id, name, version FROM scale WHERE scale_id = #{scaleId}
+        SELECT scale_id, name, version, disorder_type, description FROM scale WHERE scale_id = #{scaleId}
     </select>
 
     <select id="findItems" parameterType="string" resultMap="itemRowMap">
-        SELECT item_id, stem, dimension FROM scale_item WHERE scale_id = #{scaleId}
+        SELECT item_id, stem, dimension, sort_order, max_score
+        FROM scale_item WHERE scale_id = #{scaleId} ORDER BY sort_order
     </select>
 
     <select id="findBands" parameterType="string" resultMap="bandRowMap">
