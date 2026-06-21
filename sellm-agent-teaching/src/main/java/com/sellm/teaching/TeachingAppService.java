@@ -8,11 +8,13 @@ import com.sellm.common.ErrorCode;
 import com.sellm.storage.ObjectStorage;
 import com.sellm.teaching.dto.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Service
+@Transactional
 public class TeachingAppService {
 
     private final LessonPlanRepository planRepo;
@@ -65,6 +67,10 @@ public class TeachingAppService {
 
     public PlanResponse editPlan(Long userId, Long id, EditRequest req) {
         LessonPlan p = requireOwnedPlan(userId, id);
+        if ("FINALIZED".equals(p.getStatus()))
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "已定稿不可编辑");
+        if (req.getContent() == null || req.getContent().isBlank())
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "内容不能为空");
         p.setContent(req.getContent());
         planRepo.update(p);
         return new PlanResponse(p.getId(), p.getStatus(), p.getContent(), p.getAiDraft());
@@ -119,6 +125,10 @@ public class TeachingAppService {
 
     public CoursewareResponse editCourseware(Long userId, Long id, EditRequest req) {
         Courseware c = requireOwnedCourseware(userId, id);
+        if ("FINALIZED".equals(c.getStatus()))
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "已定稿不可编辑");
+        if (req.getContent() == null || req.getContent().isBlank())
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "内容不能为空");
         c.setContent(req.getContent());
         cwRepo.update(c);
         return toCwResponse(c);

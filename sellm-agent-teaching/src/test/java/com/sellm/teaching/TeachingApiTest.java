@@ -146,4 +146,48 @@ class TeachingApiTest {
             .andExpect(jsonPath("$.data.content").value(org.hamcrest.Matchers.containsString("失败")));
         stub.throwError = false;
     }
+
+    @Test
+    void 定稿后编辑被拒() throws Exception {
+        Long id = createFinalizedPlan(5L);
+        mvc.perform(put("/api/teaching/lesson-plans/" + id)
+                .header("X-User-Id", "5")
+                .contentType("application/json")
+                .content(json.writeValueAsString(Map.of("content", "修改内容"))))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 定稿课件后编辑被拒() throws Exception {
+        Long planId = createFinalizedPlan(5L);
+        var res = mvc.perform(post("/api/teaching/courseware")
+                .header("X-User-Id", "5").contentType("application/json")
+                .content(json.writeValueAsString(Map.of("lessonPlanId", planId))))
+            .andExpect(status().isOk())
+            .andReturn();
+        Long cwId = json.readTree(res.getResponse().getContentAsString()).path("data").path("id").asLong();
+        mvc.perform(post("/api/teaching/courseware/" + cwId + "/finalize").header("X-User-Id", "5"))
+            .andExpect(status().isOk());
+        mvc.perform(put("/api/teaching/courseware/" + cwId)
+                .header("X-User-Id", "5")
+                .contentType("application/json")
+                .content(json.writeValueAsString(Map.of("content", "修改内容"))))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 他人课件编辑被拒403() throws Exception {
+        Long planId = createFinalizedPlan(5L);
+        var res = mvc.perform(post("/api/teaching/courseware")
+                .header("X-User-Id", "5").contentType("application/json")
+                .content(json.writeValueAsString(Map.of("lessonPlanId", planId))))
+            .andExpect(status().isOk())
+            .andReturn();
+        Long cwId = json.readTree(res.getResponse().getContentAsString()).path("data").path("id").asLong();
+        mvc.perform(put("/api/teaching/courseware/" + cwId)
+                .header("X-User-Id", "8")
+                .contentType("application/json")
+                .content(json.writeValueAsString(Map.of("content", "偷改"))))
+            .andExpect(status().isForbidden());
+    }
 }
