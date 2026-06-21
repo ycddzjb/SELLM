@@ -19,7 +19,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = {"spring.profiles.active=dev"})
+@TestPropertySource(properties = {
+    "spring.profiles.active=dev",
+    "spring.cloud.nacos.discovery.enabled=false",
+    "spring.cloud.discovery.enabled=false",
+    "spring.cloud.service-registry.auto-registration.enabled=false"
+})
 public class UserListApiTest {
 
     @Autowired
