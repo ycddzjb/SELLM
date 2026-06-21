@@ -7,7 +7,9 @@ public enum ErrorCode {
     SCORING_RULE_MISSING("S002", "计分规则缺失"),
     AI_CALL_FAILED("G001", "AI 调用失败"),
     INVALID_INPUT("C001", "输入校验失败"),
-    ACCESS_DENIED("C002", "无权访问该资源");
+    ACCESS_DENIED("C002", "无权访问该资源"),
+    NOT_FOUND("C003", "资源不存在"),
+    UNAUTHORIZED("C004", "未授权,缺少身份信息");
 
     private final String code;
     private final String message;

@@ -19,12 +19,12 @@ class QaRepositoryTest {
     @Test
     void 会话保存回填id并能按用户查询() {
         QaConversation c = new QaConversation();
-        c.setUserId(7L);
+        c.setUserId(99L);  // 用独立 userId 避免与 QaAskApiTest(userId=7) 数据库状态干扰
         c.setTitle("孤独症政策");
         QaConversation saved = convRepo.save(c);
         assertNotNull(saved.getId());
 
-        List<QaConversation> mine = convRepo.listByUser(7L);
+        List<QaConversation> mine = convRepo.listByUser(99L);
         assertEquals(1, mine.size());
         assertEquals("孤独症政策", mine.get(0).getTitle());
     }
@@ -32,7 +32,7 @@ class QaRepositoryTest {
     @Test
     void 消息保存并按会话查询有序() {
         QaConversation c = new QaConversation();
-        c.setUserId(7L);
+        c.setUserId(99L);
         c.setTitle("x");
         Long cid = convRepo.save(c).getId();
 
