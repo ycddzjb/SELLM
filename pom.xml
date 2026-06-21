@@ -27,10 +27,10 @@
     <modules>
         <!-- existing monolith — keeps spring-boot-starter-parent as its own parent -->
         <module>backend</module>
-        <!-- shared capability stub (P0 placeholder; code extracted in P1) -->
-        <module>sellm-common</module>
         <!-- lightweight contracts/enums/interfaces (P2 split from sellm-common) -->
         <module>sellm-common-core</module>
+        <!-- heavy implementations/configs (P2 split from sellm-common) -->
+        <module>sellm-common-backend</module>
         <!-- API Gateway -->
         <module>sellm-gateway</module>
         <!-- Agent services -->
@@ -66,12 +66,12 @@
             <!-- 项目内模块 -->
             <dependency>
                 <groupId>com.sellm</groupId>
-                <artifactId>sellm-common</artifactId>
+                <artifactId>sellm-common-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.sellm</groupId>
-                <artifactId>sellm-common-core</artifactId>
+                <artifactId>sellm-common-backend</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
