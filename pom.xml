@@ -38,6 +38,7 @@
         <module>sellm-agent-research</module>
         <module>sellm-agent-aids</module>
         <module>sellm-agent-qa</module>
+        <module>sellm-agent-common</module>
     </modules>
 
     <dependencyManagement>
@@ -72,6 +73,11 @@
             <dependency>
                 <groupId>com.sellm</groupId>
                 <artifactId>sellm-common-backend</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sellm</groupId>
+                <artifactId>sellm-agent-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
