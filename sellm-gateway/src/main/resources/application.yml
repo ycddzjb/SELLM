@@ -2,6 +2,10 @@
 spring:
   application:
     name: sellm-gateway
+  data:
+    redis:
+      host: ${SELLM_REDIS_HOST:127.0.0.1}
+      port: ${SELLM_REDIS_PORT:6379}
   cloud:
     nacos:
       discovery:
@@ -47,3 +51,7 @@ sellm:
       whitelist:
         - /api/auth/
         - /actuator/health
+    rate-limit:
+      enabled: ${SELLM_RATELIMIT_ENABLED:true}
+      limit: ${SELLM_RATELIMIT_LIMIT:100}
+      window-seconds: ${SELLM_RATELIMIT_WINDOW:60}
