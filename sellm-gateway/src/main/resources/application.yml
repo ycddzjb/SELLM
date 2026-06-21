@@ -1,4 +1,4 @@
-# TODO(P1): JWT 鉴权已接入;限流过滤器待 P2。
+# 网关全局过滤器:JWT 鉴权(order -100)+ Redis 令牌桶限流(order 0,fail-open)均已接入。
 spring:
   application:
     name: sellm-gateway
