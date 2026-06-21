@@ -5,6 +5,21 @@ spring:
     nacos:
       discovery:
         server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
+  datasource:
+    url: jdbc:h2:mem:research_db;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+mybatis:
+  mapper-locations: classpath*:mybatis/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
 server:
   port: 8082
 
@@ -13,3 +28,8 @@ management:
     web:
       exposure:
         include: health
+
+sellm:
+  smart-layer:
+    base-url: ${SELLM_SMARTLAYER_URL:http://localhost:8090}
+    timeout-seconds: ${SELLM_SMARTLAYER_TIMEOUT:30}

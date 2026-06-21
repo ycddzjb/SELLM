@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.research.ReliabilityCalcMapper">
+    <resultMap id="calcMap" type="map">
+        <id column="id" property="id"/>
+        <result column="owner_id" property="ownerId"/>
+        <result column="dataset" property="dataset"/>
+        <result column="method" property="method"/>
+        <result column="result" property="result"/>
+    </resultMap>
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reliability_calc (owner_id, dataset, method, result)
+        VALUES (#{ownerId}, #{dataset}, #{method}, #{result})
+    </insert>
+    <select id="findById" parameterType="long" resultMap="calcMap">
+        SELECT id, owner_id, dataset, method, result FROM reliability_calc WHERE id = #{id} AND deleted = 0
+    </select>
+    <select id="findByOwnerId" parameterType="long" resultMap="calcMap">
+        SELECT id, owner_id, dataset, method, result FROM reliability_calc WHERE owner_id = #{ownerId} AND deleted = 0 ORDER BY id DESC
+    </select>
+</mapper>
