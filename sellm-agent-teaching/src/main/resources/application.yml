@@ -27,3 +27,11 @@ management:
     web:
       exposure:
         include: health
+
+sellm:
+  teaching:
+    smart-layer:
+      base-url: ${SELLM_SMARTLAYER_URL:http://localhost:8090}
+      timeout-seconds: ${SELLM_SMARTLAYER_TIMEOUT:30}
+  storage:
+    local-dir: ${SELLM_STORAGE_LOCAL_DIR:data/media}
