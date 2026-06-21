@@ -113,4 +113,27 @@ class QaAskApiTest {
             .andExpect(jsonPath("$.data.answer").value(org.hamcrest.Matchers.containsString("暂不可用")));
         stub.throwError = false;
     }
+
+    /**
+     * 红线测试1:出网文本经脱敏 —— 含身份证号的问题,到达 Python 层的文本不含原始号码。
+     * RegexAnonymizer.ID_CARD = \b\d{17}[\dXx]\b,18位纯数字符合模式。
+     */
+    @Test
+    void 出网文本中身份证号已被脱敏替换() throws Exception {
+        stub.called = false; stub.throwError = false;
+        String rawId = "110101199003078888";
+        mvc.perform(post("/api/qa/ask")
+                .header("X-User-Id", "7")
+                .contentType("application/json")
+                .content(json.writeValueAsString(Map.of(
+                    "question", "特殊教育政策对身份证 " + rawId + " 的孩子有何规定"))))
+            .andExpect(status().isOk());
+        assertTrue(stub.called, "GENERAL 意图应调用 Python");
+        String sentText = stub.lastQuestion.get();
+        assertNotNull(sentText, "出网文本不应为 null");
+        assertFalse(sentText.contains(rawId),
+            "出网文本不应包含原始身份证号,实际出网文本: " + sentText);
+        assertTrue(sentText.contains("[身份证"),
+            "出网文本应含 [身份证N] 占位符,实际出网文本: " + sentText);
+    }
 }
