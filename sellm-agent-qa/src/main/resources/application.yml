@@ -30,8 +30,6 @@ management:
         include: health
 
 sellm:
-  qa:
-    smart-layer:
-      base-url: ${SELLM_SMARTLAYER_URL:http://localhost:8090}
-      timeout-seconds: ${SELLM_SMARTLAYER_TIMEOUT:30}
-      top-k: ${SELLM_SMARTLAYER_TOPK:5}
+  smart-layer:
+    base-url: ${SELLM_SMARTLAYER_URL:http://localhost:8090}
+    timeout-seconds: ${SELLM_SMARTLAYER_TIMEOUT:30}

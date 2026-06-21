@@ -1,5 +1,6 @@
 package com.sellm.qa;
 
+import com.sellm.agentcommon.SmartLayerException;
 import com.sellm.anonymizer.AnonymizationException;
 import com.sellm.anonymizer.AnonymizationResult;
 import com.sellm.anonymizer.Anonymizer;
@@ -18,23 +19,23 @@ import java.util.Map;
 @Service
 public class QaAppService {
 
+    private static final int DEFAULT_TOP_K = 5;
+
     private final QaConversationRepository convRepo;
     private final QaMessageRepository msgRepo;
     private final IntentClassifier intentClassifier;
     private final SmartLayerClient smartLayerClient;
     private final Anonymizer anonymizer;
-    private final SmartLayerProperties props;
     private final com.fasterxml.jackson.databind.ObjectMapper json = new com.fasterxml.jackson.databind.ObjectMapper();
 
     public QaAppService(QaConversationRepository convRepo, QaMessageRepository msgRepo,
                         IntentClassifier intentClassifier, SmartLayerClient smartLayerClient,
-                        Anonymizer anonymizer, SmartLayerProperties props) {
+                        Anonymizer anonymizer) {
         this.convRepo = convRepo;
         this.msgRepo = msgRepo;
         this.intentClassifier = intentClassifier;
         this.smartLayerClient = smartLayerClient;
         this.anonymizer = anonymizer;
-        this.props = props;
     }
 
     public AskResponse ask(Long userId, AskRequest req) {
@@ -74,7 +75,7 @@ public class QaAppService {
         List<Map<String, String>> sources = new ArrayList<>();
         try {
             AnonymizationResult anon = anonymizer.anonymize(question, List.of(), List.of()); // 红线:出网必经脱敏
-            QaAnswer qa = smartLayerClient.generate(anon.getAnonymizedText(), props.getTopK());
+            QaAnswer qa = smartLayerClient.generate(anon.getAnonymizedText(), DEFAULT_TOP_K);
             answer = anonymizer.restore(qa.getAnswer(), anon.getRestoreMap());
             if (qa.getSources() != null) sources = qa.getSources();
         } catch (AnonymizationException ae) {

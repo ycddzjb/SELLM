@@ -1,5 +1,6 @@
 package com.sellm.qa;
 
+import com.sellm.agentcommon.UnauthorizedException;
 import com.sellm.common.Result;
 import com.sellm.qa.dto.AskRequest;
 import com.sellm.qa.dto.AskResponse;

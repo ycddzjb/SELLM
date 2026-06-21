@@ -1,6 +1,7 @@
 package com.sellm.qa;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sellm.agentcommon.SmartLayerException;
 import com.sellm.qa.dto.QaAnswer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
