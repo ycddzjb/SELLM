@@ -8,9 +8,9 @@ spring:
         server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
     gateway:
       routes:
-        # backend 单体(assessment)尚未接入 Nacos，保留直连 http://localhost:8080
+        # backend 经 Nacos 注册为 agent-assessment，lb 负载均衡
         - id: agent-assessment
-          uri: http://localhost:8080
+          uri: lb://agent-assessment
           predicates:
             - Path=/api/auth/**,/api/orgs/**,/api/classes/**,/api/children/**,/api/scales/**,/api/reports/**,/api/ieps/**,/api/family-ieps/**,/api/assessments/**,/api/users/**
         - id: agent-teaching

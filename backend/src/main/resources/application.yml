@@ -1,6 +1,10 @@
 spring:
   application:
-    name: asd-assistant-backend
+    name: agent-assessment
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
   sql:
     init:
       mode: never

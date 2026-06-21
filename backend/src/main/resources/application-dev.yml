@@ -14,6 +14,10 @@ spring:
   h2:
     console:
       enabled: true             # /h2-console 便于调试(dev only)
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
 
 mybatis:
   mapper-locations: classpath*:mybatis/*.xml
