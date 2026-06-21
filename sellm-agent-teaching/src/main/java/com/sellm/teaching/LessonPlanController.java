@@ -1,5 +1,6 @@
 package com.sellm.teaching;
 
+import com.sellm.agentcommon.UnauthorizedException;
 import com.sellm.common.Result;
 import com.sellm.teaching.dto.*;
 import org.springframework.web.bind.annotation.*;

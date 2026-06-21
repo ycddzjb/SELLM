@@ -1,5 +1,6 @@
 package com.sellm.teaching;
 
+import com.sellm.agentcommon.SmartLayerException;
 import com.sellm.anonymizer.AnonymizationException;
 import com.sellm.anonymizer.AnonymizationResult;
 import com.sellm.anonymizer.Anonymizer;

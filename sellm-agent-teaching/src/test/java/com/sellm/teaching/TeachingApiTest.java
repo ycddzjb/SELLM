@@ -1,6 +1,7 @@
 package com.sellm.teaching;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sellm.agentcommon.SmartLayerException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
