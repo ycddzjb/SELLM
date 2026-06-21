@@ -38,8 +38,10 @@ class ReliabilityServiceTest {
         };
         ReliabilityResult r = svc.compute(scores);
         assertEquals(3, r.getItemTotal().length);
-        for (double v : r.getItemTotal()) {
-            assertTrue(v >= -1.0 && v <= 1.0, "相关应在 [-1,1]");
+        for (Double v : r.getItemTotal()) {
+            if (v != null) {
+                assertTrue(v >= -1.0 && v <= 1.0, "相关应在 [-1,1]");
+            }
         }
     }
 
@@ -75,7 +77,7 @@ class ReliabilityServiceTest {
 
     @Test
     void 某题零方差该项总相关为NaN置null安全() {
-        // 第3题全同分 → 零方差 → 项总相关分母0
+        // 第3题全同分(2) → 零方差 → 项总相关分母0 → null
         double[][] scores = {
             {5, 4, 2},
             {4, 3, 2},
@@ -83,9 +85,13 @@ class ReliabilityServiceTest {
             {2, 1, 2}
         };
         ReliabilityResult r = svc.compute(scores);
-        // itemTotal[2] 应为 NaN 或被安全处理(不抛异常);约定:零方差项置 Double.NaN 不可,改置 0 或标记
-        // 本设计:零方差相关置 0.0 并加 note(或单独 nullable 数组);这里断言不抛 + 长度对
         assertEquals(3, r.getItemTotal().length);
+        // 零方差列(index 2)应为 null,而非 0.0
+        assertNull(r.getItemTotal()[2], "零方差项总相关应为 null,不得报 0.0(与真零相关歧义)");
+        // 其余两列有方差,应非 null
+        assertNotNull(r.getItemTotal()[0]);
+        assertNotNull(r.getItemTotal()[1]);
+        // 应有对应 note
         assertFalse(r.getNotes().isEmpty());
     }
 

@@ -6,7 +6,7 @@ import java.util.List;
 public class ReliabilityResult {
     private Double alpha;         // null = 不可算
     private Double splitHalf;     // null = 不可算
-    private double[] itemTotal;   // 每题一个(零方差项按策略处置)
+    private Double[] itemTotal;   // 每题一个(零方差项为 null = 无法计算)
     private int itemCount;
     private int subjectCount;
     private List<String> notes = new ArrayList<>();
@@ -15,8 +15,8 @@ public class ReliabilityResult {
     public void setAlpha(Double alpha) { this.alpha = alpha; }
     public Double getSplitHalf() { return splitHalf; }
     public void setSplitHalf(Double splitHalf) { this.splitHalf = splitHalf; }
-    public double[] getItemTotal() { return itemTotal; }
-    public void setItemTotal(double[] itemTotal) { this.itemTotal = itemTotal; }
+    public Double[] getItemTotal() { return itemTotal; }
+    public void setItemTotal(Double[] itemTotal) { this.itemTotal = itemTotal; }
     public int getItemCount() { return itemCount; }
     public void setItemCount(int itemCount) { this.itemCount = itemCount; }
     public int getSubjectCount() { return subjectCount; }

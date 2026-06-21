@@ -16,7 +16,7 @@ public class ReliabilityService {
 
         if (n < 2) {
             r.getNotes().add("被试数不足(N<2),无法计算方差/相关");
-            r.setItemTotal(new double[k]);
+            r.setItemTotal(new Double[k]);
             return r;
         }
 
@@ -47,12 +47,12 @@ public class ReliabilityService {
         }
 
         // 项总相关
-        double[] itemTotal = new double[k];
+        Double[] itemTotal = new Double[k];
         for (int j = 0; j < k; j++) {
             Double corr = pearson(column(scores, j), totals);
             if (corr == null) {
-                itemTotal[j] = 0.0;
-                r.getNotes().add("第 " + (j + 1) + " 题方差为 0,项总相关置 0");
+                itemTotal[j] = null;
+                r.getNotes().add("第 " + (j + 1) + " 题方差为 0,项总相关无法计算");
             } else {
                 itemTotal[j] = corr;
             }
