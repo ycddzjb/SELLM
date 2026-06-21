@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -14,6 +16,13 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 @Transactional
 class ResearchRepositoryTest {
+
+    /** 独立内存数据库,与 API 测试隔离,避免 owner=7 的记录数冲突。 */
+    @DynamicPropertySource
+    static void isolateDb(DynamicPropertyRegistry r) {
+        r.add("spring.datasource.url", () ->
+            "jdbc:h2:mem:research_repo_test;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE");
+    }
 
     @Autowired ReliabilityCalcRepository calcRepo;
     @Autowired ResearchProposalRepository proposalRepo;
