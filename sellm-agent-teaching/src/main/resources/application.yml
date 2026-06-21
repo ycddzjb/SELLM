@@ -1,9 +1,6 @@
 spring:
   application:
     name: agent-teaching
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
   cloud:
     nacos:
       discovery:

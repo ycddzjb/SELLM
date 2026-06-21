@@ -1,9 +1,6 @@
 spring:
   application:
     name: agent-research
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
   cloud:
     nacos:
       discovery:
