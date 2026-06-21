@@ -26,14 +26,19 @@ class AbstractHttpSmartLayerClientTest {
             () -> c.callSend("/v1/agents/x/invoke", "{}"));
     }
 
+    // 覆写 send 注入假响应的子类(各 agent 测试桩依赖此模式)
+    static class StubbedClient extends AbstractHttpSmartLayerClient {
+        StubbedClient(SmartLayerProperties props) { super(props); }
+        @Override protected String send(String path, String jsonBody) {
+            return "{\"content\":\"fake\"}";
+        }
+        String callSend() { return send("/v1/agents/x/invoke", "{}"); }
+    }
+
     @Test
     void 子类可覆写send注入假响应() {
-        // 验证 send 可被子类覆写(测试注入模式)
-        AbstractHttpSmartLayerClient c = new AbstractHttpSmartLayerClient(props()) {
-            @Override protected String send(String path, String jsonBody) {
-                return "{\"content\":\"fake\"}";
-            }
-        };
-        assertNotNull(c);
+        StubbedClient c = new StubbedClient(props());
+        // 覆写生效、返回假响应、不真连网(若未覆写会因不可达地址抛异常)
+        assertEquals("{\"content\":\"fake\"}", c.callSend());
     }
 }
