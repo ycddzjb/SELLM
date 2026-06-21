@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from app.config import settings
 from app.agents.qa import invoke_qa
+from app.agents.teaching import invoke_teaching
 
 app = FastAPI(title="SELLM AI Smart Layer", version="0.1.0")
 
@@ -15,6 +16,12 @@ async def health():
 async def qa_invoke(payload: dict):
     """通用问答 Agent RAG 问答(接收脱敏后问题)。"""
     return await invoke_qa(payload)
+
+
+@app.post("/v1/agents/teaching/invoke")
+async def teaching_invoke(payload: dict):
+    """教学训练 Agent 教案/课件生成(接收脱敏后文本)。"""
+    return await invoke_teaching(payload)
 
 
 @app.post("/v1/agents/{agent_name}/invoke")
