@@ -117,6 +117,10 @@ CREATE TABLE IF NOT EXISTS app_user (
 -- (计划五 Task 1 追加 app_user.status 列:账号状态 ACTIVE/PENDING/REJECTED,登录校验用)
 ALTER TABLE app_user ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE';
 
+-- (P9 微信登录:绑定微信 openid,家长端 code2session 静默登录用;唯一,可空)
+ALTER TABLE app_user ADD COLUMN IF NOT EXISTS wx_openid VARCHAR(64);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_app_user_wx_openid ON app_user (wx_openid);
+
 -- (计划六 Task 4 追加 class_room 表:班级,表名用 class_room 避开 SQL 保留字 class)
 CREATE TABLE IF NOT EXISTS class_room (
     id             BIGINT PRIMARY KEY AUTO_INCREMENT,

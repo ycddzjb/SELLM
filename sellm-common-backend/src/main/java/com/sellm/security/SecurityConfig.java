@@ -53,6 +53,9 @@ public class SecurityConfig {
                 // 老师:看分派给自己的待审家长 + 审核(通过/拒绝)
                 .requestMatchers(HttpMethod.GET, "/api/users/pending").hasRole("TEACHER")
                 .requestMatchers(HttpMethod.PUT, "/api/users/*/approve", "/api/users/*/reject").hasRole("TEACHER")
+                // 机构管理者:微信家长激活流(看待激活 + 激活/拒绝);PUT 无通配兜底,须显式列防越权
+                .requestMatchers(HttpMethod.GET, "/api/users/pending-wechat").hasRole("MANAGER")
+                .requestMatchers(HttpMethod.PUT, "/api/users/*/activate-wechat", "/api/users/*/reject-wechat").hasRole("MANAGER")
                 // 机构端点:公开列表免登录(注册选机构),建机构/看全部限超管
                 .requestMatchers(HttpMethod.GET, "/api/orgs/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/orgs/public/*/classes").permitAll()

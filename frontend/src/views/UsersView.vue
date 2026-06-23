@@ -153,6 +153,51 @@
         <el-empty v-if="!parents.length" description="暂无家长" :image-size="60" />
         <p style="color:#999;font-size:12px;margin-top:8px">家长注册后由所选老师审核;此处展示已注册家长信息。</p>
       </el-card>
+
+      <el-card>
+        <template #header><span>微信家长待激活</span></template>
+        <el-table :data="pendingWeChat" size="small">
+          <el-table-column prop="username" label="微信账号" />
+          <el-table-column label="机构" width="100">
+            <template #default="{ row }">{{ row.orgId ? row.orgId : '未分配' }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag size="small" :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="180">
+            <template #default="{ row }">
+              <el-button size="small" type="success" @click="openActivate(row)">激活</el-button>
+              <el-button size="small" type="danger" @click="onRejectWeChat(row.id)">拒绝</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-if="!pendingWeChat.length" description="暂无微信家长待激活" :image-size="60" />
+        <p style="color:#999;font-size:12px;margin-top:8px">微信家长首次登录后落本机构(或未分配),激活时补孩子信息并建档,激活后即可使用。</p>
+      </el-card>
+
+      <el-dialog v-model="activateDialog" title="激活微信家长" width="460px">
+        <el-form label-width="90px">
+          <el-form-item label="孩子姓名">
+            <el-input v-model="activateForm.childName" />
+          </el-form-item>
+          <el-form-item label="障碍类型">
+            <el-select v-model="activateForm.disorderCodes" multiple placeholder="可多选" style="width:100%">
+              <el-option v-for="d in DISORDER_TYPES" :key="d.code" :label="d.label" :value="d.code" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="班级">
+            <el-select v-model="activateForm.classId" clearable placeholder="可空(本机构班级)" style="width:100%">
+              <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="activateDialog = false">取消</el-button>
+          <el-button type="primary" :loading="activateLoading" @click="onActivate">确认激活</el-button>
+        </template>
+      </el-dialog>
     </template>
 
     <!-- ============ TEACHER ============ -->
@@ -182,7 +227,8 @@
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  listUsers, createUser, listPendingParents, listParents, approveUser, rejectUser, changeMyPassword
+  listUsers, createUser, listPendingParents, listParents, approveUser, rejectUser, changeMyPassword,
+  listPendingWeChat, activateWeChat, rejectWeChat
 } from '../api/users'
 import { listOrgs, createOrg } from '../api/orgs'
 import { listClasses } from '../api/classes'
@@ -299,6 +345,44 @@ async function loadParents() {
 async function loadClasses() {
   try { classes.value = await listClasses() } catch (e) {}
 }
+
+// ---- 微信家长激活(管理者)----
+const pendingWeChat = ref([])
+const activateDialog = ref(false)
+const activateLoading = ref(false)
+const activateForm = reactive({ id: null, childName: '', disorderCodes: [], classId: null })
+
+async function loadPendingWeChat() {
+  try { pendingWeChat.value = await listPendingWeChat() } catch (e) {}
+}
+function openActivate(row) {
+  activateForm.id = row.id
+  activateForm.childName = ''
+  activateForm.disorderCodes = []
+  activateForm.classId = null
+  activateDialog.value = true
+}
+async function onActivate() {
+  if (!activateForm.childName) { ElMessage.warning('请填写孩子姓名'); return }
+  activateLoading.value = true
+  try {
+    await activateWeChat(activateForm.id, {
+      childName: activateForm.childName,
+      childDisorderType: activateForm.disorderCodes.join(','),
+      classId: activateForm.classId || null
+    })
+    ElMessage.success('已激活')
+    activateDialog.value = false
+    await Promise.all([loadPendingWeChat(), loadUsers()])
+  } catch (e) {} finally { activateLoading.value = false }
+}
+async function onRejectWeChat(id) {
+  try {
+    await rejectWeChat(id)
+    ElMessage.success('已拒绝')
+    await loadPendingWeChat()
+  } catch (e) {}
+}
 async function onCreateUser() {
   if (!userForm.username || !userForm.password || !userForm.role) {
     ElMessage.warning('请填写完整')
@@ -343,6 +427,7 @@ onMounted(() => {
     loadUsers()
     loadParents()
     loadClasses()
+    loadPendingWeChat()
   } else if (auth.isTeacher) {
     loadPending()
   }

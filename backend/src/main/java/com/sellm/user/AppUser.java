@@ -9,6 +9,7 @@ public class AppUser {
     private Role role;
     private Long orgId;
     private String status;
+    private String wxOpenid;
 
     public AppUser() {
     }
@@ -39,4 +40,6 @@ public class AppUser {
     public void setOrgId(Long orgId) { this.orgId = orgId; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getWxOpenid() { return wxOpenid; }
+    public void setWxOpenid(String wxOpenid) { this.wxOpenid = wxOpenid; }
 }

@@ -5,6 +5,7 @@ import com.sellm.child.ChildRepository;
 import com.sellm.clazz.Clazz;
 import com.sellm.clazz.ClazzRepository;
 import com.sellm.common.BusinessException;
+import com.sellm.common.DisorderType;
 import com.sellm.common.ErrorCode;
 import com.sellm.common.Result;
 import com.sellm.parent.ParentProfile;
@@ -13,6 +14,7 @@ import com.sellm.parent.ParentProfileRow;
 import com.sellm.security.AuthPrincipal;
 import com.sellm.security.CurrentUser;
 import com.sellm.security.Role;
+import com.sellm.user.dto.ActivateWeChatRequest;
 import com.sellm.user.dto.ChangePasswordRequest;
 import com.sellm.user.dto.CreateUserRequest;
 import com.sellm.user.dto.ParentResponse;
@@ -145,6 +147,52 @@ public class UserManagementController {
         return Result.ok(null);
     }
 
+    // 机构管理者:本机构(及未分配机构)待激活微信家长列表
+    @GetMapping("/pending-wechat")
+    public Result<List<UserResponse>> pendingWeChat() {
+        AuthPrincipal me = currentUser.require();
+        return Result.ok(map(userRepository.listPendingWeChat(me.getOrgId())));
+    }
+
+    // 机构管理者:激活微信家长 —— 补孩子信息 → 建档 → 落本机构 + ACTIVE
+    @PutMapping("/{id}/activate-wechat")
+    @Transactional
+    public Result<Void> activateWeChat(@PathVariable Long id, @RequestBody ActivateWeChatRequest req) {
+        AuthPrincipal me = currentUser.require();
+        AppUser target = requireWeChatPendingParent(me, id);
+        if (req.getChildName() == null || req.getChildName().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "请填写孩子姓名");
+        }
+        DisorderType.validateCsv(req.getChildDisorderType());   // 非法码 → IllegalArgumentException → 400
+        Long orgId = me.getOrgId();
+        // 班级若填,校验属本机构(防越权)
+        if (req.getClassId() != null) {
+            Clazz clazz = clazzRepository.findById(req.getClassId());
+            if (clazz == null || !orgId.equals(clazz.getOrgId())) {
+                throw new BusinessException(ErrorCode.ACCESS_DENIED, "班级不属于本机构");
+            }
+        }
+        // 建儿童档案(guardian=该微信家长,org=管理者机构),姓名加密由 Repository 处理
+        Child child = childRepository.save(new Child(null,
+            req.getChildName(), req.getChildDisorderType(), orgId, target.getId()));
+        // 写家长档案(微信家长无 name/relationship/assignedTeacher;只存孩子信息 + childId 回填)
+        parentProfileRepository.save(new ParentProfile(
+            target.getId(), null, null, null,
+            req.getChildName(), req.getChildDisorderType(), req.getClassId(), child.getId()));
+        // 落机构(原可能为空) + 激活
+        userRepository.updateRoleOrgStatus(id, Role.PARENT, orgId, "ACTIVE");
+        return Result.ok(null);
+    }
+
+    // 机构管理者:拒绝微信家长(置 REJECTED,不建儿童)
+    @PutMapping("/{id}/reject-wechat")
+    public Result<Void> rejectWeChat(@PathVariable Long id) {
+        AuthPrincipal me = currentUser.require();
+        requireWeChatPendingParent(me, id);
+        userRepository.updateStatus(id, "REJECTED");
+        return Result.ok(null);
+    }
+
     // 全角色:改自己密码
     @PutMapping("/me/password")
     public Result<Void> changePassword(@RequestBody ChangePasswordRequest req) {
@@ -167,6 +215,25 @@ public class UserManagementController {
         if (profile == null || profile.getAssignedTeacherId() == null
                 || !profile.getAssignedTeacherId().equals(me.getUserId())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED, "无权审核该账号(非指派给你)");
+        }
+        if (!"PENDING".equals(target.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "该账号不是待审核状态");
+        }
+        return target;
+    }
+
+    // 行级校验:目标是微信 PENDING 家长(有 wx_openid),且属当前管理者机构或尚未分配机构(认领)
+    private AppUser requireWeChatPendingParent(AuthPrincipal me, Long targetId) {
+        AppUser target = userRepository.findById(targetId);
+        if (target == null || target.getRole() != Role.PARENT) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "无权激活该账号");
+        }
+        if (target.getWxOpenid() == null || target.getWxOpenid().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "该账号非微信家长,请走老师审核流");
+        }
+        // 机构归属:本机构或未分配(未分配则由本管理者认领落库)
+        if (target.getOrgId() != null && !target.getOrgId().equals(me.getOrgId())) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "无权激活其他机构的家长");
         }
         if (!"PENDING".equals(target.getStatus())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "该账号不是待审核状态");
