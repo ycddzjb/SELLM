@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev:mp-weixin": "uni -p mp-weixin",
-    "build:mp-weixin": "uni build -p mp-weixin"
+    "build:mp-weixin": "uni build -p mp-weixin",
+    "test:mp-weixin": "cross-env UNI_PLATFORM=mp-weixin jest --config jest.config.js --runInBand"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-alpha-5010320260611001",

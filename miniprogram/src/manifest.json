@@ -5,9 +5,9 @@
   "versionName": "0.1.0",
   "versionCode": "100",
   "mp-weixin": {
-    "appid": "",
+    "appid": "wx1032c7ad47e10309",
     "setting": {
-      "urlCheck": true,
+      "urlCheck": false,
       "es6": true,
       "minified": true
     },
