@@ -13,6 +13,7 @@ spring:
   sql:
     init:
       mode: always
+      encoding: UTF-8            # 种子含中文教具文案,须 UTF-8 读取(否则 Windows 默认 GBK 入库即乱码)
       schema-locations: classpath:schema.sql
 
 mybatis:
