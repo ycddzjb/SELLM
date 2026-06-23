@@ -83,7 +83,7 @@ frontend/
 - Modify: `backend/src/main/java/com/sellm/config/DevSeeder.java`(admin → SUPER_ADMIN, orgId=null)
 - Test: `backend/src/test/java/com/sellm/user/UserRepositoryTest.java`(适配:register 新签名、status)
 
-- [ ] **Step 1: Role 加 SUPER_ADMIN**
+- [x] **Step 1: Role 加 SUPER_ADMIN**
 ```java
 public enum Role {
     SUPER_ADMIN,  // 超级管理者(跨机构)
@@ -93,7 +93,7 @@ public enum Role {
 }
 ```
 
-- [ ] **Step 2: schema.sql app_user 加 status**
+- [x] **Step 2: schema.sql app_user 加 status**
 
 把 app_user 的 CREATE TABLE 加一列(放 org_id 后):
 ```sql
@@ -101,28 +101,28 @@ public enum Role {
 ```
 注:H2/MySQL 都支持列 DEFAULT。已存在的 dev H2 文件库需重建(删 backend/data/ 重启)或靠 schema 的 IF NOT EXISTS——**但 ALTER 加列更稳**:在 CREATE TABLE 之后加 `ALTER TABLE app_user ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE';`(与计划三 child guardian_user_id 同样手法,兼容已存在的库)。实现者二选一并说明;推荐 ALTER IF NOT EXISTS 以免毁掉 dev 已有数据。
 
-- [ ] **Step 3: AppUser 加 status 字段 + getter/setter**
+- [x] **Step 3: AppUser 加 status 字段 + getter/setter**
 
 `AppUser` 加 `private String status;`,全参构造器加 status 参数,并**保留兼容**:给一个不带 status 的构造器委托新构造器(status 默认 "ACTIVE"),避免计划三既有调用(若有)全炸。或更新所有调用点——实现者权衡,但**既有 UserRepositoryTest 必须仍绿**。
 
-- [ ] **Step 4: AppUserMapper + XML 带 status**
+- [x] **Step 4: AppUserMapper + XML 带 status**
 
 Mapper insert 参数 map 加 status;resultMap(userMap)加 `<result column="status" property="status"/>`;insert SQL 加 status 列;findByUsername SELECT 加 status。
 
-- [ ] **Step 5: UserRepository.register 带 status**
+- [x] **Step 5: UserRepository.register 带 status**
 
 `register(username, rawPassword, role, orgId, status)`(新增 status 参数);**保留旧 4 参 register 委托新版**(status 默认 "ACTIVE"),使计划三既有调用(AuthController/UserManagementController/DevSeeder/测试)不破——它们后续任务会逐步改。findByUsername 组装 AppUser 带 status。
 
-- [ ] **Step 6: DevSeeder admin → SUPER_ADMIN**
+- [x] **Step 6: DevSeeder admin → SUPER_ADMIN**
 
 `userRepository.register("admin", "admin123", Role.SUPER_ADMIN, null, "ACTIVE")`(超管无机构)。
 注:dev H2 文件库里已有的 admin 是旧 MANAGER。DevSeeder 是"不存在才建",已存在的不会改。**实现者需在 Step 末尾说明:验证时若 admin 已是旧角色,需删 backend/data/ 重启让种子重建**(dev 数据可丢)。或 DevSeeder 改为"存在则更新 admin 的 role/status 为 SUPER_ADMIN"(幂等纠正)——推荐后者更稳,实现者择一。
 
-- [ ] **Step 7: 适配 UserRepositoryTest**
+- [x] **Step 7: 适配 UserRepositoryTest**
 
 现有测试调 `register(u,p,role,orgId)`(4参)。若保留了 4 参委托则不破;另加断言:新注册用户 status 默认 ACTIVE;register 5 参版能存 PENDING 并读回。
 
-- [ ] **Step 8: 全量回归 + 提交**
+- [x] **Step 8: 全量回归 + 提交**
 
 Run: `cd "D:/works/test/SELLM/backend" && ./mvnw -q test`,期望此前 81 全绿(+ 可能新增断言)。报告实际数。
 ```bash
@@ -140,11 +140,11 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/Rol
 - Modify: `backend/src/main/java/com/sellm/user/UserRepository.java`(若需:findByUsername 已带 status)
 - Test: `backend/src/test/java/com/sellm/auth/AuthApiTest.java`(适配 + 新增待审不能登录)
 
-- [ ] **Step 1: RegisterRequest 加 orgId**
+- [x] **Step 1: RegisterRequest 加 orgId**
 
 加 `private Long orgId;` + getter/setter。
 
-- [ ] **Step 2: AuthController.register**
+- [x] **Step 2: AuthController.register**
 ```java
     @PostMapping("/register")
     public Result<Long> register(@RequestBody RegisterRequest req) {
@@ -161,7 +161,7 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/Rol
     }
 ```
 
-- [ ] **Step 3: AuthController.login 校验 status**
+- [x] **Step 3: AuthController.login 校验 status**
 
 在密码校验通过后、签发 token 前加:
 ```java
@@ -171,14 +171,14 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/Rol
 ```
 (AppUser 已有 getStatus,Task 1 加。)
 
-- [ ] **Step 4: 适配 + 新增测试**
+- [x] **Step 4: 适配 + 新增测试**
 
 AuthApiTest:
 - "注册并登录" 用例:注册现在需带 orgId,且注册出的是 PENDING 家长 → **不能直接登录**。改造:注册带 orgId → 断言注册成功(返回 id);但登录该家长应 400(待审核)。原"注册并登录拿 token"语义变了——拆成:① 注册家长成功;② 待审家长登录被拒(400)。
 - 新增/保留:用 AuthTestSupport 造一个 ACTIVE 用户(它直接走 UserRepository.register ACTIVE,见计划三)能正常登录拿 token。
 - 注:AuthTestSupport 造种子账号走 UserRepository.register,确保用 ACTIVE 状态(Task 1 register 默认/显式 ACTIVE)。实现者确认 AuthTestSupport 造的账号是 ACTIVE 可登录。
 
-- [ ] **Step 5: 全量回归 + 提交**
+- [x] **Step 5: 全量回归 + 提交**
 
 `./mvnw -q test`,全绿。
 ```bash
@@ -199,15 +199,15 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/user/ backen
 - Modify: `backend/src/main/java/com/sellm/security/SecurityConfig.java`(GET /api/orgs/public permitAll;POST /api/orgs 限 SUPER_ADMIN)
 - Test: `backend/src/test/java/com/sellm/org/OrganizationApiTest.java`
 
-- [ ] **Step 1: OrganizationMapper + Repository listAll**
+- [x] **Step 1: OrganizationMapper + Repository listAll**
 
 Mapper 加 `List<Map<String,Object>> findAll();` + XML select(复用 orgMap,SELECT id,name,region ORDER BY id)。Repository 加 `List<Organization> listAll()`。
 
-- [ ] **Step 2: DTO**
+- [x] **Step 2: DTO**
 
 `OrgResponse(id,name,region)`、`CreateOrgRequest(name,region)`。
 
-- [ ] **Step 3: OrganizationController**
+- [x] **Step 3: OrganizationController**
 ```java
 @RestController
 @RequestMapping("/api/orgs")
@@ -239,7 +239,7 @@ public class OrganizationController {
 }
 ```
 
-- [ ] **Step 4: SecurityConfig 规则**
+- [x] **Step 4: SecurityConfig 规则**
 
 加(放在 /api/** authenticated 之前):
 ```java
@@ -249,14 +249,14 @@ public class OrganizationController {
 ```
 注:`/api/orgs/public` 必须 permitAll(注册时未登录)。注意顺序:specific 在前。
 
-- [ ] **Step 5: 测试 OrganizationApiTest**
+- [x] **Step 5: 测试 OrganizationApiTest**
 
 - 公开列表免登录可访问(无 token GET /api/orgs/public → 200,含种子机构"阳光小学")。
 - 超管建机构成功(200);非超管(MANAGER)POST /api/orgs → 403。
 - 超管 GET /api/orgs 返回列表;MANAGER → 403。
 用 AuthTestSupport 造 SUPER_ADMIN / MANAGER 账号(ACTIVE)取 token。
 
-- [ ] **Step 6: 全量回归 + 提交**
+- [x] **Step 6: 全量回归 + 提交**
 
 ```bash
 cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/org/ backend/src/main/resources/mybatis/OrganizationMapper.xml backend/src/main/java/com/sellm/security/SecurityConfig.java backend/src/test/java/com/sellm/org/OrganizationApiTest.java && git commit -q -m "feat(org): 公开机构列表 + 超管建机构/列表"
@@ -270,7 +270,7 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/org/ backend
 - Modify: `backend/src/main/java/com/sellm/security/AccessGuard.java`
 - Test: `backend/src/test/java/com/sellm/security/AccessGuardTest.java`(新建单测)
 
-- [ ] **Step 1: canAccess 加 SUPER_ADMIN 分支**
+- [x] **Step 1: canAccess 加 SUPER_ADMIN 分支**
 
 在 switch 加:
 ```java
@@ -279,7 +279,7 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/org/ backend
 ```
 (放在 MANAGER/TEACHER 分支前。)其余不变。
 
-- [ ] **Step 2: 单测 AccessGuardTest**
+- [x] **Step 2: 单测 AccessGuardTest**
 
 纯单元(new AccessGuard,构造 AuthPrincipal + Child):
 - SUPER_ADMIN 访问任意机构 child → canAccess true。
@@ -288,7 +288,7 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/org/ backend
 - PARENT 自己监护 true、他人 false。
 - child=null → false。
 
-- [ ] **Step 3: 全量回归 + 提交**
+- [x] **Step 3: 全量回归 + 提交**
 
 ```bash
 cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/AccessGuard.java backend/src/test/java/com/sellm/security/AccessGuardTest.java && git commit -q -m "feat(rbac): AccessGuard 支持 SUPER_ADMIN 跨机构访问"
@@ -308,11 +308,11 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/Acc
 - Modify: `backend/src/main/java/com/sellm/security/SecurityConfig.java`(POST /api/users 限 SUPER_ADMIN + MANAGER)
 - Test: `backend/src/test/java/com/sellm/user/UserManagementApiTest.java`(改造 + 新增角色矩阵)
 
-- [ ] **Step 1: CreateUserRequest 加 orgId**
+- [x] **Step 1: CreateUserRequest 加 orgId**
 
 加 `private Long orgId;`(超管创建时指定目标机构;MANAGER 创建时忽略此字段)。
 
-- [ ] **Step 2: UserManagementController.create 按角色分化**
+- [x] **Step 2: UserManagementController.create 按角色分化**
 ```java
     @PostMapping
     public Result<Long> create(@RequestBody CreateUserRequest req) {
@@ -344,11 +344,11 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/Acc
 ```
 注:上级创建的账号一律 ACTIVE(无需审核)。MANAGER 建 MANAGER 被业务逻辑拒(ACCESS_DENIED → 403)。
 
-- [ ] **Step 3: SecurityConfig POST /api/users 放开给 SUPER_ADMIN + MANAGER**
+- [x] **Step 3: SecurityConfig POST /api/users 放开给 SUPER_ADMIN + MANAGER**
 
 把原 `POST /api/users` 的 `hasRole("MANAGER")` 改为 `hasAnyRole("SUPER_ADMIN","MANAGER")`(具体角色能建什么由 controller 业务逻辑细分;端点级先挡掉 TEACHER/PARENT)。
 
-- [ ] **Step 4: 测试 UserManagementApiTest 角色矩阵**
+- [x] **Step 4: 测试 UserManagementApiTest 角色矩阵**
 
 改造既有 + 新增:
 - 超管建 MANAGER 到机构 X 成功,新账号 orgId=X、role=MANAGER、status=ACTIVE(可查库或登录验证)。
@@ -359,7 +359,7 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/security/Acc
 - PARENT 调 → 403。
 - 注:既有"MANAGER 建 TEACHER"用例保留;"MANAGER 建 MANAGER"从原来可能允许 → 现在 403,需更新断言。
 
-- [ ] **Step 5: 全量回归 + 提交**
+- [x] **Step 5: 全量回归 + 提交**
 
 ```bash
 cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/user/ backend/src/main/java/com/sellm/security/SecurityConfig.java backend/src/test/java/com/sellm/user/UserManagementApiTest.java && git commit -q -m "feat(rbac): 用户创建按角色分化(超管建MANAGER/机构管理者建TEACHER/PARENT)"
@@ -379,16 +379,16 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/user/ backen
 - Modify: `backend/src/main/java/com/sellm/security/SecurityConfig.java`(新端点授权)
 - Test: `backend/src/test/java/com/sellm/user/UserAdminApiTest.java`
 
-- [ ] **Step 1: Mapper/Repository — 待审查询、改状态、改密码**
+- [x] **Step 1: Mapper/Repository — 待审查询、改状态、改密码**
 
 Mapper 加:`List<Map> findPendingByOrg(@Param Long orgId)`(WHERE org_id=? AND status='PENDING')、`updateStatus(@Param Long id, @Param String status)`、`updatePassword(@Param Long id, @Param String passwordHash)`。XML 对应实现(复用 userMap)。
 Repository 加:`listPendingByOrg(Long orgId)`(返回 List<AppUser>)、`updateStatus(Long id, String status)`、`changePassword(Long userId, String rawPassword)`(内部 BCrypt encode 后 updatePassword)、`findById(Long id)`(审核时校验该家长确属本机构;若没有 findById 则加)。
 
-- [ ] **Step 2: DTO**
+- [x] **Step 2: DTO**
 
 `ChangePasswordRequest(oldPassword,newPassword)`、`UserResponse(id,username,role,orgId,status)`。
 
-- [ ] **Step 3: UserManagementController 新端点**
+- [x] **Step 3: UserManagementController 新端点**
 ```java
     // 机构管理者:本机构待审家长列表
     @GetMapping("/pending")
@@ -430,7 +430,7 @@ Repository 加:`listPendingByOrg(Long orgId)`(返回 List<AppUser>)、`updateSta
 ```
 注:状态枚举值用字符串 ACTIVE/PENDING/REJECTED;登录校验 `!"ACTIVE".equals(status)` 已能挡 PENDING 和 REJECTED。审核端点强制校验目标属本机构(行级,防跨机构越权审核)。
 
-- [ ] **Step 4: SecurityConfig 授权**
+- [x] **Step 4: SecurityConfig 授权**
 ```java
 .requestMatchers(HttpMethod.GET, "/api/users/pending").hasRole("MANAGER")
 .requestMatchers(HttpMethod.PUT, "/api/users/*/approve", "/api/users/*/reject").hasRole("MANAGER")
@@ -438,7 +438,7 @@ Repository 加:`listPendingByOrg(Long orgId)`(返回 List<AppUser>)、`updateSta
 ```
 (放在合适位置;`/api/users/me/password` 任何登录用户可调,改自己密码。注意 `/api/users/*/approve` 的通配符路径匹配。)
 
-- [ ] **Step 5: 测试 UserAdminApiTest**
+- [x] **Step 5: 测试 UserAdminApiTest**
 
 - MANAGER 看本机构待审家长列表(先公开注册一个家长到该机构 → PENDING → MANAGER GET /api/users/pending 含它)。
 - MANAGER approve 后,该家长能登录(status ACTIVE)。
@@ -447,7 +447,7 @@ Repository 加:`listPendingByOrg(Long orgId)`(返回 List<AppUser>)、`updateSta
 - 改密码:某 TEACHER 改自己密码成功,用新密码能登录、旧密码不能;原密码错 → 400。
 - TEACHER 调 /api/users/pending → 403(仅 MANAGER)。
 
-- [ ] **Step 6: 全量回归 + 提交**
+- [x] **Step 6: 全量回归 + 提交**
 
 ```bash
 cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/user/ backend/src/main/resources/mybatis/AppUserMapper.xml backend/src/main/java/com/sellm/security/SecurityConfig.java backend/src/test/java/com/sellm/user/UserAdminApiTest.java && git commit -q -m "feat(rbac): 家长审核(通过/拒绝,行级)+ 全角色自助改密码"
@@ -464,11 +464,11 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/user/ backen
 - Modify: `backend/src/main/java/com/sellm/security/SecurityConfig.java`(GET /api/users 限 SUPER_ADMIN+MANAGER)
 - Test: `backend/src/test/java/com/sellm/user/UserListApiTest.java`
 
-- [ ] **Step 1: Mapper/Repository — findAll、findByOrg**
+- [x] **Step 1: Mapper/Repository — findAll、findByOrg**
 
 Mapper 加 `findAll()`、`findByOrg(@Param Long orgId)`(均返回 List<Map>,SELECT 不含 password_hash 或含但响应不暴露)。Repository 加 listAll/listByOrg 返回 List<AppUser>。
 
-- [ ] **Step 2: Controller GET /api/users 按角色**
+- [x] **Step 2: Controller GET /api/users 按角色**
 ```java
     @GetMapping
     public Result<List<UserResponse>> list() {
@@ -481,19 +481,19 @@ Mapper 加 `findAll()`、`findByOrg(@Param Long orgId)`(均返回 List<Map>,SELE
 ```
 **安全:UserResponse 绝不含 passwordHash**(只 id/username/role/orgId/status)。
 
-- [ ] **Step 3: SecurityConfig**
+- [x] **Step 3: SecurityConfig**
 ```java
 .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole("SUPER_ADMIN","MANAGER")
 ```
 
-- [ ] **Step 4: 测试 UserListApiTest**
+- [x] **Step 4: 测试 UserListApiTest**
 
 - 超管 GET /api/users 返回所有机构的用户(造跨机构若干用户验证含他机构的)。
 - MANAGER GET /api/users 只返回本机构用户(不含他机构)。
 - 响应不含 passwordHash(断言 JSON 无该字段)。
 - TEACHER GET /api/users → 403。
 
-- [ ] **Step 5: 全量回归 + 提交**
+- [x] **Step 5: 全量回归 + 提交**
 
 ```bash
 cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/user/ backend/src/main/resources/mybatis/AppUserMapper.xml backend/src/main/java/com/sellm/security/SecurityConfig.java backend/src/test/java/com/sellm/user/UserListApiTest.java && git commit -q -m "feat(rbac): 用户列表(超管看全部/机构管理者看本机构,不暴露密码哈希)"
@@ -513,7 +513,7 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/user/ backen
 - Modify: `frontend/src/views/LoginView.vue`(加"家长注册"入口链接)
 - Modify: `frontend/src/router/index.js`(/register 公开路由)
 
-- [ ] **Step 1: API 模块**
+- [x] **Step 1: API 模块**
 
 `users.js` 增/改:
 ```js
@@ -533,11 +533,11 @@ export const listOrgs = () => http.get('/orgs')
 export const createOrg = (payload) => http.post('/orgs', payload)
 ```
 
-- [ ] **Step 2: auth store**
+- [x] **Step 2: auth store**
 
 ROLE_LABELS 加 `SUPER_ADMIN: '超级管理者'`;加 getter `isSuperAdmin: (s) => s.role === 'SUPER_ADMIN'`。
 
-- [ ] **Step 3: UsersView 按角色分化**
+- [x] **Step 3: UsersView 按角色分化**
 
 页面按 `auth.role` 渲染:
 - **SUPER_ADMIN**:机构管理区(建机构 + 机构列表)+ 建 MANAGER(选目标机构 + 用户名密码)+ 全部用户列表(listUsers)。
@@ -547,23 +547,23 @@ ROLE_LABELS 加 `SUPER_ADMIN: '超级管理者'`;加 getter `isSuperAdmin: (s) =
 用 `v-if="auth.isSuperAdmin"` / `v-else-if="auth.isManager"` 分区;改密码区无条件显示。
 角色下拉:MANAGER 的建用户只列 TEACHER/PARENT 选项(去掉 MANAGER,因为后端会拒);SUPER_ADMIN 的建 MANAGER 区固定建 MANAGER。
 
-- [ ] **Step 4: RegisterView(家长注册选机构)**
+- [x] **Step 4: RegisterView(家长注册选机构)**
 
 新建公开页:用户名/密码 + **机构下拉(publicOrgs 加载)** + 提交 register({username,password,orgId})。提交成功提示"注册成功,待机构管理者审核后可登录",跳回 /login。
 
-- [ ] **Step 5: LoginView 加注册入口 + 路由**
+- [x] **Step 5: LoginView 加注册入口 + 路由**
 
 LoginView 加一个"家长注册"链接 → /register。router 加 `{ path: '/register', component: () => import('../views/RegisterView.vue') }`(公开,守卫放行——守卫里 /login 和 /register 都不拦)。
 
-- [ ] **Step 6: 路由守卫放行 /register**
+- [x] **Step 6: 路由守卫放行 /register**
 
 router beforeEach:`if (to.path !== '/login' && to.path !== '/register' && !auth.isLoggedIn) return '/login'`。
 
-- [ ] **Step 7: 菜单**
+- [x] **Step 7: 菜单**
 
 MainLayout 用户管理菜单项:从 `v-if="auth.isManager"` 改为 `v-if="auth.isManager || auth.isSuperAdmin"`(超管也要进用户管理)。
 
-- [ ] **Step 8: 构建验证 + 提交**
+- [x] **Step 8: 构建验证 + 提交**
 
 Run: `cd "D:/works/test/SELLM/frontend" && npm run build`,Expected 成功。
 ```bash
@@ -576,12 +576,12 @@ cd "D:/works/test/SELLM" && git add frontend/src/ && git commit -q -m "feat(fron
 
 起 dev 后端 + 前端,curl 走四级权限关键路径,验证升级后契约连通与权限正确。
 
-- [ ] **Step 1: 起 dev 后端(后台)**
+- [x] **Step 1: 起 dev 后端(后台)**
 
 `cd "D:/works/test/SELLM/backend" && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`(run_in_background)。
 **注意**:dev H2 文件库里旧 admin 是 MANAGER。若 DevSeeder 改成幂等纠正(Task 1 推荐),admin 会被更新为 SUPER_ADMIN;若不是,需先删 `backend/data/` 再启动让种子重建。实现者按 Task 1 的实际做法处理,确保 admin 登录后是 SUPER_ADMIN。
 
-- [ ] **Step 2: curl 验证四级权限关键路径**
+- [x] **Step 2: curl 验证四级权限关键路径**
 ```bash
 BASE=http://localhost:8080
 # 1. 超管登录(admin),role 应 SUPER_ADMIN
@@ -612,11 +612,11 @@ curl -s $BASE/api/users/pending -H "Authorization: Bearer $MGR_TOKEN"; echo
 ```
 **预期**:超管 role SUPER_ADMIN;建机构/建 MANAGER 成功;MANAGER 建 TEACHER 成功、建 MANAGER 403;公开机构列表免登录可见;家长注册 PENDING 不能登录;审核通过后能登录;改密码生效。逐条核对记录。
 
-- [ ] **Step 3: 浏览器人工验收清单(记录)**
+- [x] **Step 3: 浏览器人工验收清单(记录)**
 
 admin 登录(超管)→ 用户管理见"建机构/建管理者/全部用户";建机构、建 mgr1 → 退出、mgr1 登录 → 用户管理见"建老师家长/待审家长/本机构用户";建 teacher1;另开无痕用 /register 注册家长选机构 → mgr1 审核 → 家长登录;teacher1 登录只见"改密码"。
 
-- [ ] **Step 4: 停服务 + 提交联调记录**
+- [x] **Step 4: 停服务 + 提交联调记录**
 
 停后端/前端(TaskStop + 必要时 taskkill 端口),释放 8080/5173。更新 `frontend/INTEGRATION.md` 追加四级权限联调结果。
 ```bash

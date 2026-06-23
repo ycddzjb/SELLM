@@ -37,7 +37,7 @@
 > - 四个新 Agent + 网关为**独立新空壳模块**,依赖 common(空壳),有最小 SpringBoot main + health endpoint。
 > - 这确保现有测试零影响;后续 P1 再做真正的代码抽离(抽 common → 让 assessment 依赖 common → 测试仍绿)。
 
-- [ ] **Step 1: 创建根父 POM**
+- [x] **Step 1: 创建根父 POM**
 
 在 worktree 根目录(即 `dev_workspace/`)创建 `pom.xml`:
 
@@ -123,7 +123,7 @@
 </project>
 ```
 
-- [ ] **Step 2: 确认 backend/pom.xml 保持不变**
+- [x] **Step 2: 确认 backend/pom.xml 保持不变**
 
 不修改 `backend/pom.xml`。设计要点:
 - `backend` 模块的 parent 保持 `spring-boot-starter-parent`(继承链不变,现有依赖与测试零影响)。
@@ -131,7 +131,7 @@
 - **新增**模块(common/gateway/4 个 Agent)才以 `sellm-parent` 为 parent,通过其 dependencyManagement 导入的 `spring-boot-dependencies` BOM 拿到版本管理。
 - 因此存在两条 parent 链(backend → starter-parent;新模块 → sellm-parent),互不干扰,这是 P0 渐进策略的关键。
 
-- [ ] **Step 3: 创建 sellm-common 空壳模块**
+- [x] **Step 3: 创建 sellm-common 空壳模块**
 
 ```
 sellm-common/
@@ -189,7 +189,7 @@ sellm-common/
 package com.sellm.common;
 ```
 
-- [ ] **Step 4: 验证 reactor 构建**
+- [x] **Step 4: 验证 reactor 构建**
 
 Run: `cd /d/works/test/SELLM/dev_workspace && mvn -pl sellm-common -am clean install -q 2>&1 | tail -5`
 
@@ -199,7 +199,7 @@ Run: `cd /d/works/test/SELLM/dev_workspace && mvn -pl backend clean test -q 2>&1
 
 Expected: BUILD SUCCESS(现有 237 测试全绿,不受 reactor 父 POM 影响)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pom.xml sellm-common/
@@ -225,7 +225,7 @@ git commit -m "feat(p0): Maven reactor parent + sellm-common 空壳模块"
 - Consumes: `sellm-common` (compile 依赖,P0 仅占位 jar)
 - Produces: 每个 Agent 可独立 `mvn spring-boot:run` 启动并暴露 `GET /actuator/health` → 200
 
-- [ ] **Step 1: 创建 Agent 模块模板(以 teaching 为例)**
+- [x] **Step 1: 创建 Agent 模块模板(以 teaching 为例)**
 
 `sellm-agent-teaching/pom.xml`:
 ```xml
@@ -339,7 +339,7 @@ class TeachingApplicationTest {
 }
 ```
 
-- [ ] **Step 2: 同结构创建 research / aids / qa 三个模块**
+- [x] **Step 2: 同结构创建 research / aids / qa 三个模块**
 
 对每个模块替换:
 - `teaching` → `research` / `aids` / `qa`
@@ -349,7 +349,7 @@ class TeachingApplicationTest {
 - service name:`agent-research` / `agent-aids` / `agent-qa`
 - health path:`/api/research/health` / `/api/aids/health` / `/api/qa/health`
 
-- [ ] **Step 3: 创建 API 网关模块**
+- [x] **Step 3: 创建 API 网关模块**
 
 `sellm-gateway/pom.xml`:
 ```xml
@@ -453,7 +453,7 @@ management:
 
 > **Nacos 服务发现的 P0 取舍(显式声明,非遗漏)**:Spec 将 Nacos 列入 P0。本计划**基础设施层**(Task 3)用 docker-compose 拉起 Nacos,但**应用层路由**先用静态 `uri: http://localhost:PORT`,**不**在各 Agent/网关接入 `spring-cloud-starter-alibaba-nacos-discovery` 客户端。原因:接入发现客户端后,`@SpringBootTest` 的 `contextLoads` 在无 Nacos 运行时会失败或需额外 `spring.cloud.nacos.discovery.enabled=false` 测试配置,增加 P0 风险且与"测试不依赖外部服务"约束冲突。**P1 第一步**再接入发现客户端,届时网关路由改为 `uri: lb://agent-xxx`,并在各模块 `application-test.yml` 设 `spring.cloud.nacos.discovery.enabled=false`。此为有意分阶段,不是覆盖缺口。
 
-- [ ] **Step 4: 验证全部 reactor 构建**
+- [x] **Step 4: 验证全部 reactor 构建**
 
 Run:
 ```bash
@@ -468,7 +468,7 @@ mvn -pl backend test -q 2>&1 | tail -5
 ```
 Expected: BUILD SUCCESS(现有测试不受影响)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add sellm-agent-teaching/ sellm-agent-research/ sellm-agent-aids/ sellm-agent-qa/ sellm-gateway/ pom.xml
@@ -487,7 +487,7 @@ git commit -m "feat(p0): 四个新Agent + API网关 空壳脚手架(health endpo
 **Interfaces:**
 - Produces: `docker-compose up -d` 一键拉起 MySQL + Redis + Nacos + RabbitMQ + Milvus + MinIO;各 Agent 连接配置走环境变量
 
-- [ ] **Step 1: 创建 docker-compose.yml**
+- [x] **Step 1: 创建 docker-compose.yml**
 
 `docker/docker-compose.yml`:
 ```yaml
@@ -578,7 +578,7 @@ volumes:
   minio_data:
 ```
 
-- [ ] **Step 2: 创建 docker/.env.example**
+- [x] **Step 2: 创建 docker/.env.example**
 
 ```bash
 # docker-compose 环境变量(复制为 .env 后 docker-compose 自动加载)
@@ -589,7 +589,7 @@ MINIO_USER=minioadmin
 MINIO_PASS=minioadmin
 ```
 
-- [ ] **Step 3: 验证 compose 配置语法**
+- [x] **Step 3: 验证 compose 配置语法**
 
 Run:
 ```bash
@@ -598,7 +598,7 @@ docker compose config --quiet 2>&1 && echo "CONFIG VALID" || echo "CONFIG INVALI
 ```
 Expected: CONFIG VALID(或 docker-compose 未安装则跳过,打印提示)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docker/
@@ -631,7 +631,7 @@ git commit -m "feat(p0): docker-compose 基础设施(MySQL/Redis/Nacos/RabbitMQ/
 **Interfaces:**
 - Produces: `uvicorn app.main:app` 启动,暴露 `GET /health` + `POST /v1/agents/{agent_name}/invoke`(空壳返回 mock)
 
-- [ ] **Step 1: 创建 pyproject.toml + requirements.txt**
+- [x] **Step 1: 创建 pyproject.toml + requirements.txt**
 
 `ai-smart-layer/pyproject.toml`:
 ```toml
@@ -675,7 +675,7 @@ pytest==8.2.2
 pytest-asyncio==0.23.7
 ```
 
-- [ ] **Step 2: 创建 FastAPI 主入口**
+- [x] **Step 2: 创建 FastAPI 主入口**
 
 `ai-smart-layer/app/__init__.py`:
 ```python
@@ -738,7 +738,7 @@ async def invoke_agent(agent_name: str, payload: dict):
     }
 ```
 
-- [ ] **Step 3: 创建 Agent 占位模块**
+- [x] **Step 3: 创建 Agent 占位模块**
 
 `ai-smart-layer/app/agents/__init__.py`:
 ```python
@@ -781,7 +781,7 @@ async def invoke_qa(payload: dict) -> dict:
     return {"agent": "qa", "mock": True, "input_keys": list(payload.keys())}
 ```
 
-- [ ] **Step 4: 创建 RAG 管线占位**
+- [x] **Step 4: 创建 RAG 管线占位**
 
 `ai-smart-layer/app/rag/__init__.py`:
 ```python
@@ -798,7 +798,7 @@ async def retrieve(query: str, collection: str = "kb_special_edu", top_k: int = 
     return []
 ```
 
-- [ ] **Step 5: 创建 LLM 适配器占位**
+- [x] **Step 5: 创建 LLM 适配器占位**
 
 `ai-smart-layer/app/adapters/__init__.py`:
 ```python
@@ -832,7 +832,7 @@ def get_llm():
     return MockLLM()
 ```
 
-- [ ] **Step 6: 创建测试**
+- [x] **Step 6: 创建测试**
 
 `ai-smart-layer/tests/__init__.py`:
 ```python
@@ -867,7 +867,7 @@ async def test_invoke_mock():
     assert data["status"] == "mock"
 ```
 
-- [ ] **Step 7: 创建 Dockerfile**
+- [x] **Step 7: 创建 Dockerfile**
 
 `ai-smart-layer/Dockerfile`:
 ```dockerfile
@@ -880,7 +880,7 @@ EXPOSE 8090
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8090"]
 ```
 
-- [ ] **Step 8: 验证(本地无需 Python 环境也可跳过;有则运行)**
+- [x] **Step 8: 验证(本地无需 Python 环境也可跳过;有则运行)**
 
 Run(如 Python 3.11+ 可用):
 ```bash
@@ -890,7 +890,7 @@ pytest tests/ -v 2>&1 | tail -10
 ```
 Expected: 2 passed
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add ai-smart-layer/
@@ -916,7 +916,7 @@ git commit -m "feat(p0): Python 智能层脚手架(FastAPI + LangGraph/LlamaInde
 **Interfaces:**
 - Produces: `npm run dev:mp-weixin` 编译到 `dist/dev/mp-weixin`;`npm run build:mp-weixin` 产出可导入微信开发者工具的产物
 
-- [ ] **Step 1: 创建 package.json**
+- [x] **Step 1: 创建 package.json**
 
 `miniprogram/package.json`:
 ```json
@@ -947,7 +947,7 @@ git commit -m "feat(p0): Python 智能层脚手架(FastAPI + LangGraph/LlamaInde
 }
 ```
 
-- [ ] **Step 2: 创建入口文件**
+- [x] **Step 2: 创建入口文件**
 
 `miniprogram/index.html`:
 ```html
@@ -1007,7 +1007,7 @@ page {
 </style>
 ```
 
-- [ ] **Step 3: 创建页面与路由**
+- [x] **Step 3: 创建页面与路由**
 
 `miniprogram/src/pages.json`:
 ```json
@@ -1055,7 +1055,7 @@ page {
 </style>
 ```
 
-- [ ] **Step 4: 创建 Pinia store + http 工具**
+- [x] **Step 4: 创建 Pinia store + http 工具**
 
 `miniprogram/src/store/user.js`:
 ```javascript
@@ -1117,7 +1117,7 @@ export function request(options) {
 }
 ```
 
-- [ ] **Step 5: 创建 manifest.json**
+- [x] **Step 5: 创建 manifest.json**
 
 `miniprogram/src/manifest.json`:
 ```json
@@ -1139,7 +1139,7 @@ export function request(options) {
 }
 ```
 
-- [ ] **Step 6: 验证(npm install + build)**
+- [x] **Step 6: 验证(npm install + build)**
 
 Run:
 ```bash
@@ -1149,7 +1149,7 @@ npm run build:mp-weixin 2>&1 | tail -10
 ```
 Expected: 产出 `dist/build/mp-weixin/` 目录(可导入微信开发者工具)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add miniprogram/
@@ -1168,7 +1168,7 @@ git commit -m "feat(p0): uni-app 微信小程序脚手架(家长端骨架 + Pini
 **Interfaces:**
 - Produces: `AgentEvent` 共享 DTO(所有 Agent 模块引用)+ `EventConstants` routing key 常量
 
-- [ ] **Step 1: 创建 AgentEvent DTO**
+- [x] **Step 1: 创建 AgentEvent DTO**
 
 `sellm-common/src/main/java/com/sellm/common/event/AgentEvent.java`:
 ```java
@@ -1203,7 +1203,7 @@ public record AgentEvent(
 }
 ```
 
-- [ ] **Step 2: 创建 EventConstants**
+- [x] **Step 2: 创建 EventConstants**
 
 `sellm-common/src/main/java/com/sellm/common/event/EventConstants.java`:
 ```java
@@ -1236,7 +1236,7 @@ public final class EventConstants {
 }
 ```
 
-- [ ] **Step 3: 更新 .env.example 追加平台基础设施配置**
+- [x] **Step 3: 更新 .env.example 追加平台基础设施配置**
 
 在 `.env.example` 末尾追加:
 ```bash
@@ -1263,7 +1263,7 @@ SELLM_MILVUS_HOST=127.0.0.1
 SELLM_MILVUS_PORT=19530
 ```
 
-- [ ] **Step 4: 验证 sellm-common 仍可编译**
+- [x] **Step 4: 验证 sellm-common 仍可编译**
 
 Run:
 ```bash
@@ -1272,7 +1272,7 @@ mvn -pl sellm-common clean compile -q && echo "COMPILE OK"
 ```
 Expected: COMPILE OK
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add sellm-common/src/main/java/com/sellm/common/event/ .env.example
@@ -1289,7 +1289,7 @@ git commit -m "feat(p0): RabbitMQ 事件契约(AgentEvent + EventConstants) + .e
 **Interfaces:**
 - Produces: 确认 P0 脚手架不破坏任何现有功能
 
-- [ ] **Step 1: 后端全量测试回归**
+- [x] **Step 1: 后端全量测试回归**
 
 Run:
 ```bash
@@ -1298,7 +1298,7 @@ mvn -pl backend test -q 2>&1 | tail -5
 ```
 Expected: BUILD SUCCESS(237 tests all pass)
 
-- [ ] **Step 2: 前端 build 验证**
+- [x] **Step 2: 前端 build 验证**
 
 Run:
 ```bash
@@ -1307,7 +1307,7 @@ npm run build 2>&1 | tail -5
 ```
 Expected: `✓ built in X.XXs`
 
-- [ ] **Step 3: 新 Agent 模块上下文加载测试**
+- [x] **Step 3: 新 Agent 模块上下文加载测试**
 
 Run:
 ```bash
@@ -1319,7 +1319,7 @@ mvn -pl sellm-agent-qa test -q 2>&1 | tail -3
 ```
 Expected: 每个 BUILD SUCCESS(contextLoads 通过)
 
-- [ ] **Step 4: Reactor 全量构建**
+- [x] **Step 4: Reactor 全量构建**
 
 Run:
 ```bash
@@ -1328,11 +1328,11 @@ mvn clean install -q 2>&1 | tail -5
 ```
 Expected: BUILD SUCCESS(所有模块)
 
-- [ ] **Step 5: 记录变更日志**
+- [x] **Step 5: 记录变更日志**
 
 追加到 `.claude/CLAUDE_CHANGES.md`(如 worktree 内有此文件)。
 
-- [ ] **Step 6: 最终标记提交(如有未提交文件)**
+- [x] **Step 6: 最终标记提交(如有未提交文件)**
 
 ```bash
 git status --short

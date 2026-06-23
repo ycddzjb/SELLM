@@ -80,7 +80,7 @@ frontend/
 - Create: `backend/src/main/java/com/sellm/config/DevSeeder.java`
 - Test: `backend/src/test/java/com/sellm/config/DevSeederSmokeTest.java`(可选轻量,见 Step 4)
 
-- [ ] **Step 1: application-dev.yml**
+- [x] **Step 1: application-dev.yml**
 
 `backend/src/main/resources/application-dev.yml`:
 ```yaml
@@ -114,7 +114,7 @@ sellm:
 ```
 注:H2 文件库落在 `backend/data/`(下一步 gitignore)。`continue-on-error:true` 让幂等种子的重复 INSERT 不致启动失败。**校验 aes-key 恰好 32 字节**(UTF-8):`dev-aes-key-32bytes-0123456789ab` = 32 字符全 ASCII,满足 AesFieldCipher 的 32 字节要求(实现者务必数准,不足则启动失败)。
 
-- [ ] **Step 2: seed-dev.sql(机构 + CARS 量表,幂等)**
+- [x] **Step 2: seed-dev.sql(机构 + CARS 量表,幂等)**
 
 `backend/src/main/resources/seed-dev.sql`(H2 用 `MERGE` 实现幂等 upsert;主键已知时 MERGE 比 INSERT 安全):
 ```sql
@@ -134,7 +134,7 @@ MERGE INTO score_band (id, scale_id, lower_bound, upper_bound, label, interpreta
 ```
 注:`MERGE ... KEY(...)` 是 H2 的幂等 upsert,重复启动不冲突。MySQL 生产环境用 `INSERT ... ON DUPLICATE KEY`,但 dev 只跑 H2,故用 MERGE。
 
-- [ ] **Step 3: DevSeeder(种子 MANAGER,真实 BCrypt,幂等)**
+- [x] **Step 3: DevSeeder(种子 MANAGER,真实 BCrypt,幂等)**
 
 `backend/src/main/java/com/sellm/config/DevSeeder.java`:
 ```java
@@ -169,7 +169,7 @@ public class DevSeeder implements CommandLineRunner {
 ```
 注:@Profile("dev") 保证只在 dev 启动时跑,不影响测试(test profile)与生产。种子 MANAGER 走 register → BCrypt 哈希,登录可用。机构(orgId=1)由 seed-dev.sql 先建,与该 MANAGER 的 orgId 一致。
 
-- [ ] **Step 4: gitignore + 轻量验证**
+- [x] **Step 4: gitignore + 轻量验证**
 
 把 H2 文件库目录加进 `.gitignore`(根):追加一行 `backend/data/`。
 轻量验证 DevSeeder 不破坏上下文(测试用 test profile,DevSeeder 不激活,但要确保它能编译且 @Profile 不误装配)。新建 `backend/src/test/java/com/sellm/config/DevSeederSmokeTest.java`:
@@ -198,7 +198,7 @@ class DevSeederSmokeTest {
 }
 ```
 
-- [ ] **Step 5: 手动验证后端能 dev 启动(关键,联调前提)**
+- [x] **Step 5: 手动验证后端能 dev 启动(关键,联调前提)**
 
 后台启动:`cd "D:/works/test/SELLM/backend" && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`(首次会建 data/asd_dev H2 文件)。等启动日志出现端口 8080 后,另开终端验证登录:
 ```bash
@@ -207,7 +207,7 @@ curl -s -X POST http://localhost:8080/api/auth/login -H "Content-Type: applicati
 Expected: 返回 `{"code":"0",...,"data":{"token":"...","role":"MANAGER"}}`。验证完停掉后端(后续联调时再起)。
 注:`spring-boot:run` 是前台阻塞进程,实现时用后台运行(run_in_background)或单独终端;验证完务必停掉,别占着 8080。
 
-- [ ] **Step 6: 全量回归 + 提交**
+- [x] **Step 6: 全量回归 + 提交**
 
 Run: `cd "D:/works/test/SELLM/backend" && ./mvnw -q test`
 Expected: 此前 78 + DevSeederSmokeTest 1 = 79 全绿(dev 资源不影响 test profile)。
@@ -226,7 +226,7 @@ cd "D:/works/test/SELLM" && git add backend/src/main/resources/application-dev.y
 - Modify: `backend/src/main/java/com/sellm/iep/{IepRecordMapper.java,IepRecordRepository.java,IepAppService.java,IepController.java}` + `mybatis/IepRecordMapper.xml`
 - Test: `backend/src/test/java/com/sellm/flow/ListByChildApiTest.java`
 
-- [ ] **Step 1: Mapper 加 findByChildId**
+- [x] **Step 1: Mapper 加 findByChildId**
 
 三个 Mapper 接口各加(以 AssessmentMapper 为例,其余同形):
 ```java
@@ -254,11 +254,11 @@ IepRecordMapper.xml(复用 iepMap):
     </select>
 ```
 
-- [ ] **Step 2: Repository 加 listByChild(组装为各自实体 List)**
+- [x] **Step 2: Repository 加 listByChild(组装为各自实体 List)**
 
 各 Repository 加 `listByChild(Long childId)`,遍历 `mapper.findByChildId(childId)` 用既有的行→实体组装逻辑(与 findById 相同的字段提取)产出 `List<Assessment>` / `List<ReportRecord>` / `List<IepRecord>`。Number 强转 longValue/doubleValue 与既有一致。
 
-- [ ] **Step 3: AppService 加 listByChild(行级校验)**
+- [x] **Step 3: AppService 加 listByChild(行级校验)**
 
 各 AppService 加:
 ```java
@@ -271,7 +271,7 @@ IepRecordMapper.xml(复用 iepMap):
 - AssessmentAppService 已注入 childRepository/currentUser/accessGuard,直接用。
 - ReportAppService、IepAppService 也已注入这三者(Task 9/10 的 generate 用过),直接用。
 
-- [ ] **Step 4: Controller 加 GET 列表端点(?childId=)**
+- [x] **Step 4: Controller 加 GET 列表端点(?childId=)**
 
 各 Controller 加:
 ```java
@@ -288,7 +288,7 @@ IepRecordMapper.xml(复用 iepMap):
 - ReportController / IepController 已有 GET /{id};新增的 GET(无 {id}、带 @RequestParam childId)与之不冲突(路径 /api/reports vs /api/reports/{id})。复用 ReportResponse/IepResponse。
 - **SecurityConfig 检查**:这些是 GET /api/{assessments,reports,ieps}?childId=,落在"其余 /api/** authenticated"(三角色登录可访问,行级由 AppService 的 AccessGuard 控),无需改 SecurityConfig 的 POST/PUT 规则。确认现有规则没有把这些 GET 限死成只有老师/管理者——GET 应三角色可达(家长也要能看自己孩子的历史)。
 
-- [ ] **Step 5: 写测试 ListByChildApiTest(MockMvc)**
+- [x] **Step 5: 写测试 ListByChildApiTest(MockMvc)**
 
 `backend/src/test/java/com/sellm/flow/ListByChildApiTest.java`:种 CARS 量表;老师建档→提交评估→生成报告→生成 IEP;然后:
 - `GET /api/assessments?childId={id}` 返回非空数组、含刚提交的评估(bandLabel"轻-中度")。
@@ -296,7 +296,7 @@ IepRecordMapper.xml(复用 iepMap):
 - 行级:另一机构老师 `GET /api/assessments?childId={id}` → 403。
 用 AuthTestSupport 取 token(注意:此时 AuthTestSupport 仍是计划三的版本,造老师用 register 或 userRepo——按当前 master 的 AuthTestSupport 实际签名调用)。
 
-- [ ] **Step 6: 全量回归 + 提交**
+- [x] **Step 6: 全量回归 + 提交**
 
 Run: `cd "D:/works/test/SELLM/backend" && ./mvnw -q test`,期望此前 79 + ListByChildApiTest(约 2-3)全绿。报告实际数。
 ```bash
@@ -317,7 +317,7 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/assessment/ 
 - Create: `src/layouts/MainLayout.vue`
 - Create: `src/views/LoginView.vue`、`src/views/HomeView.vue`(占位首页)
 
-- [ ] **Step 1: 初始化工程与依赖**
+- [x] **Step 1: 初始化工程与依赖**
 
 在 `D:/works/test/SELLM` 下创建 `frontend/`,写 `package.json`:
 ```json
@@ -346,7 +346,7 @@ cd "D:/works/test/SELLM" && git add backend/src/main/java/com/sellm/assessment/ 
 ```
 然后安装:`cd "D:/works/test/SELLM/frontend" && npm install`(联网装依赖,首次较慢)。
 
-- [ ] **Step 2: vite.config.js(含 /api 代理)**
+- [x] **Step 2: vite.config.js(含 /api 代理)**
 
 `frontend/vite.config.js`:
 ```js
@@ -367,7 +367,7 @@ export default defineConfig({
 })
 ```
 
-- [ ] **Step 3: index.html + .gitignore**
+- [x] **Step 3: index.html + .gitignore**
 
 `frontend/index.html`:
 ```html
@@ -392,7 +392,7 @@ dist/
 .vite/
 ```
 
-- [ ] **Step 4: axios 封装 http.js(JWT 注入 + Result 解包)**
+- [x] **Step 4: axios 封装 http.js(JWT 注入 + Result 解包)**
 
 `frontend/src/api/http.js`:
 ```js
@@ -445,7 +445,7 @@ http.interceptors.response.use(
 export default http
 ```
 
-- [ ] **Step 5: Pinia 认证 store**
+- [x] **Step 5: Pinia 认证 store**
 
 `frontend/src/stores/auth.js`:
 ```js
@@ -477,7 +477,7 @@ export const useAuthStore = defineStore('auth', {
 })
 ```
 
-- [ ] **Step 6: auth API**
+- [x] **Step 6: auth API**
 
 `frontend/src/api/auth.js`:
 ```js
@@ -488,7 +488,7 @@ export function login(username, password) {
 }
 ```
 
-- [ ] **Step 7: 路由 + 登录守卫**
+- [x] **Step 7: 路由 + 登录守卫**
 
 `frontend/src/router/index.js`:
 ```js
@@ -524,7 +524,7 @@ export default router
 ```
 注:ChildrenView/AssessmentView/ReportView/IepView/UsersView 在后续任务创建;本任务先建占位空组件使路由可加载(或本任务只建 children 占位,其余 Task 创建时补)。**为避免本任务路由加载报错,本步同时创建这 5 个 view 的最小占位**(`<template><div>占位</div></template>`),后续任务替换为真实实现。
 
-- [ ] **Step 8: main.js + App.vue + 占位 views + 布局 + 登录页**
+- [x] **Step 8: main.js + App.vue + 占位 views + 布局 + 登录页**
 
 `frontend/src/main.js`:
 ```js
@@ -645,12 +645,12 @@ async function onSubmit() {
 <template><div>页面建设中</div></template>
 ```
 
-- [ ] **Step 9: 构建验证**
+- [x] **Step 9: 构建验证**
 
 Run: `cd "D:/works/test/SELLM/frontend" && npm run build`
 Expected: 构建成功(vite build 通过,产出 dist/)。这验证所有组件/路由/依赖能正确编译。Node 24 下若 Vite 报引擎告警(非错误)可忽略;若真报错,记录现象。
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 cd "D:/works/test/SELLM" && git add frontend/ && git commit -q -m "feat(frontend): Vue3 脚手架 + axios 封装 + 认证 + 登录页"
@@ -664,7 +664,7 @@ cd "D:/works/test/SELLM" && git add frontend/ && git commit -q -m "feat(frontend
 - Create: `frontend/src/api/children.js`
 - Replace: `frontend/src/views/ChildrenView.vue`(占位 → 真实)
 
-- [ ] **Step 1: children API**
+- [x] **Step 1: children API**
 
 `frontend/src/api/children.js`:
 ```js
@@ -677,7 +677,7 @@ export const updateChild = (id, payload) => http.put(`/children/${id}`, payload)
 export const deleteChild = (id) => http.delete(`/children/${id}`)
 ```
 
-- [ ] **Step 2: ChildrenView.vue**
+- [x] **Step 2: ChildrenView.vue**
 
 `frontend/src/views/ChildrenView.vue`:
 ```vue
@@ -794,7 +794,7 @@ function goAssessment(row) {
 </script>
 ```
 
-- [ ] **Step 3: 构建验证 + 提交**
+- [x] **Step 3: 构建验证 + 提交**
 
 Run: `cd "D:/works/test/SELLM/frontend" && npm run build`,Expected 构建成功。
 ```bash
@@ -809,7 +809,7 @@ cd "D:/works/test/SELLM" && git add frontend/src/api/children.js frontend/src/vi
 - Create: `frontend/src/api/assessments.js`
 - Replace: `frontend/src/views/AssessmentView.vue`
 
-- [ ] **Step 1: assessments API**
+- [x] **Step 1: assessments API**
 
 `frontend/src/api/assessments.js`:
 ```js
@@ -818,7 +818,7 @@ import http from './http'
 export const submitAssessment = (payload) => http.post('/assessments', payload)
 ```
 
-- [ ] **Step 2: AssessmentView.vue**
+- [x] **Step 2: AssessmentView.vue**
 
 第一版前端硬编码 CARS 量表题目(与种子一致:scaleId=cars,q1/q2),0-4 分。提交后展示得分,并提供"基于此评估生成报告"跳转。
 `frontend/src/views/AssessmentView.vue`:
@@ -889,7 +889,7 @@ function goReport() {
 </script>
 ```
 
-- [ ] **Step 3: 构建验证 + 提交**
+- [x] **Step 3: 构建验证 + 提交**
 
 Run: `cd "D:/works/test/SELLM/frontend" && npm run build`,Expected 成功。
 ```bash
@@ -905,7 +905,7 @@ cd "D:/works/test/SELLM" && git add frontend/src/api/assessments.js frontend/src
 - Create: `frontend/src/api/reports.js`、`frontend/src/api/ieps.js`
 - Replace: `frontend/src/views/ReportView.vue`、`frontend/src/views/IepView.vue`
 
-- [ ] **Step 1: reports / ieps API**
+- [x] **Step 1: reports / ieps API**
 
 `frontend/src/api/reports.js`:
 ```js
@@ -925,7 +925,7 @@ export const getIep = (id) => http.get(`/ieps/${id}`)
 export const finalizeIep = (id, content) => http.put(`/ieps/${id}/finalize`, { content })
 ```
 
-- [ ] **Step 2: ReportView.vue**
+- [x] **Step 2: ReportView.vue**
 
 `frontend/src/views/ReportView.vue`:
 ```vue
@@ -1001,7 +1001,7 @@ function goIep() {
 </script>
 ```
 
-- [ ] **Step 3: IepView.vue**
+- [x] **Step 3: IepView.vue**
 
 `frontend/src/views/IepView.vue`(结构同 Report,把 assessmentId→reportId、reports API→ieps API、文案改 IEP;定稿后无下一步跳转):
 ```vue
@@ -1072,7 +1072,7 @@ async function onFinalize() {
 </script>
 ```
 
-- [ ] **Step 4: 构建验证 + 提交**
+- [x] **Step 4: 构建验证 + 提交**
 
 Run: `cd "D:/works/test/SELLM/frontend" && npm run build`,Expected 成功。
 ```bash
@@ -1087,7 +1087,7 @@ cd "D:/works/test/SELLM" && git add frontend/src/api/reports.js frontend/src/api
 - Create: `frontend/src/api/users.js`
 - Replace: `frontend/src/views/UsersView.vue`
 
-- [ ] **Step 1: users API**
+- [x] **Step 1: users API**
 
 `frontend/src/api/users.js`:
 ```js
@@ -1096,7 +1096,7 @@ import http from './http'
 export const createUser = (payload) => http.post('/users', payload)
 ```
 
-- [ ] **Step 2: UsersView.vue**
+- [x] **Step 2: UsersView.vue**
 
 仅 MANAGER 可见(MainLayout 菜单已按 isManager 过滤;此页再防御一次)。建账号:username/password/role(TEACHER/MANAGER/PARENT);orgId 后端强制取建者机构,前端不传。
 `frontend/src/views/UsersView.vue`:
@@ -1154,7 +1154,7 @@ async function onSubmit() {
 </script>
 ```
 
-- [ ] **Step 3: 构建验证 + 提交**
+- [x] **Step 3: 构建验证 + 提交**
 
 Run: `cd "D:/works/test/SELLM/frontend" && npm run build`,Expected 成功。
 ```bash
@@ -1172,13 +1172,13 @@ cd "D:/works/test/SELLM" && git add frontend/src/api/users.js frontend/src/views
 - Modify: `frontend/src/views/ChildrenView.vue`(列表加"详情"按钮跳详情页)
 - Create: `frontend/src/views/ChildDetailView.vue`
 
-- [ ] **Step 1: API 各加 listByChild**
+- [x] **Step 1: API 各加 listByChild**
 
 `assessments.js` 加:`export const listAssessmentsByChild = (childId) => http.get('/assessments', { params: { childId } })`
 `reports.js` 加:`export const listReportsByChild = (childId) => http.get('/reports', { params: { childId } })`
 `ieps.js` 加:`export const listIepsByChild = (childId) => http.get('/ieps', { params: { childId } })`
 
-- [ ] **Step 2: 路由加详情页**
+- [x] **Step 2: 路由加详情页**
 
 `router/index.js` 的 children 子路由组里加:
 ```js
@@ -1186,14 +1186,14 @@ cd "D:/works/test/SELLM" && git add frontend/src/api/users.js frontend/src/views
 ```
 (放在 `children` 项之后即可。)
 
-- [ ] **Step 3: ChildrenView 列表加"详情"入口**
+- [x] **Step 3: ChildrenView 列表加"详情"入口**
 
 在 ChildrenView 操作列加一个按钮:`<el-button size="small" @click="goDetail(row)">详情</el-button>`,并加:
 ```js
 function goDetail(row) { router.push(`/children/${row.id}`) }
 ```
 
-- [ ] **Step 4: ChildDetailView.vue**
+- [x] **Step 4: ChildDetailView.vue**
 
 `frontend/src/views/ChildDetailView.vue`:
 ```vue
@@ -1298,7 +1298,7 @@ function openIep(i) {
 
 注:ReportView/IepView 目前从 query 取 `assessmentId`/`reportId` 触发生成。为支持详情页的"查看已有报告/IEP",ReportView 需支持 query `reportId`(直接 GET 加载已有报告而非生成)、IepView 支持 query `iepId`/`reportId`。**本步同时给 ReportView/IepView 补一个 onMounted:若 query 带 reportId(report)/iepId(iep)则调 getReport/getIep 加载展示;若带 assessmentId(report)/reportId(iep)则维持原"待生成"态。** 改动小,实现者在 ReportView/IepView 的 setup 里加 onMounted 判断即可(getReport 已在 reports.js,getIep 已在 ieps.js)。
 
-- [ ] **Step 5: 构建验证 + 提交**
+- [x] **Step 5: 构建验证 + 提交**
 
 Run: `cd "D:/works/test/SELLM/frontend" && npm run build`,Expected 成功。
 ```bash
@@ -1311,15 +1311,15 @@ cd "D:/works/test/SELLM" && git add frontend/src/api/ frontend/src/router/index.
 
 不写新代码,做真实联调:起 dev 后端 + 前端 dev server,用种子 admin 走完整流程,确认前后端契约连通、JWT/行级权限/主链路在浏览器侧真实可用。产出一份联调结果记录。
 
-- [ ] **Step 1: 起后端(dev profile,后台)**
+- [x] **Step 1: 起后端(dev profile,后台)**
 
 `cd "D:/works/test/SELLM/backend" && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`(后台运行 run_in_background)。等日志出现 Tomcat started on port 8080。
 
-- [ ] **Step 2: 起前端 dev server(后台)**
+- [x] **Step 2: 起前端 dev server(后台)**
 
 `cd "D:/works/test/SELLM/frontend" && npm run dev`(后台运行)。等输出 Local: http://localhost:5173。
 
-- [ ] **Step 3: 用 curl 走完整链路验证后端契约(经真实 HTTP,不经浏览器)**
+- [x] **Step 3: 用 curl 走完整链路验证后端契约(经真实 HTTP,不经浏览器)**
 
 按序执行(每步取上一步返回的 id/token):
 ```bash
@@ -1334,12 +1334,12 @@ curl -s http://localhost:8080/api/children -H "Authorization: Bearer $TOKEN"
 ```
 Expected:登录得 token;建档返回 id;列表返回明文"小明";评估返回 bandLabel;报告/IEP 返回 DRAFT 草稿。**这验证了 dev 后端 + 全链路 + JWT + 加密落库读回明文在真实运行时成立。**
 
-- [ ] **Step 4: 浏览器侧人工核对(描述预期,供执行者确认)**
+- [x] **Step 4: 浏览器侧人工核对(描述预期,供执行者确认)**
 
 打开 http://localhost:5173 → 用 admin/admin123 登录 → 儿童档案页能看到/新建档案 → 点"评估"带入 childId,答题提交得分 → "生成报告"→ 草稿展示、编辑、定稿 → "生成 IEP"→ 草案、定稿 → 回儿童档案点"详情"进工作台,确认该童的评估/报告/IEP 历史都列出来、可查看/续作 → 用户管理页建一个 TEACHER 账号 → 登出、用新老师账号登录验证其只能看本机构档案。
 执行者用 curl(Step 3)确认后端契约;浏览器人工步骤记录为"待人工验收"清单(自动化测试不强求,属联调验收)。
 
-- [ ] **Step 5: 停服务 + 记录联调结果**
+- [x] **Step 5: 停服务 + 记录联调结果**
 
 停掉后台的后端与前端进程。把 Step 3 的 curl 实际输出(脱敏后)整理成一段"联调结果"写入提交信息或一个简短 `frontend/INTEGRATION.md`(可选)。
 ```bash

@@ -39,7 +39,7 @@
 
 > **关键**:NoopObjectStorage 纯 JDK NIO、构造仅收 `String localDir`、不依赖 StorageProperties(已核实),可干净迁 core。迁移后 backend 的 `StorageConfig`(在 backend,`new NoopObjectStorage(props.getLocalDir())`)与 `StorageConfigTest`(`isInstanceOf(NoopObjectStorage.class)`)仍引用同包名 `com.sellm.storage.NoopObjectStorage`,经 core 传递解析,**import 不变、编译通过**。backend 经自身 StorageConfig 提供 ObjectStorage bean,core 的 auto-config `@ConditionalOnMissingBean` 退让 → backend 恰一个 bean。
 
-- [ ] **Step 1: git mv NoopObjectStorage 到 core**
+- [x] **Step 1: git mv NoopObjectStorage 到 core**
 
 ```bash
 cd /d/works/test/SELLM/dev_workspace
@@ -48,7 +48,7 @@ git mv sellm-common-backend/src/main/java/com/sellm/storage/NoopObjectStorage.ja
 ```
 (包声明 `package com.sellm.storage;` 不变,无需改文件内容。)
 
-- [ ] **Step 2: 创建 StorageAutoConfiguration**
+- [x] **Step 2: 创建 StorageAutoConfiguration**
 
 `sellm-common-core/src/main/java/com/sellm/storage/StorageAutoConfiguration.java`:
 ```java
@@ -76,7 +76,7 @@ public class StorageAutoConfiguration {
 }
 ```
 
-- [ ] **Step 3: 注册进 AutoConfiguration.imports**
+- [x] **Step 3: 注册进 AutoConfiguration.imports**
 
 在 `sellm-common-core/src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 追加一行(保留现有 AnonymizerAutoConfiguration 行):
 ```
@@ -88,7 +88,7 @@ com.sellm.anonymizer.AnonymizerAutoConfiguration
 com.sellm.storage.StorageAutoConfiguration
 ```
 
-- [ ] **Step 4: 写 NoopObjectStorage 测试(确认迁移后行为不变)**
+- [x] **Step 4: 写 NoopObjectStorage 测试(确认迁移后行为不变)**
 
 `sellm-common-core/src/test/java/com/sellm/storage/NoopObjectStorageTest.java`:
 ```java
@@ -122,7 +122,7 @@ class NoopObjectStorageTest {
 
 > 若 core 测试无 JUnit5:core 已有 RegexAnonymizerTest(qa 阶段加),说明 core 测试栈可用;沿用即可。若 put 返回的 key 与传入 key 不同(实现细节),按实际调整断言(实现者先读 NoopObjectStorage 的 put 语义)。
 
-- [ ] **Step 5: 验证 core + backend(重点回归 backend StorageConfigTest)**
+- [x] **Step 5: 验证 core + backend(重点回归 backend StorageConfigTest)**
 
 ```bash
 export PATH="/c/tools/apache-maven-3.9.6/bin:$PATH"
@@ -135,7 +135,7 @@ Expected: core 测试绿(含 NoopObjectStorageTest);CORE+BACKEND OK;backend 242(
 
 > 若 backend 报找不到 NoopObjectStorage 或 StorageConfigTest 失败:确认 NoopObjectStorage 已在 core 且包名未变、backend 依赖 core。报 BLOCKED 附错误。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add sellm-common-core/ sellm-common-backend/
@@ -169,7 +169,7 @@ git commit -m "feat(teaching): ObjectStorage 自动装配(NoopObjectStorage 迁 
 
 > 镜像 agent-qa 的 Task 1 持久化模式 + report/iep 四件套。两张表两套四件套。
 
-- [ ] **Step 1: 加持久化依赖到 sellm-agent-teaching/pom.xml**
+- [x] **Step 1: 加持久化依赖到 sellm-agent-teaching/pom.xml**
 
 `<dependencies>` 加(同 qa Task1):
 ```xml
@@ -189,7 +189,7 @@ git commit -m "feat(teaching): ObjectStorage 自动装配(NoopObjectStorage 迁 
         </dependency>
 ```
 
-- [ ] **Step 2: 创建 schema.sql**
+- [x] **Step 2: 创建 schema.sql**
 
 `sellm-agent-teaching/src/main/resources/schema.sql`:
 ```sql
@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS courseware (
 );
 ```
 
-- [ ] **Step 3: 配置 H2(main + test application.yml)**
+- [x] **Step 3: 配置 H2(main + test application.yml)**
 
 `sellm-agent-teaching/src/main/resources/application.yml` 的 `spring:` 下加(合并,不破坏 application.name/cloud):
 ```yaml
@@ -246,7 +246,7 @@ mybatis:
 ```
 `sellm-agent-teaching/src/test/resources/application.yml` 的 `spring:` 下加同样 datasource + sql.init + 顶层 mybatis(合并入已有 spring.cloud 禁 discovery 节点)。
 
-- [ ] **Step 4: 写失败测试 TeachingRepositoryTest**
+- [x] **Step 4: 写失败测试 TeachingRepositoryTest**
 
 `sellm-agent-teaching/src/test/java/com/sellm/teaching/TeachingRepositoryTest.java`:
 ```java
@@ -315,7 +315,7 @@ class TeachingRepositoryTest {
 }
 ```
 
-- [ ] **Step 5: 运行测试确认失败**
+- [x] **Step 5: 运行测试确认失败**
 
 ```bash
 export PATH="/c/tools/apache-maven-3.9.6/bin:$PATH"
@@ -324,7 +324,7 @@ mvn -pl sellm-agent-teaching test -Dtest=TeachingRepositoryTest 2>&1 | grep -E "
 ```
 Expected: 编译失败(LessonPlan/Courseware/Repository 未定义)。
 
-- [ ] **Step 6: 创建实体 LessonPlan**
+- [x] **Step 6: 创建实体 LessonPlan**
 
 `sellm-agent-teaching/src/main/java/com/sellm/teaching/LessonPlan.java`:
 ```java
@@ -368,7 +368,7 @@ public class LessonPlan {
 }
 ```
 
-- [ ] **Step 7: 创建实体 Courseware**
+- [x] **Step 7: 创建实体 Courseware**
 
 `sellm-agent-teaching/src/main/java/com/sellm/teaching/Courseware.java`:
 ```java
@@ -406,7 +406,7 @@ public class Courseware {
 }
 ```
 
-- [ ] **Step 8: 创建 Mapper 接口(2 个)**
+- [x] **Step 8: 创建 Mapper 接口(2 个)**
 
 `sellm-agent-teaching/src/main/java/com/sellm/teaching/LessonPlanMapper.java`:
 ```java
@@ -440,7 +440,7 @@ public interface CoursewareMapper {
 }
 ```
 
-- [ ] **Step 9: 创建 Mapper XML(2 个)**
+- [x] **Step 9: 创建 Mapper XML(2 个)**
 
 `sellm-agent-teaching/src/main/resources/mybatis/LessonPlanMapper.xml`:
 ```xml
@@ -512,7 +512,7 @@ public interface CoursewareMapper {
 </mapper>
 ```
 
-- [ ] **Step 10: 创建 Repository(2 个,镜像 report/qa)**
+- [x] **Step 10: 创建 Repository(2 个,镜像 report/qa)**
 
 `sellm-agent-teaching/src/main/java/com/sellm/teaching/LessonPlanRepository.java`:
 ```java
@@ -645,7 +645,7 @@ public class CoursewareRepository {
 }
 ```
 
-- [ ] **Step 11: 运行测试确认通过**
+- [x] **Step 11: 运行测试确认通过**
 
 ```bash
 export PATH="/c/tools/apache-maven-3.9.6/bin:$PATH"
@@ -654,7 +654,7 @@ mvn -pl sellm-agent-teaching clean test 2>&1 | grep -E "Tests run:|BUILD" | tail
 ```
 Expected: TeachingRepositoryTest 3 + 原 contextLoads 通过,`BUILD SUCCESS`。
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add sellm-agent-teaching/
@@ -686,7 +686,7 @@ git commit -m "feat(teaching): 持久化基建(H2+schema+lesson_plan/courseware 
 
 > **复用 qa 模板**:SmartLayerClient/HttpSmartLayerClient/SmartLayerProperties/SmartLayerException/UnauthorizedException/TeachingExceptionHandler 与 qa 同构(包名换 teaching)。脱敏:`anonymizer.anonymize(text, List.of(), List.of())`(空 names/schools + 内置正则;已含 ID/手机/邮箱);AnonymizationException→硬阻断 ANONYMIZATION_FAILED。鉴权:`@RequestHeader("X-User-Id") Long userId`,缺→401;行级权限:资源 ownerId==userId,否则 403。
 
-- [ ] **Step 1: 写失败测试 TeachingApiTest(教案+课件主流程)**
+- [x] **Step 1: 写失败测试 TeachingApiTest(教案+课件主流程)**
 
 `sellm-agent-teaching/src/test/java/com/sellm/teaching/TeachingApiTest.java`:
 ```java
@@ -832,7 +832,7 @@ class TeachingApiTest {
 }
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [x] **Step 2: 运行测试确认失败**
 
 ```bash
 export PATH="/c/tools/apache-maven-3.9.6/bin:$PATH"
@@ -841,7 +841,7 @@ mvn -pl sellm-agent-teaching test -Dtest=TeachingApiTest 2>&1 | grep -E "ERROR|c
 ```
 Expected: 编译失败(Controller/AppService/SmartLayerClient/DTO 未定义)。
 
-- [ ] **Step 3: 创建 SmartLayer 客户端组件(镜像 qa)**
+- [x] **Step 3: 创建 SmartLayer 客户端组件(镜像 qa)**
 
 `SmartLayerClient.java`:
 ```java
@@ -953,7 +953,7 @@ public class HttpSmartLayerClient implements SmartLayerClient {
 }
 ```
 
-- [ ] **Step 4: 创建 DTO(5 个)**
+- [x] **Step 4: 创建 DTO(5 个)**
 
 `dto/GeneratePlanRequest.java`:
 ```java
@@ -1055,7 +1055,7 @@ public class CoursewareResponse {
 }
 ```
 
-- [ ] **Step 5: 创建 UnauthorizedException + TeachingExceptionHandler(镜像 qa)**
+- [x] **Step 5: 创建 UnauthorizedException + TeachingExceptionHandler(镜像 qa)**
 
 `UnauthorizedException.java`:
 ```java
@@ -1096,7 +1096,7 @@ public class TeachingExceptionHandler {
 }
 ```
 
-- [ ] **Step 6: 实现 TeachingAppService**
+- [x] **Step 6: 实现 TeachingAppService**
 
 `sellm-agent-teaching/src/main/java/com/sellm/teaching/TeachingAppService.java`:
 ```java
@@ -1264,7 +1264,7 @@ public class TeachingAppService {
 }
 ```
 
-- [ ] **Step 7: 创建 Controllers**
+- [x] **Step 7: 创建 Controllers**
 
 `LessonPlanController.java`:
 ```java
@@ -1372,7 +1372,7 @@ public class CoursewareController {
 }
 ```
 
-- [ ] **Step 8: TeachingApplication 启用 Properties + yml 配置**
+- [x] **Step 8: TeachingApplication 启用 Properties + yml 配置**
 
 修改 `TeachingApplication.java`:加 `@EnableConfigurationProperties(SmartLayerProperties.class)`(import org.springframework.boot.context.properties.EnableConfigurationProperties)。
 `application.yml` 末尾加(顶层):
@@ -1386,7 +1386,7 @@ sellm:
     local-dir: ${SELLM_STORAGE_LOCAL_DIR:data/media}
 ```
 
-- [ ] **Step 9: 写脱敏硬阻断独立测试 TeachingSanitizeHardBlockTest**
+- [x] **Step 9: 写脱敏硬阻断独立测试 TeachingSanitizeHardBlockTest**
 
 `sellm-agent-teaching/src/test/java/com/sellm/teaching/TeachingSanitizeHardBlockTest.java`:
 ```java
@@ -1455,7 +1455,7 @@ class TeachingSanitizeHardBlockTest {
 }
 ```
 
-- [ ] **Step 10: 运行测试确认通过**
+- [x] **Step 10: 运行测试确认通过**
 
 ```bash
 export PATH="/c/tools/apache-maven-3.9.6/bin:$PATH"
@@ -1466,7 +1466,7 @@ Expected: TeachingApiTest 7 + TeachingSanitizeHardBlockTest 1 + TeachingReposito
 
 > 若 ObjectStorage bean 缺失(finalize 课件时):确认 Task1 的 StorageAutoConfiguration 已注册到 core 的 imports;agent-teaching 经 core 自动装配获得 NoopObjectStorage。若仍缺报 BLOCKED。
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add sellm-agent-teaching/
@@ -1489,7 +1489,7 @@ git commit -m "feat(teaching): TeachingAppService 编排(脱敏/状态机/课件
 
 > teaching 编排首版纯 prompt 拼装 + mock LLM(不挂 RAG,与 qa 区分)。task=lesson_plan 用 iepContent;task=courseware 用 lessonPlanContent。Python 只见脱敏文本,不还原。
 
-- [ ] **Step 1: 写失败测试 test_teaching.py**
+- [x] **Step 1: 写失败测试 test_teaching.py**
 
 `ai-smart-layer/tests/test_teaching.py`:
 ```python
@@ -1539,7 +1539,7 @@ async def test_python_no_restore():
     assert isinstance(out["content"], str)  # 结构合规;无 restore 逻辑
 ```
 
-- [ ] **Step 2: 运行测试确认失败(或无 Python 静态)**
+- [x] **Step 2: 运行测试确认失败(或无 Python 静态)**
 
 ```bash
 cd /d/works/test/SELLM/dev_workspace/ai-smart-layer
@@ -1547,7 +1547,7 @@ pytest tests/test_teaching.py -v 2>&1 | tail -10 || echo "(deferred:无 Python 3
 ```
 Expected(有 Python):FAIL(invoke_teaching 旧空壳签名不符 / 端点不存在)。无 Python:静态审查。
 
-- [ ] **Step 3: 实现 agents/teaching.py**
+- [x] **Step 3: 实现 agents/teaching.py**
 
 `ai-smart-layer/app/agents/teaching.py`(替换 P0 空壳):
 ```python
@@ -1577,7 +1577,7 @@ async def invoke_teaching(payload: dict) -> dict:
     return {"content": content, "mock": True}
 ```
 
-- [ ] **Step 4: main.py 加 teaching 端点**
+- [x] **Step 4: main.py 加 teaching 端点**
 
 修改 `ai-smart-layer/app/main.py`,加(import + endpoint):
 ```python
@@ -1591,7 +1591,7 @@ async def teaching_invoke(payload: dict):
 ```
 (保留现有 /health、/v1/agents/qa/invoke、通用 invoke。)
 
-- [ ] **Step 5: 运行测试确认通过(或静态)**
+- [x] **Step 5: 运行测试确认通过(或静态)**
 
 ```bash
 cd /d/works/test/SELLM/dev_workspace/ai-smart-layer
@@ -1599,7 +1599,7 @@ pytest tests/test_teaching.py tests/test_qa.py tests/test_health.py -v 2>&1 | ta
 ```
 Expected(有 Python):test_teaching 4 + 既有 qa/health 全通过。无 Python:静态审查 invoke_teaching 签名/await/返回结构与测试断言一致,报告 deferred。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /d/works/test/SELLM/dev_workspace
@@ -1618,7 +1618,7 @@ git commit -m "feat(teaching): Python 智能层 teaching 编排(mock LLM 教案/
 **Interfaces:**
 - Produces: 确认 agent-teaching 不破坏全 reactor;9 模块绿
 
-- [ ] **Step 1: 全 reactor clean install(9 模块)**
+- [x] **Step 1: 全 reactor clean install(9 模块)**
 
 ```bash
 export PATH="/c/tools/apache-maven-3.9.6/bin:$PATH"
@@ -1627,7 +1627,7 @@ mvn clean install 2>&1 | grep -E "Reactor Summary|SUCCESS \[|FAILURE \[|BUILD SU
 ```
 Expected: 9 模块全 SUCCESS;backend 仍绿(StorageConfigTest 经 core 解析 NoopObjectStorage);agent-teaching 测试全绿。
 
-- [ ] **Step 2: agent-teaching 测试汇总**
+- [x] **Step 2: agent-teaching 测试汇总**
 
 ```bash
 export PATH="/c/tools/apache-maven-3.9.6/bin:$PATH"
@@ -1636,7 +1636,7 @@ mvn -pl sellm-agent-teaching clean test 2>&1 | grep -E "Tests run:.*Failures|BUI
 ```
 Expected: 全绿(Repository 3 + TeachingApi 7 + SanitizeHardBlock 1 + contextLoads 1)。
 
-- [ ] **Step 3: 前端 build**
+- [x] **Step 3: 前端 build**
 
 ```bash
 cd /d/works/test/SELLM/dev_workspace/frontend
@@ -1644,7 +1644,7 @@ npm run build 2>&1 | grep -E "built in|error" | tail -2
 ```
 Expected: `✓ built in X.XXs`。
 
-- [ ] **Step 4: .env.example 补存储配置**
+- [x] **Step 4: .env.example 补存储配置**
 
 在 `.env.example` 末尾(智能层段附近)追加:
 ```bash
@@ -1653,11 +1653,11 @@ SELLM_STORAGE_LOCAL_DIR=data/media
 ```
 (SELLM_SMARTLAYER_URL/TIMEOUT 已在 qa 阶段加,teaching 复用同名,确认在即可。)
 
-- [ ] **Step 5: 追加变更记录 + 确认工作树**
+- [x] **Step 5: 追加变更记录 + 确认工作树**
 
 向 `.claude/CLAUDE_CHANGES.md` 追加 P5 记录(FEATURE 类型)。`git status --short` 应仅 .env.example 待提交。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add .env.example

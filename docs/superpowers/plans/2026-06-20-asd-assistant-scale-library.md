@@ -76,7 +76,7 @@ scale/scale_item 加列;CARS 种子补 disorder_type/sort_order/max_score。
 
 **Files:** schema.sql, seed-dev.sql, scale-seed.sql(测试)
 
-- [ ] **Step 1:** schema.sql 追加 ALTER 语句
+- [x] **Step 1:** schema.sql 追加 ALTER 语句
 ```sql
 ALTER TABLE scale ADD COLUMN IF NOT EXISTS disorder_type VARCHAR(32);
 ALTER TABLE scale ADD COLUMN IF NOT EXISTS description VARCHAR(512);
@@ -84,10 +84,10 @@ ALTER TABLE scale_item ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
 ALTER TABLE scale_item ADD COLUMN IF NOT EXISTS max_score DOUBLE DEFAULT 4;
 ```
 
-- [ ] **Step 2:** seed-dev.sql CARS MERGE 补 disorder_type='ASD', description;item 补 sort_order/max_score
-- [ ] **Step 3:** test scale-seed.sql 同步补字段
-- [ ] **Step 4:** `./mvnw -q test`(应用 context 加载测试) 全绿
-- [ ] **Step 5:** Commit
+- [x] **Step 2:** seed-dev.sql CARS MERGE 补 disorder_type='ASD', description;item 补 sort_order/max_score
+- [x] **Step 3:** test scale-seed.sql 同步补字段
+- [x] **Step 4:** `./mvnw -q test`(应用 context 加载测试) 全绿
+- [x] **Step 5:** Commit
 
 ---
 
@@ -97,12 +97,12 @@ Scale 加 disorderType(String)/ description;ScaleItem 加 sortOrder(int)/ maxSco
 
 **Files:** Scale.java, ScaleItem.java, ScoreRand.java(不变)
 
-- [ ] **Step 1:** Scale.java 加字段 + getter + 新构造器(7 参);旧 5 参委托新构造(disorder/desc=null)
-- [ ] **Step 2:** ScaleItem.java 加字段 + getter + 新构造器(5 参);旧 3 参委托新构造(sortOrder=0,maxScore=4)
-- [ ] **Step 3:** ScaleRepository.findById 读时填充新字段(改 mapper query + 组装)
-- [ ] **Step 4:** ScaleMapper.xml findScaleById 加 disorder_type/description;findItems 加 sort_order/max_score + ORDER BY sort_order
-- [ ] **Step 5:** 既有测试(ScaleRepositoryTest / DefaultScoringEngineTest)适配 + 全绿
-- [ ] **Step 6:** Commit
+- [x] **Step 1:** Scale.java 加字段 + getter + 新构造器(7 参);旧 5 参委托新构造(disorder/desc=null)
+- [x] **Step 2:** ScaleItem.java 加字段 + getter + 新构造器(5 参);旧 3 参委托新构造(sortOrder=0,maxScore=4)
+- [x] **Step 3:** ScaleRepository.findById 读时填充新字段(改 mapper query + 组装)
+- [x] **Step 4:** ScaleMapper.xml findScaleById 加 disorder_type/description;findItems 加 sort_order/max_score + ORDER BY sort_order
+- [x] **Step 5:** 既有测试(ScaleRepositoryTest / DefaultScoringEngineTest)适配 + 全绿
+- [x] **Step 6:** Commit
 
 ---
 
@@ -112,16 +112,16 @@ ScaleRepository 加 save / update / delete(事务原子:scale + items + bands �
 
 **Files:** ScaleMapper.java, ScaleMapper.xml, ScaleRepository.java
 
-- [ ] **Step 1:** ScaleMapper 接口加方法声明(insertScale/updateScale/deleteScale/insertItem/insertBand/deleteItemsByScale/deleteBandsByScale/findAll/findByDisorderType)
-- [ ] **Step 2:** ScaleMapper.xml 写对应 SQL(INSERT/UPDATE/DELETE)
-- [ ] **Step 3:** ScaleRepository 实现:
+- [x] **Step 1:** ScaleMapper 接口加方法声明(insertScale/updateScale/deleteScale/insertItem/insertBand/deleteItemsByScale/deleteBandsByScale/findAll/findByDisorderType)
+- [x] **Step 2:** ScaleMapper.xml 写对应 SQL(INSERT/UPDATE/DELETE)
+- [x] **Step 3:** ScaleRepository 实现:
   - `save(Scale)`: insertScale → 遍历 items insertItem → 遍历 bands insertBand。validate disorder_type 合法(DisorderType.valueOf)
   - `update(Scale)`: updateScale头 → deleteItemsByScale → deleteByScale bands → 重插 items/bands
   - `deleteById(scaleId)`: deleteItems → deleteBands → deleteScale
   - `listAll()`: findAll → 组装列表(头信息,不含 items/bands)
   - `listByDisorderType(type)`: findByDisorderType → 组装列表
-- [ ] **Step 4:** ScaleRepositoryTest 扩展(save→findById 验证全字段 / update / delete / listAll / listByDisorderType)
-- [ ] **Step 5:** 全量回归绿 → Commit
+- [x] **Step 4:** ScaleRepositoryTest 扩展(save→findById 验证全字段 / update / delete / listAll / listByDisorderType)
+- [x] **Step 5:** 全量回归绿 → Commit
 
 ---
 
@@ -131,14 +131,14 @@ ScaleRepository 加 save / update / delete(事务原子:scale + items + bands �
 
 **Files:** ScaleController.java, dto/ScaleRequest.java, dto/ScaleResponse.java, dto/ScaleItemDto.java, dto/ScoreBandDto.java, SecurityConfig.java, ScaleApiTest.java
 
-- [ ] **Step 1:** DTO 定义
+- [x] **Step 1:** DTO 定义
   - `ScaleRequest`: scaleId(创建时必填,不可更新), name, version, disorderType, description, items[](ScaleItemDto), bands[](ScoreBandDto)
   - `ScaleItemDto`: itemId, stem, dimension, sortOrder, maxScore
   - `ScoreBandDto`: lowerBound, upperBound, label, interpretation
   - `ScaleResponse`: scaleId, name, version, disorderType, description, items[], bands[]
   - `ScaleListItem`: scaleId, name, version, disorderType, description(列表轻量,不带 items/bands)
 
-- [ ] **Step 2:** ScaleController
+- [x] **Step 2:** ScaleController
 ```
 GET    /api/scales                → listAll(可选 ?disorderType=ASD 过滤)
 GET    /api/scales/{scaleId}      → 完整详情(含 items/bands)
@@ -147,11 +147,11 @@ PUT    /api/scales/{scaleId}      → 更新(超管)
 DELETE /api/scales/{scaleId}      → 删除(超管)
 ```
 
-- [ ] **Step 3:** SecurityConfig:
+- [x] **Step 3:** SecurityConfig:
   - GET /api/scales/** → authenticated(评估时老师需读取)
   - POST/PUT/DELETE /api/scales/** → hasRole("SUPER_ADMIN")
 
-- [ ] **Step 4:** ScaleApiTest:
+- [x] **Step 4:** ScaleApiTest:
   - 超管创建量表(含 items+bands)→ 200;GET 详情含全部 items/bands
   - 超管更新量表(改题目/加题目/改分段)→ 200
   - 超管删除量表 → 200;再 GET → 404/400
@@ -160,7 +160,7 @@ DELETE /api/scales/{scaleId}      → 删除(超管)
   - scaleId 已存在 → 409
   - 无效 disorderType → 400
 
-- [ ] **Step 5:** 全量回归绿 → Commit
+- [x] **Step 5:** 全量回归绿 → Commit
 
 ---
 
@@ -170,7 +170,7 @@ DELETE /api/scales/{scaleId}      → 删除(超管)
 
 **Files:** scales.js, ScaleLibraryView.vue, MainLayout.vue, router/index.js
 
-- [ ] **Step 1:** `frontend/src/api/scales.js`
+- [x] **Step 1:** `frontend/src/api/scales.js`
 ```js
 export const listScales = (disorderType) => http.get('/scales', disorderType ? { params: { disorderType } } : {})
 export const getScale = (scaleId) => http.get(`/scales/${scaleId}`)
@@ -179,15 +179,15 @@ export const updateScale = (scaleId, payload) => http.put(`/scales/${scaleId}`, 
 export const deleteScale = (scaleId) => http.delete(`/scales/${scaleId}`)
 ```
 
-- [ ] **Step 2:** ScaleLibraryView.vue:
+- [x] **Step 2:** ScaleLibraryView.vue:
   - 顶部:品类筛选(el-select,DISORDER_TYPES + 全部)
   - 列表:el-table(scaleId/名称/版本/品类/题目数/操作)
   - 创建/编辑 dialog:分三区——量表基本信息(scaleId/name/version/disorderType/description)、题目列表(可动态增删行:itemId/stem/dimension/sortOrder/maxScore)、分段列表(可动态增删行:lowerBound/upperBound/label/interpretation)
   - 删除确认 MessageBox
 
-- [ ] **Step 3:** MainLayout.vue:超管"量表库管理"菜单从 `disabled` 改为正常可点(index="/scale-library")
-- [ ] **Step 4:** router/index.js:加 `{ path: 'scale-library', component: () => import('../views/ScaleLibraryView.vue') }`
-- [ ] **Step 5:** `npm run build` 通过 → Commit
+- [x] **Step 3:** MainLayout.vue:超管"量表库管理"菜单从 `disabled` 改为正常可点(index="/scale-library")
+- [x] **Step 4:** router/index.js:加 `{ path: 'scale-library', component: () => import('../views/ScaleLibraryView.vue') }`
+- [x] **Step 5:** `npm run build` 通过 → Commit
 
 ---
 
@@ -197,12 +197,12 @@ AssessmentView 从硬编码 CARS 改为:先选量表(从 GET /api/scales 列表�
 
 **Files:** AssessmentView.vue, assessments.js(不变)
 
-- [ ] **Step 1:** 加量表选择步骤(el-select 或 el-radio-group,选项来自 listScales)
-- [ ] **Step 2:** 选择后 getScale(scaleId) 获取 items → 动态生成 answers reactive 对象
-- [ ] **Step 3:** el-rate :max 取 item.maxScore(默认 4);题目按 sortOrder 排序
-- [ ] **Step 4:** 提交 payload.scaleId 改为动态选择的值
-- [ ] **Step 5:** 保留"从儿童档案页带入 childId"的 query 逻辑
-- [ ] **Step 6:** `npm run build` 通过 → Commit
+- [x] **Step 1:** 加量表选择步骤(el-select 或 el-radio-group,选项来自 listScales)
+- [x] **Step 2:** 选择后 getScale(scaleId) 获取 items → 动态生成 answers reactive 对象
+- [x] **Step 3:** el-rate :max 取 item.maxScore(默认 4);题目按 sortOrder 排序
+- [x] **Step 4:** 提交 payload.scaleId 改为动态选择的值
+- [x] **Step 5:** 保留"从儿童档案页带入 childId"的 query 逻辑
+- [x] **Step 6:** `npm run build` 通过 → Commit
 
 ---
 
@@ -210,8 +210,8 @@ AssessmentView 从硬编码 CARS 改为:先选量表(从 GET /api/scales 列表�
 
 起 dev 后端 + curl:超管建量表(含题目+分段)→ 列表按品类过滤 → 详情 → 更新(加题目)→ 老师取量表定义 → 老师提交评估(新量表)→ 删除量表。记录 INTEGRATION.md。
 
-- [ ] **Step 1:** 起 dev 后端
-- [ ] **Step 2:** curl 链路:
+- [x] **Step 1:** 起 dev 后端
+- [x] **Step 2:** curl 链路:
   1. 超管登录 → POST /api/scales(创建一个"感统"量表 3 题 + 2 分段)→ 200
   2. GET /api/scales?disorderType=SENSORY_INTEGRATION → 包含新量表
   3. GET /api/scales/{id} → 含 3 items + 2 bands
@@ -220,7 +220,7 @@ AssessmentView 从硬编码 CARS 改为:先选量表(从 GET /api/scales 列表�
   6. 老师 POST /api/assessments(用新量表 4 题作答)→ 200(计分正确)
   7. 超管 DELETE /api/scales/{id} → 200
   8. MANAGER POST /api/scales → 403
-- [ ] **Step 3:** 停服务,追加 INTEGRATION.md,提交
+- [x] **Step 3:** 停服务,追加 INTEGRATION.md,提交
 
 ---
 

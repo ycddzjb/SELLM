@@ -65,14 +65,14 @@ frontend/src/
 
 **Files:** AiProperties, OpenAiCompatibleModel, AiModelConfig, MockAiModel(调整), application.yml/dev, OpenAiCompatibleModelTest, AiModelConfigTest
 
-- [ ] **Step 1:** `AiProperties`(`@ConfigurationProperties("sellm.ai")`):provider(默认 "mock")、baseUrl、apiKey、model、timeoutSeconds(默认 30)。
-- [ ] **Step 2:** `OpenAiCompatibleModel implements AiModel`:JDK `HttpClient` POST `{baseUrl}/v1/chat/completions`,body `{model, messages:[{role:user, content:prompt}]}`,header `Authorization: Bearer {apiKey}`;解析 `choices[0].message.content`;非 2xx / 解析失败抛 RuntimeException(网关会包成 AiGatewayException)。用 Jackson 组/解 JSON。**不在构造期连网**。
-- [ ] **Step 3:** `AiModelConfig`:`@Bean @Primary AiModel aiModel(AiProperties)` —— provider=="openai" 且 apiKey 非空 → OpenAiCompatibleModel,否则 MockAiModel。MockAiModel 去掉 `@Component`(由 config 产出),保留类。
-- [ ] **Step 4:** application.yml 加 `sellm.ai.provider: ${SELLM_AI_PROVIDER:mock}` 等;application-dev.yml 显式 `provider: mock`。
-- [ ] **Step 5:** 测试:
+- [x] **Step 1:** `AiProperties`(`@ConfigurationProperties("sellm.ai")`):provider(默认 "mock")、baseUrl、apiKey、model、timeoutSeconds(默认 30)。
+- [x] **Step 2:** `OpenAiCompatibleModel implements AiModel`:JDK `HttpClient` POST `{baseUrl}/v1/chat/completions`,body `{model, messages:[{role:user, content:prompt}]}`,header `Authorization: Bearer {apiKey}`;解析 `choices[0].message.content`;非 2xx / 解析失败抛 RuntimeException(网关会包成 AiGatewayException)。用 Jackson 组/解 JSON。**不在构造期连网**。
+- [x] **Step 3:** `AiModelConfig`:`@Bean @Primary AiModel aiModel(AiProperties)` —— provider=="openai" 且 apiKey 非空 → OpenAiCompatibleModel,否则 MockAiModel。MockAiModel 去掉 `@Component`(由 config 产出),保留类。
+- [x] **Step 4:** application.yml 加 `sellm.ai.provider: ${SELLM_AI_PROVIDER:mock}` 等;application-dev.yml 显式 `provider: mock`。
+- [x] **Step 5:** 测试:
   - `OpenAiCompatibleModelTest`:构造请求体含 model/messages、Authorization;响应 JSON 解析出 content(把 HttpClient 抽成可注入或用本地 stub server/可覆写的 send 方法——优先把"发请求"抽成可覆写 protected 方法,测试子类化注入假响应,不真连网)。
   - `AiModelConfigTest`:provider=mock → 实例是 MockAiModel;provider=openai+key → 是 OpenAiCompatibleModel。
-- [ ] **Step 6:** 全量回归绿(默认 mock,既有 AiGateway 测试不变)→ Commit
+- [x] **Step 6:** 全量回归绿(默认 mock,既有 AiGateway 测试不变)→ Commit
 
 ---
 
@@ -82,10 +82,10 @@ frontend/src/
 
 **Files:** ReportService, IepService(微调 prompt),对应 service 测试
 
-- [ ] **Step 1:** ReportService.generateDraft 入参补充可选的儿童档案上下文(baselineSummary/monthlyGoal 等),拼进 prompt"既往档案"段;指令明确"输出分节评估报告草案,供教师编辑定稿"。ReportAppService 传入 child 的扩展字段。
-- [ ] **Step 2:** IepService 同理:prompt 纳入档案上下文 + 明确"长短期目标 + 干预活动"结构。
-- [ ] **Step 3:** 测试:用桩 AiModel 捕获 prompt,断言含档案上下文且**不含**明文姓名(脱敏);既有 ReportServiceTest/IepServiceTest 适配。
-- [ ] **Step 4:** 全量回归绿 → Commit
+- [x] **Step 1:** ReportService.generateDraft 入参补充可选的儿童档案上下文(baselineSummary/monthlyGoal 等),拼进 prompt"既往档案"段;指令明确"输出分节评估报告草案,供教师编辑定稿"。ReportAppService 传入 child 的扩展字段。
+- [x] **Step 2:** IepService 同理:prompt 纳入档案上下文 + 明确"长短期目标 + 干预活动"结构。
+- [x] **Step 3:** 测试:用桩 AiModel 捕获 prompt,断言含档案上下文且**不含**明文姓名(脱敏);既有 ReportServiceTest/IepServiceTest 适配。
+- [x] **Step 4:** 全量回归绿 → Commit
 
 ---
 
@@ -95,12 +95,12 @@ frontend/src/
 
 **Files:** pom.xml, export/PdfExporter, ReportController/IepController 加下载端点, SecurityConfig, PdfExporterTest
 
-- [ ] **Step 1:** pom 加 `com.openhtmltopdf:openhtmltopdf-pdfbox`(锁定版本)+ 内置/打包一个中文字体(或用 PDFBox 标准字体 + 注意中文——openhtmltopdf 需注册中文 TTF;选一个开源思源/文泉驿子集放 resources)。
-- [ ] **Step 2:** `PdfExporter.toPdf(String title, String content) -> byte[]`:把定稿文本包成简单 HTML(标题+正文,保留换行),渲染 PDF。
-- [ ] **Step 3:** `GET /api/reports/{id}/pdf`、`GET /api/ieps/{id}/pdf`:行级权限(经 AppService.get 已校验);仅 status==FINALIZED 才允许(否则 400 "请先定稿");返回 `application/pdf` + `Content-Disposition: attachment`。
-- [ ] **Step 4:** SecurityConfig:`GET /api/reports/*/pdf`、`/api/ieps/*/pdf` authenticated(行级在 service)。
-- [ ] **Step 5:** 测试:`PdfExporterTest`(产出非空、以 `%PDF` 开头);API 测试(未定稿下载 400;定稿后 200 + content-type)。
-- [ ] **Step 6:** 全量回归绿 → Commit
+- [x] **Step 1:** pom 加 `com.openhtmltopdf:openhtmltopdf-pdfbox`(锁定版本)+ 内置/打包一个中文字体(或用 PDFBox 标准字体 + 注意中文——openhtmltopdf 需注册中文 TTF;选一个开源思源/文泉驿子集放 resources)。
+- [x] **Step 2:** `PdfExporter.toPdf(String title, String content) -> byte[]`:把定稿文本包成简单 HTML(标题+正文,保留换行),渲染 PDF。
+- [x] **Step 3:** `GET /api/reports/{id}/pdf`、`GET /api/ieps/{id}/pdf`:行级权限(经 AppService.get 已校验);仅 status==FINALIZED 才允许(否则 400 "请先定稿");返回 `application/pdf` + `Content-Disposition: attachment`。
+- [x] **Step 4:** SecurityConfig:`GET /api/reports/*/pdf`、`/api/ieps/*/pdf` authenticated(行级在 service)。
+- [x] **Step 5:** 测试:`PdfExporterTest`(产出非空、以 `%PDF` 开头);API 测试(未定稿下载 400;定稿后 200 + content-type)。
+- [x] **Step 6:** 全量回归绿 → Commit
 
 ---
 
@@ -110,12 +110,12 @@ frontend/src/
 
 **Files:** schema(family_iep 表)、FamilyIepService/AppService/Controller/DTO、SecurityConfig、FamilyIepApiTest
 
-- [ ] **Step 1:** schema 加 `family_iep`(id/child_id/parent_user_id/parent_goal/draft/finalized_content/status/created_at),复用 record 范式;Mapper/XML/Repository。
-- [ ] **Step 2:** `FamilyIepService.generateDraft(childName, schoolName, parentGoal, latestReportConclusion)`:RAG 召回家庭训练策略 + prompt(含家长目标 + 最新评估结论)→ AiGateway。
-- [ ] **Step 3:** `FamilyIepAppService.generate(childId, parentGoal)`:行级 `checkChildAccess`(家长仅自己孩子)；取该 child 最新 **FINALIZED** 报告作结论(无定稿报告 → 400 "请等待评估报告定稿")；落库 family_iep DRAFT。get/listByChild/finalize 同 IEP 范式。
-- [ ] **Step 4:** `FamilyIepController` `/api/family-ieps`:POST 生成(childId+parentGoal)、GET 列表(?childId)、GET/{id}、PUT/{id}/finalize。SecurityConfig:authenticated(行级在 service，家长能访问自己孩子)。
-- [ ] **Step 5:** FamilyIepApiTest:家长对自己孩子生成(有定稿报告)→ 成功;无定稿报告 → 400;对别人孩子 → 403;列表/定稿。
-- [ ] **Step 6:** 全量回归绿 → Commit
+- [x] **Step 1:** schema 加 `family_iep`(id/child_id/parent_user_id/parent_goal/draft/finalized_content/status/created_at),复用 record 范式;Mapper/XML/Repository。
+- [x] **Step 2:** `FamilyIepService.generateDraft(childName, schoolName, parentGoal, latestReportConclusion)`:RAG 召回家庭训练策略 + prompt(含家长目标 + 最新评估结论)→ AiGateway。
+- [x] **Step 3:** `FamilyIepAppService.generate(childId, parentGoal)`:行级 `checkChildAccess`(家长仅自己孩子)；取该 child 最新 **FINALIZED** 报告作结论(无定稿报告 → 400 "请等待评估报告定稿")；落库 family_iep DRAFT。get/listByChild/finalize 同 IEP 范式。
+- [x] **Step 4:** `FamilyIepController` `/api/family-ieps`:POST 生成(childId+parentGoal)、GET 列表(?childId)、GET/{id}、PUT/{id}/finalize。SecurityConfig:authenticated(行级在 service，家长能访问自己孩子)。
+- [x] **Step 5:** FamilyIepApiTest:家长对自己孩子生成(有定稿报告)→ 成功;无定稿报告 → 400;对别人孩子 → 403;列表/定稿。
+- [x] **Step 6:** 全量回归绿 → Commit
 
 ---
 
@@ -123,10 +123,10 @@ frontend/src/
 
 **Files:** api/reports.js/ieps.js(+ familyIeps.js)、ReportView/IepView、FamilyIepView、router、MainLayout
 
-- [ ] **Step 1:** reports.js/ieps.js 加 `downloadPdf(id)`(http get responseType blob → 触发浏览器下载);ReportView/IepView 定稿后显示"下载 PDF"按钮。
-- [ ] **Step 2:** familyIeps.js（generate/list/get/finalize）；FamilyIepView.vue:家长选自己孩子 + 填 IEP 目标 → 生成 → 展示草案 → 可编辑定稿 → 下载。
-- [ ] **Step 3:** MainLayout 家长菜单加"家庭 IEP";router 加 `/family-iep`;家长登录后可见(auth.isParent)。
-- [ ] **Step 4:** `npm run build` 通过 → Commit
+- [x] **Step 1:** reports.js/ieps.js 加 `downloadPdf(id)`(http get responseType blob → 触发浏览器下载);ReportView/IepView 定稿后显示"下载 PDF"按钮。
+- [x] **Step 2:** familyIeps.js（generate/list/get/finalize）；FamilyIepView.vue:家长选自己孩子 + 填 IEP 目标 → 生成 → 展示草案 → 可编辑定稿 → 下载。
+- [x] **Step 3:** MainLayout 家长菜单加"家庭 IEP";router 加 `/family-iep`;家长登录后可见(auth.isParent)。
+- [x] **Step 4:** `npm run build` 通过 → Commit
 
 ---
 
@@ -134,9 +134,9 @@ frontend/src/
 
 dev(provider=mock,不出网)起后端 + curl:走 评估→报告(Mock草案)→定稿→下载PDF;IEP 同;家长家庭 IEP(需先有定稿报告);并验证 `sellm.ai.provider` 切到 openai+假 base-url 时 mock 仍可回退/或显式 mock 路径不外联。记录 INTEGRATION.md。
 
-- [ ] **Step 1:** 起 dev 后端(默认 mock)
-- [ ] **Step 2:** curl:老师 评估→生成报告→定稿→GET /reports/{id}/pdf(200, %PDF);生成 IEP→定稿→PDF;家长 family-iep(自己孩子+有定稿报告)→成功,无定稿→400,别人孩子→403。
-- [ ] **Step 3:** 停服务,追加 INTEGRATION.md,提交
+- [x] **Step 1:** 起 dev 后端(默认 mock)
+- [x] **Step 2:** curl:老师 评估→生成报告→定稿→GET /reports/{id}/pdf(200, %PDF);生成 IEP→定稿→PDF;家长 family-iep(自己孩子+有定稿报告)→成功,无定稿→400,别人孩子→403。
+- [x] **Step 3:** 停服务,追加 INTEGRATION.md,提交
 
 ---
 

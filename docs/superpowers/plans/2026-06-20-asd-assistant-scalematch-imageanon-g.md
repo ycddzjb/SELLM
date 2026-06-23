@@ -65,10 +65,10 @@ frontend/src/
 
 **Files:** ChildController(加端点), RecommendedScalesApiTest
 
-- [ ] **Step 1:** `GET /api/children/{childId}/recommended-scales`:`requireAccess(childId)`(行级)→ 读 child.disorderType → 若非空 `scaleRepository.listByDisorderType(type)`,空则返回空列表(老师手选全部)→ 复用 `ScaleResponse`(头信息)。注入 ScaleRepository。
-- [ ] **Step 2:** SecurityConfig:`GET /api/children/*/recommended-scales` 命中现有 `/api/**` authenticated 即可(行级在 controller),无需新规则(GET 不被 child 写规则影响)。
-- [ ] **Step 3:** RecommendedScalesApiTest:老师对本机构 ASD 儿童 → 推荐含 ASD 量表、不含他类;child.disorderType 为空 → 空列表;他机构老师 → 403;家长自己孩子 → 200。
-- [ ] **Step 4:** 全量回归绿 → Commit。
+- [x] **Step 1:** `GET /api/children/{childId}/recommended-scales`:`requireAccess(childId)`(行级)→ 读 child.disorderType → 若非空 `scaleRepository.listByDisorderType(type)`,空则返回空列表(老师手选全部)→ 复用 `ScaleResponse`(头信息)。注入 ScaleRepository。
+- [x] **Step 2:** SecurityConfig:`GET /api/children/*/recommended-scales` 命中现有 `/api/**` authenticated 即可(行级在 controller),无需新规则(GET 不被 child 写规则影响)。
+- [x] **Step 3:** RecommendedScalesApiTest:老师对本机构 ASD 儿童 → 推荐含 ASD 量表、不含他类;child.disorderType 为空 → 空列表;他机构老师 → 403;家长自己孩子 → 200。
+- [x] **Step 4:** 全量回归绿 → Commit。
 
 ---
 
@@ -76,13 +76,13 @@ frontend/src/
 
 **Files:** multimodal/ImageAnonymizer.java + Noop/Http/Properties/Config, application.yml/dev, 测试
 
-- [ ] **Step 1:** `ImageAnonymizer` 接口:`byte[] sanitize(byte[] image)`(null/空原样返回)。
-- [ ] **Step 2:** `NoopImageAnonymizer`(默认:原样返回)。
-- [ ] **Step 3:** `ImageAnonProperties`(`sellm.image-anon`):provider(默认 "noop" | "http")、endpoint、apiKey、timeoutSeconds。
-- [ ] **Step 4:** `HttpImageAnonymizer`:POST 图片字节到外部打码服务(`{endpoint}` 返回打码后图片字节);`send()` protected 便于测试不连网;失败 fail-safe——**抛异常阻断**(脱敏失败绝不让原图出网,符合现有 Anonymizer "脱敏失败硬阻断"红线)。
-- [ ] **Step 5:** `ImageAnonConfig` 按 provider 装配(默认 Noop)。
-- [ ] **Step 6:** application.yml `sellm.image-anon.*` env 模式;dev 默认 noop。
-- [ ] **Step 7:** 测试:ImageAnonConfigTest(provider 选择);HttpImageAnonymizerTest(send 抽 protected 注入假打码响应、失败抛异常)。全量回归绿 → Commit。
+- [x] **Step 1:** `ImageAnonymizer` 接口:`byte[] sanitize(byte[] image)`(null/空原样返回)。
+- [x] **Step 2:** `NoopImageAnonymizer`(默认:原样返回)。
+- [x] **Step 3:** `ImageAnonProperties`(`sellm.image-anon`):provider(默认 "noop" | "http")、endpoint、apiKey、timeoutSeconds。
+- [x] **Step 4:** `HttpImageAnonymizer`:POST 图片字节到外部打码服务(`{endpoint}` 返回打码后图片字节);`send()` protected 便于测试不连网;失败 fail-safe——**抛异常阻断**(脱敏失败绝不让原图出网,符合现有 Anonymizer "脱敏失败硬阻断"红线)。
+- [x] **Step 5:** `ImageAnonConfig` 按 provider 装配(默认 Noop)。
+- [x] **Step 6:** application.yml `sellm.image-anon.*` env 模式;dev 默认 noop。
+- [x] **Step 7:** 测试:ImageAnonConfigTest(provider 选择);HttpImageAnonymizerTest(send 抽 protected 注入假打码响应、失败抛异常)。全量回归绿 → Commit。
 
 ---
 
@@ -90,10 +90,10 @@ frontend/src/
 
 **Files:** OpenAiVisionModel.java, MultimodalConfig.java, OpenAiVisionModelTest
 
-- [ ] **Step 1:** `OpenAiVisionModel` 构造注入 `ImageAnonymizer`;`analyze` 里 `media = imageAnonymizer.sanitize(media)` **在 buildRequestBody 之前**(出网图片先脱敏)。
-- [ ] **Step 2:** `MultimodalConfig.multimodalModel` 注入 ImageAnonymizer 传给 OpenAiVisionModel(Mock 路径不需要,Mock 不出网)。
-- [ ] **Step 3:** OpenAiVisionModelTest 补:注入一个"标记式"ImageAnonymizer(返回固定字节),断言 buildRequestBody 用的是脱敏后字节(出网前确实过了脱敏)。
-- [ ] **Step 4:** 全量回归绿 → Commit。
+- [x] **Step 1:** `OpenAiVisionModel` 构造注入 `ImageAnonymizer`;`analyze` 里 `media = imageAnonymizer.sanitize(media)` **在 buildRequestBody 之前**(出网图片先脱敏)。
+- [x] **Step 2:** `MultimodalConfig.multimodalModel` 注入 ImageAnonymizer 传给 OpenAiVisionModel(Mock 路径不需要,Mock 不出网)。
+- [x] **Step 3:** OpenAiVisionModelTest 补:注入一个"标记式"ImageAnonymizer(返回固定字节),断言 buildRequestBody 用的是脱敏后字节(出网前确实过了脱敏)。
+- [x] **Step 4:** 全量回归绿 → Commit。
 
 > 说明:默认 multimodal=mock 时整条 vision 不触发,脱敏层不参与;仅当显式启用真实 vision 时,图像必经脱敏层(默认 Noop 不改图,配 http 才真打码)。这是"可启用的拦截点",非强制改图。
 
@@ -103,17 +103,17 @@ frontend/src/
 
 **Files:** api(recommendedScales), AssessmentView.vue
 
-- [ ] **Step 1:** api 加 `recommendedScales(childId)`。
-- [ ] **Step 2:** AssessmentView:有 childId 时,量表下拉默认用"推荐量表"(按该儿童障碍类型),加一个"显示全部量表"开关切回 listScales 全量;推荐为空时自动回退全部 + 提示。
-- [ ] **Step 3:** `npm run build` 通过 → Commit。
+- [x] **Step 1:** api 加 `recommendedScales(childId)`。
+- [x] **Step 2:** AssessmentView:有 childId 时,量表下拉默认用"推荐量表"(按该儿童障碍类型),加一个"显示全部量表"开关切回 listScales 全量;推荐为空时自动回退全部 + 提示。
+- [x] **Step 3:** `npm run build` 通过 → Commit。
 
 ---
 
 ### Task 5: 配置文档 + 端到端联调 + PR
 
-- [ ] **Step 1:** .env.example 加 `SELLM_IMAGE_ANON_*`(无真值 + 风险说明:默认 noop 不改图,启用 http 接外部打码服务)。
-- [ ] **Step 2:** dev 起后端,curl:老师对 ASD 儿童取 recommended-scales(含 ASD 量表);他机构 403;disorderType 空 → 空列表。(脱敏默认 noop + multimodal mock,vision 不触发,故图像脱敏走单测覆盖。)
-- [ ] **Step 3:** INTEGRATION.md 记录;停服务;提交;开 PR。
+- [x] **Step 1:** .env.example 加 `SELLM_IMAGE_ANON_*`(无真值 + 风险说明:默认 noop 不改图,启用 http 接外部打码服务)。
+- [x] **Step 2:** dev 起后端,curl:老师对 ASD 儿童取 recommended-scales(含 ASD 量表);他机构 403;disorderType 空 → 空列表。(脱敏默认 noop + multimodal mock,vision 不触发,故图像脱敏走单测覆盖。)
+- [x] **Step 3:** INTEGRATION.md 记录;停服务;提交;开 PR。
 
 ---
 

@@ -43,22 +43,22 @@ frontend/src/
 
 **Files:** ChildReminderController.java, dto/ChildReminderResponse.java, ChildReminderApiTest.java
 
-- [ ] **Step 1:** `ChildReminderResponse`:`childId`、`name`、`reminderType`(REASSESS / IEP_DUE)、`dueDate`(ISO)、`daysLeft`(int,负=已逾期)、`overdue`(boolean)。
-- [ ] **Step 2:** `ChildReminderController` `@GetMapping("/api/children/reminders")`:
+- [x] **Step 1:** `ChildReminderResponse`:`childId`、`name`、`reminderType`(REASSESS / IEP_DUE)、`dueDate`(ISO)、`daysLeft`(int,负=已逾期)、`overdue`(boolean)。
+- [x] **Step 2:** `ChildReminderController` `@GetMapping("/api/children/reminders")`:
   - `me = currentUser.require()`
   - 遍历 `repository.findAll()`,`accessGuard.canAccess(me, c)` 过滤(同 list())
   - 对每个有权儿童:若 `reassessDate` 非空且 `daysLeft ≤ 30`(`LocalDate.now().until(parse).getDays()`,逾期为负也纳入)→ 加一条 REASSESS;`iepDueDate` 同理加 IEP_DUE 条目
   - 解析失败(非法日期串)跳过该日期,不抛错
   - 按 daysLeft 升序(最紧急/逾期最久在前)
   - 常量 `REMIND_WITHIN_DAYS = 30`
-- [ ] **Step 3:** `ChildReminderApiTest`(用 ChildRepository 直接造数据,LocalDate.now() 动态算日期串):
+- [x] **Step 3:** `ChildReminderApiTest`(用 ChildRepository 直接造数据,LocalDate.now() 动态算日期串):
   - 老师本机构儿童:20 天后复评 → 含 REASSESS,daysLeft≈20,overdue=false
   - IEP 已逾期(-5 天)→ 含 IEP_DUE,overdue=true,daysLeft<0
   - 40 天后到期 → 不在列表(超窗)
   - 无日期儿童 → 不在列表
   - 他机构儿童 → 老师看不到(行级)
   - 家长只看到自己孩子的提醒
-- [ ] **Step 4:** `./mvnw test` 全绿(现 186 + 新增约 4-5)→ Commit
+- [x] **Step 4:** `./mvnw test` 全绿(现 186 + 新增约 4-5)→ Commit
 
 ---
 
@@ -66,10 +66,10 @@ frontend/src/
 
 **Files:** api/children.js, views/ChildrenView.vue
 
-- [ ] **Step 1:** `children.js` 加 `listReminders = () => http.get('/children/reminders')`
-- [ ] **Step 2:** `ChildrenView.vue` 顶部加 el-card "到期提醒":el-table 列出 姓名 / 提醒类型(复评 or IEP到期,中文)/ 到期日 / 剩余(`daysLeft>=0` 显"N天后",`<0` 显"已逾期N天"红色 el-tag);点行可跳 `/children/{id}` 详情。onMounted 调 listReminders。空时不显示该卡或显"暂无临期提醒"。
-- [ ] **Step 3:** reminderType→中文映射(REASSESS=复评提醒 / IEP_DUE=IEP到期);overdue 用 `type="danger"`,否则 `warning`。
-- [ ] **Step 4:** `npm run build` 通过 → Commit
+- [x] **Step 1:** `children.js` 加 `listReminders = () => http.get('/children/reminders')`
+- [x] **Step 2:** `ChildrenView.vue` 顶部加 el-card "到期提醒":el-table 列出 姓名 / 提醒类型(复评 or IEP到期,中文)/ 到期日 / 剩余(`daysLeft>=0` 显"N天后",`<0` 显"已逾期N天"红色 el-tag);点行可跳 `/children/{id}` 详情。onMounted 调 listReminders。空时不显示该卡或显"暂无临期提醒"。
+- [x] **Step 3:** reminderType→中文映射(REASSESS=复评提醒 / IEP_DUE=IEP到期);overdue 用 `type="danger"`,否则 `warning`。
+- [x] **Step 4:** `npm run build` 通过 → Commit
 
 ---
 
@@ -77,9 +77,9 @@ frontend/src/
 
 起 dev 后端 + curl:造不同日期的儿童(临期/逾期/超窗/无日期)→ GET /api/children/reminders 核对纳入与排序 → 他机构老师看不到。记录 INTEGRATION.md。
 
-- [ ] **Step 1:** 起 dev 后端
-- [ ] **Step 2:** curl:老师建档设 reassessDate(用相对今天的日期)→ 查 reminders 含它且 daysLeft 正确;逾期一条 overdue=true;超 30 天一条不在;他机构老师查 → 不含。
-- [ ] **Step 3:** 停服务,追加 INTEGRATION.md,提交
+- [x] **Step 1:** 起 dev 后端
+- [x] **Step 2:** curl:老师建档设 reassessDate(用相对今天的日期)→ 查 reminders 含它且 daysLeft 正确;逾期一条 overdue=true;超 30 天一条不在;他机构老师查 → 不含。
+- [x] **Step 3:** 停服务,追加 INTEGRATION.md,提交
 
 ---
 

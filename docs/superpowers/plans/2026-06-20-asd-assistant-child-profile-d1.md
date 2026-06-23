@@ -75,8 +75,8 @@ frontend/src/
 
 **Files:** common/LogType.java, schema.sql, LogTypeTest.java
 
-- [ ] **Step 1:** `LogType` 枚举:CLASSROOM_TRACK("课堂追踪")、HOME_COMMUNICATION("家校沟通")、STAGE_REVIEW("阶段复盘");getLabel + validate + labelOf(参照 Relationship)
-- [ ] **Step 2:** schema.sql:
+- [x] **Step 1:** `LogType` 枚举:CLASSROOM_TRACK("课堂追踪")、HOME_COMMUNICATION("家校沟通")、STAGE_REVIEW("阶段复盘");getLabel + validate + labelOf(参照 Relationship)
+- [x] **Step 2:** schema.sql:
 ```sql
 ALTER TABLE child ADD COLUMN IF NOT EXISTS baseline_summary VARCHAR(1024);
 ALTER TABLE child ADD COLUMN IF NOT EXISTS annual_iep_summary VARCHAR(1024);
@@ -94,8 +94,8 @@ CREATE TABLE IF NOT EXISTS child_log (
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
-- [ ] **Step 3:** LogTypeTest(3 类齐全 + 标签 + 非法码抛异常 + labelOf 兜底)
-- [ ] **Step 4:** 全量回归绿 → Commit
+- [x] **Step 3:** LogTypeTest(3 类齐全 + 标签 + 非法码抛异常 + labelOf 兜底)
+- [x] **Step 4:** 全量回归绿 → Commit
 
 ---
 
@@ -103,13 +103,13 @@ CREATE TABLE IF NOT EXISTS child_log (
 
 **Files:** Child.java, ChildMapper.xml, ChildRepository.java, dto/ChildRequest.java, dto/ChildResponse.java, ChildController.java, ChildRepositoryTest.java
 
-- [ ] **Step 1:** Child 实体加 6 字段 + getter/setter;**保留现有构造器**(5 参 id/name/disorder/org/guardian 委托,新字段 null),加全参或用 setter 装配
-- [ ] **Step 2:** ChildMapper.xml:resultMap 加 6 列;insert/update/select 带新列(reassess_date/iep_due_date 用 DATE)
-- [ ] **Step 3:** ChildRepository save/update/toChild 带新字段(姓名仍加密,新字段明文)
-- [ ] **Step 4:** ChildRequest/ChildResponse 加 6 字段;ChildController.update 写入新字段(归属 orgId/guardian 仍不可改)
-- [ ] **Step 5:** ChildRepositoryTest 扩:save 带新字段 → findById 读回一致(日期、概要)
-- [ ] **Step 6:** ChildExtendedFieldsApiTest:老师建档/改档带新字段 → GET 返回;行级不变
-- [ ] **Step 7:** 全量回归绿 → Commit
+- [x] **Step 1:** Child 实体加 6 字段 + getter/setter;**保留现有构造器**(5 参 id/name/disorder/org/guardian 委托,新字段 null),加全参或用 setter 装配
+- [x] **Step 2:** ChildMapper.xml:resultMap 加 6 列;insert/update/select 带新列(reassess_date/iep_due_date 用 DATE)
+- [x] **Step 3:** ChildRepository save/update/toChild 带新字段(姓名仍加密,新字段明文)
+- [x] **Step 4:** ChildRequest/ChildResponse 加 6 字段;ChildController.update 写入新字段(归属 orgId/guardian 仍不可改)
+- [x] **Step 5:** ChildRepositoryTest 扩:save 带新字段 → findById 读回一致(日期、概要)
+- [x] **Step 6:** ChildExtendedFieldsApiTest:老师建档/改档带新字段 → GET 返回;行级不变
+- [x] **Step 7:** 全量回归绿 → Commit
 
 ---
 
@@ -117,21 +117,21 @@ CREATE TABLE IF NOT EXISTS child_log (
 
 **Files:** child/log/*.java, mybatis/ChildLogMapper.xml, SecurityConfig.java, ChildLogApiTest.java
 
-- [ ] **Step 1:** ChildLog 实体(id/childId/logType/content/authorUserId/createdAt)+ Mapper(insert/findByChild/findByChildAndType/findById/deleteById)+ XML
-- [ ] **Step 2:** ChildLogRepository(save 回填 id;listByChild;listByChildAndType;findById;deleteById)
-- [ ] **Step 3:** ChildLogController `@RequestMapping("/api/children/{childId}/logs")`:
+- [x] **Step 1:** ChildLog 实体(id/childId/logType/content/authorUserId/createdAt)+ Mapper(insert/findByChild/findByChildAndType/findById/deleteById)+ XML
+- [x] **Step 2:** ChildLogRepository(save 回填 id;listByChild;listByChildAndType;findById;deleteById)
+- [x] **Step 3:** ChildLogController `@RequestMapping("/api/children/{childId}/logs")`:
   - GET(可选 ?type= 过滤):先 findById child + AccessGuard.checkChildAccess(行级);列出记录
   - POST:校验 child 存在 + 行级;LogType.validate;author=当前用户;保存
   - DELETE /{logId}:校验 log 属该 child + 行级;删除
   - DTO:ChildLogRequest(logType/content)、ChildLogResponse(id/logType/logTypeLabel/content/authorUserId/createdAt)
-- [ ] **Step 4:** SecurityConfig:`/api/children/*/logs/**` 写(POST/DELETE)限 TEACHER/MANAGER;GET authenticated(行级在 controller)。放在 /api/children 既有规则之前
-- [ ] **Step 5:** ChildLogApiTest:
+- [x] **Step 4:** SecurityConfig:`/api/children/*/logs/**` 写(POST/DELETE)限 TEACHER/MANAGER;GET authenticated(行级在 controller)。放在 /api/children 既有规则之前
+- [x] **Step 5:** ChildLogApiTest:
   - 老师对本机构儿童加记录(三类)→ 成功;按 type 过滤正确
   - 老师对他机构儿童加记录 → 403(行级)
   - 家长对自己孩子加记录 → 成功;对别人孩子 → 403
   - 非法 logType → 400
   - 删除本机构儿童记录 → 成功
-- [ ] **Step 6:** 全量回归绿 → Commit
+- [x] **Step 6:** 全量回归绿 → Commit
 
 ---
 
@@ -139,10 +139,10 @@ CREATE TABLE IF NOT EXISTS child_log (
 
 **Files:** api/children.js, api/meta.js, views/ChildDetailView.vue
 
-- [ ] **Step 1:** meta.js 加 `LOG_TYPES`(code+label);children.js 加 listChildLogs(childId, type?)/createChildLog/deleteChildLog
-- [ ] **Step 2:** ChildDetailView 顶部 el-descriptions 增展示新字段(基线/年度IEP/月度目标/复评时间/IEP到期/干预进度);加"编辑档案字段"dialog(复用 updateChild,提交 6 字段)
-- [ ] **Step 3:** 新增"成长记录"区:el-tabs(课堂追踪/家校沟通/阶段复盘)或带 type 筛选的表;每类可新增(content 文本 + 提交)/删除;按 created_at 倒序展示
-- [ ] **Step 4:** `npm run build` 通过 → Commit
+- [x] **Step 1:** meta.js 加 `LOG_TYPES`(code+label);children.js 加 listChildLogs(childId, type?)/createChildLog/deleteChildLog
+- [x] **Step 2:** ChildDetailView 顶部 el-descriptions 增展示新字段(基线/年度IEP/月度目标/复评时间/IEP到期/干预进度);加"编辑档案字段"dialog(复用 updateChild,提交 6 字段)
+- [x] **Step 3:** 新增"成长记录"区:el-tabs(课堂追踪/家校沟通/阶段复盘)或带 type 筛选的表;每类可新增(content 文本 + 提交)/删除;按 created_at 倒序展示
+- [x] **Step 4:** `npm run build` 通过 → Commit
 
 ---
 
@@ -150,9 +150,9 @@ CREATE TABLE IF NOT EXISTS child_log (
 
 起 dev 后端 + curl:老师建档(带扩展字段)→ 改档 → 加三类记录 → 按 type 查 → 家长对自己孩子加记录 → 他机构老师加记录 403 → 删除。记录 INTEGRATION.md。
 
-- [ ] **Step 1:** 起 dev 后端(schema 加列/表,ALTER/CREATE IF NOT EXISTS 兼容)
-- [ ] **Step 2:** curl 链路(扩字段建档/改档读回、三类记录 CRUD、type 过滤、行级 403)
-- [ ] **Step 3:** 停服务,追加 INTEGRATION.md,提交
+- [x] **Step 1:** 起 dev 后端(schema 加列/表,ALTER/CREATE IF NOT EXISTS 兼容)
+- [x] **Step 2:** curl 链路(扩字段建档/改档读回、三类记录 CRUD、type 过滤、行级 403)
+- [x] **Step 3:** 停服务,追加 INTEGRATION.md,提交
 
 ---
 
