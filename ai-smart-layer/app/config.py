@@ -13,11 +13,14 @@ class Settings(BaseSettings):
     ai_timeout: int = 60
 
     # 文生媒体(可切换,默认 mock 不外联)
-    media_provider: str = "mock"  # mock | openai
+    media_provider: str = "mock"  # mock | openai | wanx(阿里云通义万相,异步任务)
     media_base_url: str = ""
     media_api_key: str = ""
     media_model: str = "dall-e-3"
     media_timeout: int = 120
+    media_size: str = "1024*1024"   # 万相用 * 分隔;openai 用 x(适配器内各自处理)
+    media_poll_interval: int = 3    # wanx 异步轮询间隔秒
+    media_max_polls: int = 40       # wanx 最大轮询次数(× interval = 最长等待)
 
     # 文生视频(可切换,默认 mock 不外联;真实视频生成通常异步:提交→轮询→下载)
     video_provider: str = "mock"  # mock | openai

@@ -116,6 +116,94 @@ class OpenAiImageGenerator(MediaGenerator):
             return resp.json()
 
 
+class WanxImageGenerator(MediaGenerator):
+    """阿里云通义万相文生图(provider=wanx 且配 key 时启用)。仅图像;其他类型返 None。
+
+    DashScope 专有异步 API:提交任务(X-DashScope-Async)→ 轮询 task → 取图 URL → 下载转 b64。
+    四步各抽为可覆写方法,测试子类注入假响应、不真连网。强制 HTTP/1.1。
+    ⚠️ 出网会把(已脱敏的)prompt 发往第三方 —— 合规风险由配置方承担。
+    """
+
+    SUBMIT_PATH = "/api/v1/services/aigc/text2image/image-synthesis"
+    TASK_PATH = "/api/v1/tasks/"
+
+    async def generate(self, asset_type: str, prompt: str) -> dict | None:
+        if (asset_type or "").upper() not in ("IMAGE", "PICTUREBOOK"):
+            return None
+        task_id = await self._submit(prompt)
+        if not task_id:
+            return None
+        for _ in range(settings.media_max_polls):
+            status = await self._poll(task_id)
+            state = (status.get("output", {}).get("task_status", "") or "").upper()
+            if state == "SUCCEEDED":
+                results = status.get("output", {}).get("results", [])
+                url = results[0].get("url", "") if results else ""
+                if not url:
+                    return None
+                data = await self._download(url)
+                return {
+                    "media_b64": base64.b64encode(data).decode("ascii"),
+                    "mime_type": "image/png",
+                    "ext": "png",
+                }
+            if state in ("FAILED", "CANCELED", "UNKNOWN"):
+                raise RuntimeError(f"万相生成失败: {status.get('output', {}).get('message', state)}")
+            await self._sleep(settings.media_poll_interval)
+        raise RuntimeError("万相生成超时")
+
+    async def _submit(self, prompt: str) -> str:
+        """提交异步文生图任务,返回 task_id。"""
+        import httpx
+
+        url = settings.media_base_url.rstrip("/") + self.SUBMIT_PATH
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {settings.media_api_key}",
+            "X-DashScope-Async": "enable",
+        }
+        payload = {
+            "model": settings.media_model,
+            "input": {"prompt": prompt},
+            "parameters": {"size": settings.media_size, "n": 1},
+        }
+        async with httpx.AsyncClient(http1=True, http2=False,
+                                     timeout=settings.media_timeout) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+            if resp.status_code // 100 != 2:
+                raise RuntimeError(f"万相任务提交返回非 2xx: {resp.status_code}")
+            return resp.json().get("output", {}).get("task_id", "")
+
+    async def _poll(self, task_id: str) -> dict:
+        """查询任务状态(返回完整 DashScope 响应体)。"""
+        import httpx
+
+        url = settings.media_base_url.rstrip("/") + self.TASK_PATH + task_id
+        headers = {"Authorization": f"Bearer {settings.media_api_key}"}
+        async with httpx.AsyncClient(http1=True, http2=False,
+                                     timeout=settings.media_timeout) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code // 100 != 2:
+                raise RuntimeError(f"万相任务轮询返回非 2xx: {resp.status_code}")
+            return resp.json()
+
+    async def _download(self, url: str) -> bytes:
+        """下载产物图片字节。"""
+        import httpx
+
+        async with httpx.AsyncClient(http1=True, http2=False,
+                                     timeout=settings.media_timeout) as client:
+            resp = await client.get(url)
+            if resp.status_code // 100 != 2:
+                raise RuntimeError(f"万相产物下载返回非 2xx: {resp.status_code}")
+            return resp.content
+
+    async def _sleep(self, seconds: float) -> None:
+        """轮询间隔(抽出便于测试覆盖为 no-op)。"""
+        import asyncio
+        await asyncio.sleep(seconds)
+
+
 class OpenAiVideoGenerator(MediaGenerator):
     """文生视频(provider=openai 且配 key 时启用)。仅 VIDEO;其他类型返 None(上层降级)。
 
@@ -214,8 +302,12 @@ class CompositeMediaGenerator(MediaGenerator):
 
 
 def get_media_generator() -> MediaGenerator:
-    image_gen = (OpenAiImageGenerator()
-                 if settings.media_provider == "openai" and settings.media_api_key else None)
+    if settings.media_provider == "wanx" and settings.media_api_key:
+        image_gen = WanxImageGenerator()
+    elif settings.media_provider == "openai" and settings.media_api_key:
+        image_gen = OpenAiImageGenerator()
+    else:
+        image_gen = None
     video_gen = (OpenAiVideoGenerator()
                  if settings.video_provider == "openai" and settings.video_api_key else None)
     if image_gen is None and video_gen is None:
