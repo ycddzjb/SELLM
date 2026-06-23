@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.aids.TeachingAidMapper">
+    <resultMap id="aidMap" type="map">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="disorder_types" property="disorderTypes"/>
+        <result column="category" property="category"/>
+        <result column="usage_guide" property="usageGuide"/>
+    </resultMap>
+    <select id="findByDisorderType" resultMap="aidMap">
+        SELECT id, name, disorder_types, category, usage_guide FROM teaching_aid
+        WHERE deleted = 0
+        <if test="disorderType != null and disorderType != ''">
+            AND disorder_types LIKE CONCAT('%"', #{disorderType}, '"%')
+        </if>
+        ORDER BY id ASC
+    </select>
+</mapper>
