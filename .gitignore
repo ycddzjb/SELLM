@@ -4,6 +4,10 @@ dist/
 target/
 *.class
 
+# Python 缓存
+__pycache__/
+*.pyc
+
 # IDE / 编辑器
 .idea/
 .vscode/
@@ -26,6 +30,12 @@ Thumbs.db
 
 # dev profile H2 文件库
 backend/data/
+
+# Agent 运行时落盘的本地媒体产物(ObjectStorage Noop 本地目录)
+sellm-agent-aids/data/
+
+# 微信开发者工具私有配置(各人本地)
+miniprogram/project.private.config.json
 
 # Git worktree (隔离开发工作区)
 dev_workspace/
