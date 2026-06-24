@@ -243,6 +243,20 @@ public class UserManagementController {
         return Result.ok(null);
     }
 
+    // 超管:初始化(重置)用户密码为默认初始密码,返回明文供线下告知用户
+    private static final String DEFAULT_RESET_PASSWORD = "sellm@123";
+    @PutMapping("/{id}/reset-password")
+    @Transactional
+    public Result<String> resetPassword(@PathVariable Long id) {
+        currentUser.require();
+        AppUser target = userRepository.findById(id);
+        if (target == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "用户不存在");
+        }
+        userRepository.changePassword(id, DEFAULT_RESET_PASSWORD);
+        return Result.ok(DEFAULT_RESET_PASSWORD);
+    }
+
     // 行级校验:目标是 PENDING 家长,且 parent_profile.assigned_teacher_id == 当前老师(否则 403)
     private AppUser requireAssignedPendingParent(AuthPrincipal me, Long targetId) {
         AppUser target = userRepository.findById(targetId);

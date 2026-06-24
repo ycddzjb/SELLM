@@ -58,6 +58,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/users/*/activate-wechat", "/api/users/*/reject-wechat").hasRole("MANAGER")
                 // 超管:编辑/软删用户(PUT/DELETE /api/users/{id});单段通配只命中 /{id},
                 // 不命中 /me/password(两段)及上面已列的具体 PUT。无通配兜底须显式列防越权。
+                .requestMatchers(HttpMethod.PUT, "/api/users/*/reset-password").hasRole("SUPER_ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/users/*").hasRole("SUPER_ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("SUPER_ADMIN")
                 // 机构端点:公开列表免登录(注册选机构),建机构/看全部限超管

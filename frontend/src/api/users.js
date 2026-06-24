@@ -14,3 +14,4 @@ export const changeMyPassword = (oldPassword, newPassword) =>
 // 超管:编辑(状态/角色/机构)+ 软删用户
 export const updateUser = (id, payload) => http.put(`/users/${id}`, payload)
 export const deleteUser = (id) => http.delete(`/users/${id}`)
+export const resetUserPassword = (id) => http.put(`/users/${id}/reset-password`)

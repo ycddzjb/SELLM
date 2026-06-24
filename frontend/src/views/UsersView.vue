@@ -75,13 +75,29 @@
 
       <el-card>
         <template #header><span>全部用户</span></template>
-        <el-table :data="users" size="small">
+        <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+          <el-select v-model="userFilter.province" placeholder="按地区(省)" clearable filterable style="width:150px">
+            <el-option v-for="p in PROVINCES" :key="p.name" :label="p.name" :value="p.name" />
+          </el-select>
+          <el-select v-model="userFilter.orgId" placeholder="按机构" clearable filterable style="width:180px">
+            <el-option v-for="o in orgs" :key="o.id" :label="o.name" :value="o.id" />
+          </el-select>
+          <el-select v-model="userFilter.role" placeholder="按角色" clearable style="width:150px">
+            <el-option label="超级管理者" value="SUPER_ADMIN" />
+            <el-option label="机构管理者" value="MANAGER" />
+            <el-option label="老师/康复师" value="TEACHER" />
+            <el-option label="家长" value="PARENT" />
+          </el-select>
+        </div>
+        <el-table :data="filteredUsers" size="small">
           <el-table-column prop="id" label="ID" width="70" />
           <el-table-column prop="username" label="用户名" />
           <el-table-column label="角色">
             <template #default="{ row }">{{ roleLabel(row.role) }}</template>
           </el-table-column>
-          <el-table-column prop="orgId" label="机构ID" width="90" />
+          <el-table-column label="机构" width="150">
+            <template #default="{ row }">{{ orgName(row.orgId) }}</template>
+          </el-table-column>
           <el-table-column label="状态" width="90">
             <template #default="{ row }">
               <el-tag size="small" :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
@@ -119,6 +135,7 @@
           </el-form-item>
         </el-form>
         <template #footer>
+          <el-button type="warning" plain :loading="resetPwdLoading" @click="onResetPassword">初始化密码</el-button>
           <el-button @click="editUserDialog = false">取消</el-button>
           <el-button type="primary" :loading="editUserLoading" @click="onSaveEditUser">保存</el-button>
         </template>
@@ -260,7 +277,7 @@ import { reactive, ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   listUsers, createUser, listPendingParents, listParents, approveUser, rejectUser, changeMyPassword,
-  listPendingWeChat, activateWeChat, rejectWeChat, updateUser, deleteUser
+  listPendingWeChat, activateWeChat, rejectWeChat, updateUser, deleteUser, resetUserPassword
 } from '../api/users'
 import { listOrgs, createOrg } from '../api/orgs'
 import { listClasses } from '../api/classes'
@@ -359,6 +376,35 @@ async function onSaveEditUser() {
     await loadUsers()
   } catch (e) {} finally { editUserLoading.value = false }
 }
+// 全部用户筛选(地区/机构/角色)+ 机构名映射
+const userFilter = reactive({ province: '', orgId: null, role: '' })
+const orgName = (orgId) => {
+  const o = orgs.value.find(x => x.id === orgId)
+  return o ? o.name : (orgId == null ? '—' : orgId)
+}
+const filteredUsers = computed(() => users.value.filter(u => {
+  if (userFilter.role && u.role !== userFilter.role) return false
+  if (userFilter.orgId && u.orgId !== userFilter.orgId) return false
+  if (userFilter.province) {
+    const o = orgs.value.find(x => x.id === u.orgId)
+    if (!o || o.province !== userFilter.province) return false
+  }
+  return true
+}))
+
+// 初始化密码
+const resetPwdLoading = ref(false)
+async function onResetPassword() {
+  try {
+    await ElMessageBox.confirm(`确认将用户「${editUserForm.username}」的密码初始化为默认密码?`, '初始化密码', { type: 'warning' })
+  } catch { return }
+  resetPwdLoading.value = true
+  try {
+    const pwd = await resetUserPassword(editUserForm.id)
+    ElMessageBox.alert(`已初始化。新密码:${pwd}\n请线下告知该用户并提示尽快修改。`, '初始化成功', { type: 'success' })
+  } catch (e) {} finally { resetPwdLoading.value = false }
+}
+
 async function onDeleteUser(row) {
   try {
     await ElMessageBox.confirm(`确认删除用户「${row.username}」?删除后该账号将停用、无法登录。`, '确认删除', { type: 'warning' })
