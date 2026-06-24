@@ -42,9 +42,16 @@ public class AssetAppService {
         a.setTaskId(String.valueOf(a.getId()));
         repo.update(a);
 
-        // PENDING 已提交,触发后台任务(同步 executor 时同线程执行完)
-        task.run(a.getId());
+        // PENDING 已提交,触发后台任务(同步 executor 时同线程执行完)。
+        // subjectNames 经方法参数传入后台任务(同 JVM 引用传递,不落库),用于出网脱敏屏蔽表。
+        task.run(a.getId(), safeNames(req.getSubjectNames()));
         return a.getId();
+    }
+
+    /** subjectNames 安全转 List:null→空,过滤空白(供脱敏屏蔽表)。 */
+    private static List<String> safeNames(List<String> names) {
+        if (names == null) return List.of();
+        return names.stream().filter(n -> n != null && !n.isBlank()).toList();
     }
 
     public TaskStatusResponse pollTask(Long userId, Long taskId) {

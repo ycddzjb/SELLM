@@ -74,7 +74,8 @@ public class QaAppService {
         String answer;
         List<Map<String, String>> sources = new ArrayList<>();
         try {
-            AnonymizationResult anon = anonymizer.anonymize(question, List.of(), List.of()); // 红线:出网必经脱敏
+            AnonymizationResult anon = anonymizer.anonymize(question,
+                safeNames(req.getSubjectNames()), List.of()); // 红线:出网必经脱敏(姓名靠调用方传入屏蔽表)
             QaAnswer qa = smartLayerClient.generate(anon.getAnonymizedText(), DEFAULT_TOP_K);
             answer = anonymizer.restore(qa.getAnswer(), anon.getRestoreMap());
             if (qa.getSources() != null) sources = qa.getSources();
@@ -110,6 +111,12 @@ public class QaAppService {
             out.add(new ConversationView(c.getId(), c.getTitle(), null));
         }
         return out;
+    }
+
+    /** subjectNames 安全转 List:null→空,过滤空白(供脱敏屏蔽表)。 */
+    private static List<String> safeNames(List<String> names) {
+        if (names == null) return List.of();
+        return names.stream().filter(n -> n != null && !n.isBlank()).toList();
     }
 
     private QaConversation resolveConversation(Long userId, Long conversationId, String question) {

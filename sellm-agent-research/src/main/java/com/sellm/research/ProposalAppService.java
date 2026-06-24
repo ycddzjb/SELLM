@@ -36,7 +36,8 @@ public class ProposalAppService {
         repo.save(p);
         String content;
         try {
-            AnonymizationResult anon = anonymizer.anonymize(req.getTopic(), List.of(), List.of());
+            AnonymizationResult anon = anonymizer.anonymize(req.getTopic(),
+                safeNames(req.getSubjectNames()), List.of());
             String aiText = smartLayer.generate(anon.getAnonymizedText());
             content = anonymizer.restore(aiText, anon.getRestoreMap());
         } catch (AnonymizationException ae) {
@@ -74,6 +75,12 @@ public class ProposalAppService {
 
     public List<ResearchProposal> listMine(Long userId) {
         return repo.listByOwner(userId);
+    }
+
+    /** subjectNames 安全转 List:null→空,过滤空白(供脱敏屏蔽表)。 */
+    private static List<String> safeNames(List<String> names) {
+        if (names == null) return List.of();
+        return names.stream().filter(n -> n != null && !n.isBlank()).toList();
     }
 
     private ResearchProposal requireOwned(Long userId, Long id) {

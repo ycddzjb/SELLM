@@ -37,12 +37,13 @@ public class AssetGenerationTask {
     }
 
     @Async("assetTaskExecutor")
-    public void run(Long assetId) {
+    public void run(Long assetId, List<String> subjectNames) {
         GeneratedAsset a = repo.findById(assetId);
         if (a == null) {
             log.warn("文生素材任务找不到 asset id={}", assetId);
             return;
         }
+        List<String> names = subjectNames == null ? List.of() : subjectNames;
         try {
             a.setStatus(AssetStatus.RUNNING.name());
             repo.update(a);
@@ -50,7 +51,7 @@ public class AssetGenerationTask {
             String content;
             GeneratedContent generated;
             try {
-                AnonymizationResult anon = anonymizer.anonymize(a.getPrompt(), List.of(), List.of());
+                AnonymizationResult anon = anonymizer.anonymize(a.getPrompt(), names, List.of());
                 generated = smartLayer.generate(a.getType(), anon.getAnonymizedText());
                 content = anonymizer.restore(generated.getText(), anon.getRestoreMap());
             } catch (AnonymizationException ae) {
