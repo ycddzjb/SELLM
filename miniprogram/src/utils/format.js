@@ -1,13 +1,13 @@
-/** 障碍类型 code → 中文 label。 */
+/** 障碍类型 code → 中文 label(须与后端 com.sellm.common.DisorderType 对齐)。 */
 const DISORDER_LABELS = {
-  ASD: '自闭症谱系',
-  ADHD: '注意缺陷多动',
+  ASD: '孤独症',
+  DEVELOPMENTAL_DELAY: '发育迟缓',
   INTELLECTUAL: '智力障碍',
-  SPEECH: '言语语言',
-  PHYSICAL: '肢体障碍',
-  EMOTIONAL: '情绪行为',
-  HEARING: '听力障碍',
-  VISUAL: '视力障碍',
+  LANGUAGE: '语言障碍',
+  SENSORY_INTEGRATION: '感统失调',
+  CEREBRAL_PALSY: '脑瘫',
+  ADHD: '注意缺陷多动障碍',
+  HEARING_VISION: '听视障',
 }
 
 export function disorderLabel(code) {
