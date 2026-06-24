@@ -1,0 +1,13 @@
+# dev profile:本地联调用 H2 文件库,覆盖主 yml 的 MySQL。
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/research_dev;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+      schema-locations: classpath:schema.sql
+      continue-on-error: true

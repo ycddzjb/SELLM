@@ -6,15 +6,14 @@ spring:
       discovery:
         server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
   datasource:
-    url: jdbc:h2:mem:aids_db;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
+    # 生产用独立 MySQL 库(aids);dev 联调走 application-dev.yml 的 H2 文件库。
+    url: ${SELLM_AIDS_DB_URL:jdbc:mysql://localhost:3306/sellm_aids?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4}
+    username: ${SELLM_AIDS_DB_USER:root}
+    password: ${SELLM_AIDS_DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
   sql:
     init:
-      mode: always
-      encoding: UTF-8            # 种子含中文教具文案,须 UTF-8 读取(否则 Windows 默认 GBK 入库即乱码)
-      schema-locations: classpath:schema.sql
+      mode: never   # 生产不自动建表/种子(H2 MERGE 方言不兼容 MySQL,由迁移脚本);dev profile 覆盖为 always
 
 mybatis:
   mapper-locations: classpath*:mybatis/*.xml
