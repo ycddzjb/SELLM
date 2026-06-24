@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS family_iep (
     child_id          BIGINT NOT NULL,
     parent_user_id    BIGINT NOT NULL,
     parent_goal       VARCHAR(1024),
-    draft             VARCHAR(8192),
-    finalized_content VARCHAR(8192),
+    draft             TEXT,
+    finalized_content TEXT,
     status            VARCHAR(16) NOT NULL,
     created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -166,8 +166,8 @@ CREATE TABLE IF NOT EXISTS report (
     id            BIGINT PRIMARY KEY AUTO_INCREMENT,
     assessment_id BIGINT NOT NULL,
     child_id      BIGINT NOT NULL,
-    draft         VARCHAR(8000) NOT NULL,
-    finalized_content VARCHAR(8000),
+    draft         TEXT NOT NULL,
+    finalized_content TEXT,
     status        VARCHAR(16) NOT NULL,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -177,8 +177,8 @@ CREATE TABLE IF NOT EXISTS iep (
     id            BIGINT PRIMARY KEY AUTO_INCREMENT,
     report_id     BIGINT NOT NULL,
     child_id      BIGINT NOT NULL,
-    draft         VARCHAR(8000) NOT NULL,
-    finalized_content VARCHAR(8000),
+    draft         TEXT NOT NULL,
+    finalized_content TEXT,
     status        VARCHAR(16) NOT NULL,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
