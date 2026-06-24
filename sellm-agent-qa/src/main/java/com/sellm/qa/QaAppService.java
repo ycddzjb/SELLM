@@ -26,16 +26,35 @@ public class QaAppService {
     private final IntentClassifier intentClassifier;
     private final SmartLayerClient smartLayerClient;
     private final Anonymizer anonymizer;
+    private final com.sellm.qa.doc.DocAnalyzer docAnalyzer;
     private final com.fasterxml.jackson.databind.ObjectMapper json = new com.fasterxml.jackson.databind.ObjectMapper();
 
     public QaAppService(QaConversationRepository convRepo, QaMessageRepository msgRepo,
                         IntentClassifier intentClassifier, SmartLayerClient smartLayerClient,
-                        Anonymizer anonymizer) {
+                        Anonymizer anonymizer, com.sellm.qa.doc.DocAnalyzer docAnalyzer) {
         this.convRepo = convRepo;
         this.msgRepo = msgRepo;
         this.intentClassifier = intentClassifier;
         this.smartLayerClient = smartLayerClient;
         this.anonymizer = anonymizer;
+        this.docAnalyzer = docAnalyzer;
+    }
+
+    /** 文档/图片分析:出网前对提问脱敏(失败硬阻断),调 DocAnalyzer(默认 mock)。匿名可用,不落库。 */
+    public String analyzeDoc(String filename, String mimeType, byte[] bytes, String question, java.util.List<String> subjectNames) {
+        if (bytes == null || bytes.length == 0) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "文件不能为空");
+        }
+        String safePrompt = "";
+        if (question != null && !question.isBlank()) {
+            try {
+                AnonymizationResult anon = anonymizer.anonymize(question, safeNames(subjectNames), List.of());
+                safePrompt = anon.getAnonymizedText();
+            } catch (AnonymizationException ae) {
+                throw new BusinessException(ErrorCode.ANONYMIZATION_FAILED, "脱敏校验未通过,已阻断出网");
+            }
+        }
+        return docAnalyzer.analyze(filename, mimeType, bytes, safePrompt);
     }
 
     public AskResponse ask(Long userId, AskRequest req) {
@@ -43,20 +62,24 @@ public class QaAppService {
         if (question == null || question.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "问题不能为空");
         }
-        // 1. 会话:取或建
-        QaConversation conv = resolveConversation(userId, req.getConversationId(), question);
-        // 2. 写 USER 消息(明文原问题)
-        QaMessage userMsg = new QaMessage();
-        userMsg.setConversationId(conv.getId());
-        userMsg.setRole("USER");
-        userMsg.setContent(question);
-        msgRepo.save(userMsg);
+        boolean anon = (userId == null);   // 匿名:不落库会话/消息,只返本次答案
+
+        // 1. 会话:登录用户取或建;匿名跳过
+        QaConversation conv = anon ? null : resolveConversation(userId, req.getConversationId(), question);
+        // 2. 写 USER 消息(明文原问题);匿名跳过
+        if (!anon) {
+            QaMessage userMsg = new QaMessage();
+            userMsg.setConversationId(conv.getId());
+            userMsg.setRole("USER");
+            userMsg.setContent(question);
+            msgRepo.save(userMsg);
+        }
 
         // 3. 意图分类
         Intent intent = intentClassifier.classify(question);
 
         AskResponse resp = new AskResponse();
-        resp.setConversationId(conv.getId());
+        resp.setConversationId(anon ? null : conv.getId());
 
         if (intent != Intent.GENERAL) {
             // 4a. 业务意图:返深链,不调 Python(守 AI 红线)
@@ -65,8 +88,10 @@ public class QaAppService {
             resp.setDeepLink(intent.getDeepLink());
             resp.setAnswer(answer);
             resp.setSources(List.of());
-            QaMessage a = saveAssistant(conv.getId(), answer, intent.getRouteTo(), "[]");
-            resp.setMessageId(a.getId());
+            if (!anon) {
+                QaMessage a = saveAssistant(conv.getId(), answer, intent.getRouteTo(), "[]");
+                resp.setMessageId(a.getId());
+            }
             return resp;
         }
 
@@ -74,10 +99,10 @@ public class QaAppService {
         String answer;
         List<Map<String, String>> sources = new ArrayList<>();
         try {
-            AnonymizationResult anon = anonymizer.anonymize(question,
+            AnonymizationResult anonResult = anonymizer.anonymize(question,
                 safeNames(req.getSubjectNames()), List.of()); // 红线:出网必经脱敏(姓名靠调用方传入屏蔽表)
-            QaAnswer qa = smartLayerClient.generate(anon.getAnonymizedText(), DEFAULT_TOP_K);
-            answer = anonymizer.restore(qa.getAnswer(), anon.getRestoreMap());
+            QaAnswer qa = smartLayerClient.generate(anonResult.getAnonymizedText(), DEFAULT_TOP_K);
+            answer = anonymizer.restore(qa.getAnswer(), anonResult.getRestoreMap());
             if (qa.getSources() != null) sources = qa.getSources();
         } catch (AnonymizationException ae) {
             // 脱敏失败硬阻断(绝不发送)
@@ -88,9 +113,11 @@ public class QaAppService {
         }
         resp.setAnswer(answer);
         resp.setSources(sources);
-        String sourcesJson = toJson(sources);
-        QaMessage a = saveAssistant(conv.getId(), answer, null, sourcesJson);
-        resp.setMessageId(a.getId());
+        if (!anon) {
+            String sourcesJson = toJson(sources);
+            QaMessage a = saveAssistant(conv.getId(), answer, null, sourcesJson);
+            resp.setMessageId(a.getId());
+        }
         return resp;
     }
 

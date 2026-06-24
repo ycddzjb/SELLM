@@ -81,11 +81,13 @@ class QaAskApiTest {
     }
 
     @Test
-    void 缺X_User_Id返401() throws Exception {
+    void 缺X_User_Id匿名也可问答返200() throws Exception {
+        // 匿名问答(豆包式公开体验):无 X-User-Id 不再 401,返 200,但不落库会话(conversationId 为空)
         mvc.perform(post("/api/qa/ask")
                 .contentType("application/json")
                 .content(json.writeValueAsString(Map.of("question", "你好"))))
-            .andExpect(status().isUnauthorized());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.conversationId").doesNotExist());
     }
 
     @Test

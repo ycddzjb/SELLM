@@ -53,6 +53,10 @@ sellm:
       whitelist:
         - /api/auth/
         - /actuator/health
+        # 匿名问答+文档分析(豆包式公开体验);注意只放这两个精确端点,
+        # /api/qa/conversations(历史)不在白名单,仍需登录。
+        - /api/qa/ask
+        - /api/qa/analyze
     rate-limit:
       enabled: ${SELLM_RATELIMIT_ENABLED:true}
       limit: ${SELLM_RATELIMIT_LIMIT:100}

@@ -31,8 +31,8 @@ Thumbs.db
 # dev profile H2 文件库
 backend/data/
 
-# Agent 运行时落盘的本地媒体产物(ObjectStorage Noop 本地目录)
-sellm-agent-aids/data/
+# Agent dev H2 文件库 + 运行时落盘媒体(各 agent data 目录)
+sellm-agent-*/data/
 
 # 微信开发者工具私有配置(各人本地)
 miniprogram/project.private.config.json
