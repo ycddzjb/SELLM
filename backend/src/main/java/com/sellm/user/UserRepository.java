@@ -118,6 +118,10 @@ public class UserRepository {
         mapper.updateStatus(id, status);
     }
 
+    public long countActiveByRole(String role) {
+        return mapper.countActiveByRole(role);
+    }
+
     public void changePassword(Long userId, String rawPassword) {
         mapper.updatePassword(userId, passwordEncoder.encode(rawPassword));
     }

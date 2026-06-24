@@ -18,6 +18,7 @@ import com.sellm.user.dto.ActivateWeChatRequest;
 import com.sellm.user.dto.ChangePasswordRequest;
 import com.sellm.user.dto.CreateUserRequest;
 import com.sellm.user.dto.ParentResponse;
+import com.sellm.user.dto.UpdateUserRequest;
 import com.sellm.user.dto.UserResponse;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -202,6 +203,43 @@ public class UserManagementController {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "原密码错误");
         }
         userRepository.changePassword(me.getUserId(), req.getNewPassword());
+        return Result.ok(null);
+    }
+
+    // 超管:编辑用户(状态/角色/机构);字段为 null 则保留原值
+    @PutMapping("/{id}")
+    @Transactional
+    public Result<Void> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest req) {
+        AuthPrincipal me = currentUser.require();
+        AppUser target = userRepository.findById(id);
+        if (target == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "用户不存在");
+        }
+        Role role = req.getRole() != null ? req.getRole() : target.getRole();
+        Long orgId = req.getOrgId() != null ? req.getOrgId() : target.getOrgId();
+        String status = (req.getStatus() != null && !req.getStatus().isBlank())
+            ? req.getStatus() : target.getStatus();
+        userRepository.updateRoleOrgStatus(id, role, orgId, status);
+        return Result.ok(null);
+    }
+
+    // 超管:软删用户(置 DISABLED,登录校验 status==ACTIVE 即自动失效);禁删自己/最后一个超管
+    @DeleteMapping("/{id}")
+    @Transactional
+    public Result<Void> deleteUser(@PathVariable Long id) {
+        AuthPrincipal me = currentUser.require();
+        if (id.equals(me.getUserId())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "不能删除当前登录账号");
+        }
+        AppUser target = userRepository.findById(id);
+        if (target == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "用户不存在");
+        }
+        if (target.getRole() == Role.SUPER_ADMIN
+                && userRepository.countActiveByRole(Role.SUPER_ADMIN.name()) <= 1) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "不能删除最后一个超级管理员");
+        }
+        userRepository.updateStatus(id, "DISABLED");
         return Result.ok(null);
     }
 

@@ -11,3 +11,6 @@ export const activateWeChat = (id, payload) => http.put(`/users/${id}/activate-w
 export const rejectWeChat = (id) => http.put(`/users/${id}/reject-wechat`)
 export const changeMyPassword = (oldPassword, newPassword) =>
   http.put('/users/me/password', { oldPassword, newPassword })
+// 超管:编辑(状态/角色/机构)+ 软删用户
+export const updateUser = (id, payload) => http.put(`/users/${id}`, payload)
+export const deleteUser = (id) => http.delete(`/users/${id}`)

@@ -79,4 +79,8 @@
         UPDATE app_user SET password_hash = #{passwordHash} WHERE id = #{id}
     </update>
 
+    <select id="countActiveByRole" resultType="long">
+        SELECT COUNT(*) FROM app_user WHERE role = #{role} AND status = 'ACTIVE'
+    </select>
+
 </mapper>

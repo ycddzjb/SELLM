@@ -56,6 +56,10 @@ public class SecurityConfig {
                 // 机构管理者:微信家长激活流(看待激活 + 激活/拒绝);PUT 无通配兜底,须显式列防越权
                 .requestMatchers(HttpMethod.GET, "/api/users/pending-wechat").hasRole("MANAGER")
                 .requestMatchers(HttpMethod.PUT, "/api/users/*/activate-wechat", "/api/users/*/reject-wechat").hasRole("MANAGER")
+                // 超管:编辑/软删用户(PUT/DELETE /api/users/{id});单段通配只命中 /{id},
+                // 不命中 /me/password(两段)及上面已列的具体 PUT。无通配兜底须显式列防越权。
+                .requestMatchers(HttpMethod.PUT, "/api/users/*").hasRole("SUPER_ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("SUPER_ADMIN")
                 // 机构端点:公开列表免登录(注册选机构),建机构/看全部限超管
                 .requestMatchers(HttpMethod.GET, "/api/orgs/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/orgs/public/*/classes").permitAll()

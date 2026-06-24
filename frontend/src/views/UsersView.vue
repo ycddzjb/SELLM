@@ -3,12 +3,12 @@
     <!-- 修改密码:所有角色都显示 -->
     <el-card style="max-width:520px;margin-bottom:24px">
       <template #header><span>修改密码</span></template>
-      <el-form label-width="100px">
+      <el-form label-width="100px" autocomplete="off">
         <el-form-item label="旧密码">
-          <el-input v-model="pwd.oldPassword" type="password" show-password />
+          <el-input v-model="pwd.oldPassword" type="password" show-password autocomplete="new-password" placeholder="请输入当前密码" />
         </el-form-item>
         <el-form-item label="新密码">
-          <el-input v-model="pwd.newPassword" type="password" show-password />
+          <el-input v-model="pwd.newPassword" type="password" show-password autocomplete="new-password" placeholder="请输入新密码" />
         </el-form-item>
         <el-button type="primary" :loading="pwdLoading" @click="onChangePassword">保存新密码</el-button>
       </el-form>
@@ -28,16 +28,20 @@
             </el-select>
           </el-form-item>
           <el-form-item label="省份">
-            <el-input v-model="orgForm.province" />
+            <el-select v-model="orgForm.province" placeholder="选择省份" filterable style="width:100%" @change="onOrgProvinceChange">
+              <el-option v-for="p in PROVINCES" :key="p.name" :label="p.name" :value="p.name" />
+            </el-select>
           </el-form-item>
           <el-form-item label="地市">
-            <el-input v-model="orgForm.city" />
+            <el-select v-model="orgForm.city" placeholder="先选省份" filterable :disabled="!orgForm.province" style="width:100%">
+              <el-option v-for="c in orgCityOptions" :key="c" :label="c" :value="c" />
+            </el-select>
           </el-form-item>
           <el-form-item label="管理员账号">
-            <el-input v-model="orgForm.managerUsername" />
+            <el-input v-model="orgForm.managerUsername" autocomplete="off" placeholder="新建管理员登录账号" />
           </el-form-item>
           <el-form-item label="管理员密码">
-            <el-input v-model="orgForm.managerPassword" type="password" show-password />
+            <el-input v-model="orgForm.managerPassword" type="password" show-password autocomplete="new-password" placeholder="新建管理员密码" />
           </el-form-item>
           <el-button type="primary" :loading="orgLoading" @click="onCreateOrg">创建机构</el-button>
         </el-form>
@@ -46,7 +50,18 @@
 
       <el-card style="margin-bottom:24px">
         <template #header><span>机构列表</span></template>
-        <el-table :data="orgs" size="small">
+        <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+          <el-select v-model="orgFilter.province" placeholder="按省份" clearable filterable style="width:160px" @change="orgFilter.city=''">
+            <el-option v-for="p in PROVINCES" :key="p.name" :label="p.name" :value="p.name" />
+          </el-select>
+          <el-select v-model="orgFilter.city" placeholder="按地市" clearable filterable :disabled="!orgFilter.province" style="width:160px">
+            <el-option v-for="c in orgFilterCityOptions" :key="c" :label="c" :value="c" />
+          </el-select>
+          <el-select v-model="orgFilter.disorder" placeholder="按障碍类型" clearable style="width:180px">
+            <el-option v-for="d in DISORDER_TYPES" :key="d.code" :label="d.label" :value="d.code" />
+          </el-select>
+        </div>
+        <el-table :data="filteredOrgs" size="small">
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column prop="name" label="名称" />
           <el-table-column label="障碍类型">
@@ -55,42 +70,59 @@
           <el-table-column prop="province" label="省份" width="100" />
           <el-table-column prop="city" label="地市" width="100" />
         </el-table>
-      </el-card>
-
-      <el-card style="max-width:520px;margin-bottom:24px">
-        <template #header><span>创建机构管理者 (MANAGER)</span></template>
-        <el-form label-width="100px">
-          <el-form-item label="所属机构">
-            <el-select v-model="mgrForm.orgId" placeholder="选择机构" style="width:100%">
-              <el-option v-for="o in orgs" :key="o.id" :label="o.name" :value="o.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="用户名">
-            <el-input v-model="mgrForm.username" />
-          </el-form-item>
-          <el-form-item label="密码">
-            <el-input v-model="mgrForm.password" type="password" show-password />
-          </el-form-item>
-          <el-button type="primary" :loading="mgrLoading" @click="onCreateManager">创建管理者</el-button>
-        </el-form>
+        <el-empty v-if="!filteredOrgs.length" description="无匹配机构" :image-size="60" />
       </el-card>
 
       <el-card>
         <template #header><span>全部用户</span></template>
         <el-table :data="users" size="small">
-          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column prop="id" label="ID" width="70" />
           <el-table-column prop="username" label="用户名" />
           <el-table-column label="角色">
             <template #default="{ row }">{{ roleLabel(row.role) }}</template>
           </el-table-column>
-          <el-table-column prop="orgId" label="机构ID" width="100" />
-          <el-table-column label="状态">
+          <el-table-column prop="orgId" label="机构ID" width="90" />
+          <el-table-column label="状态" width="90">
             <template #default="{ row }">
               <el-tag size="small" :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="160">
+            <template #default="{ row }">
+              <el-button size="small" @click="openEditUser(row)">编辑</el-button>
+              <el-button size="small" type="danger" :disabled="row.id === currentUid" @click="onDeleteUser(row)">删除</el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </el-card>
+
+      <el-dialog v-model="editUserDialog" title="编辑用户" width="420px">
+        <el-form label-width="80px">
+          <el-form-item label="用户名"><span>{{ editUserForm.username }}</span></el-form-item>
+          <el-form-item label="角色">
+            <el-select v-model="editUserForm.role" style="width:100%">
+              <el-option label="超级管理者" value="SUPER_ADMIN" />
+              <el-option label="机构管理者" value="MANAGER" />
+              <el-option label="老师/康复师" value="TEACHER" />
+              <el-option label="家长" value="PARENT" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="机构ID">
+            <el-input v-model.number="editUserForm.orgId" placeholder="机构 ID(可空)" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="editUserForm.status" style="width:100%">
+              <el-option label="已激活" value="ACTIVE" />
+              <el-option label="待审核" value="PENDING" />
+              <el-option label="已停用" value="DISABLED" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="editUserDialog = false">取消</el-button>
+          <el-button type="primary" :loading="editUserLoading" @click="onSaveEditUser">保存</el-button>
+        </template>
+      </el-dialog>
     </template>
 
     <!-- ============ MANAGER ============ -->
@@ -224,15 +256,16 @@
 </template>
 <!-- PLACEHOLDER_SCRIPT -->
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { reactive, ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   listUsers, createUser, listPendingParents, listParents, approveUser, rejectUser, changeMyPassword,
-  listPendingWeChat, activateWeChat, rejectWeChat
+  listPendingWeChat, activateWeChat, rejectWeChat, updateUser, deleteUser
 } from '../api/users'
 import { listOrgs, createOrg } from '../api/orgs'
 import { listClasses } from '../api/classes'
 import { DISORDER_TYPES, disorderCsvToLabels } from '../api/meta'
+import { PROVINCES } from '../api/regions'
 import { useAuthStore } from '../stores/auth'
 
 const ROLE_LABELS = {
@@ -242,11 +275,13 @@ const ROLE_LABELS = {
   PARENT: '家长'
 }
 const roleLabel = (r) => ROLE_LABELS[r] || r
-const statusType = (s) => (s === 'ACTIVE' ? 'success' : s === 'PENDING' ? 'warning' : 'info')
-const STATUS_LABELS = { ACTIVE: '已激活', PENDING: '待审核', REJECTED: '已拒绝' }
+const statusType = (s) => (s === 'ACTIVE' ? 'success' : s === 'PENDING' ? 'warning' : s === 'DISABLED' ? 'danger' : 'info')
+const STATUS_LABELS = { ACTIVE: '已激活', PENDING: '待审核', REJECTED: '已拒绝', DISABLED: '已停用' }
 const statusLabel = (s) => STATUS_LABELS[s] || s
 
 const auth = useAuthStore()
+// auth store 未存当前 userId;禁删自己由后端兜底(JWT uid),前端不预禁用
+const currentUid = null
 
 // 改密码(全角色)
 const pwd = reactive({ oldPassword: '', newPassword: '' })
@@ -278,8 +313,62 @@ const orgForm = reactive({
   managerUsername: '', managerPassword: ''
 })
 const orgLoading = ref(false)
-const mgrForm = reactive({ username: '', password: '', orgId: null })
-const mgrLoading = ref(false)
+
+// 创建机构:省→市级联
+const orgCityOptions = computed(() => {
+  const p = PROVINCES.find(x => x.name === orgForm.province)
+  return p ? p.cities : []
+})
+function onOrgProvinceChange() { orgForm.city = '' }
+
+// 机构列表筛选(省/市/障碍类型)
+const orgFilter = reactive({ province: '', city: '', disorder: '' })
+const orgFilterCityOptions = computed(() => {
+  const p = PROVINCES.find(x => x.name === orgFilter.province)
+  return p ? p.cities : []
+})
+const filteredOrgs = computed(() => orgs.value.filter(o => {
+  if (orgFilter.province && o.province !== orgFilter.province) return false
+  if (orgFilter.city && o.city !== orgFilter.city) return false
+  if (orgFilter.disorder && !(o.disorderTypes || '').split(',').map(s => s.trim()).includes(orgFilter.disorder)) return false
+  return true
+}))
+
+// 编辑用户
+const editUserDialog = ref(false)
+const editUserLoading = ref(false)
+const editUserForm = reactive({ id: null, username: '', role: '', orgId: null, status: '' })
+function openEditUser(row) {
+  editUserForm.id = row.id
+  editUserForm.username = row.username
+  editUserForm.role = row.role
+  editUserForm.orgId = row.orgId
+  editUserForm.status = row.status
+  editUserDialog.value = true
+}
+async function onSaveEditUser() {
+  editUserLoading.value = true
+  try {
+    await updateUser(editUserForm.id, {
+      role: editUserForm.role,
+      orgId: editUserForm.orgId === '' ? null : editUserForm.orgId,
+      status: editUserForm.status
+    })
+    ElMessage.success('已保存')
+    editUserDialog.value = false
+    await loadUsers()
+  } catch (e) {} finally { editUserLoading.value = false }
+}
+async function onDeleteUser(row) {
+  try {
+    await ElMessageBox.confirm(`确认删除用户「${row.username}」?删除后该账号将停用、无法登录。`, '确认删除', { type: 'warning' })
+  } catch { return }
+  try {
+    await deleteUser(row.id)
+    ElMessage.success('已删除(停用)')
+    await loadUsers()
+  } catch (e) {}
+}
 
 async function loadOrgs() {
   try { orgs.value = await listOrgs() } catch (e) {}
@@ -309,24 +398,6 @@ async function onCreateOrg() {
     orgForm.managerPassword = ''
     await loadOrgs()
   } catch (e) {} finally { orgLoading.value = false }
-}
-async function onCreateManager() {
-  if (!mgrForm.orgId || !mgrForm.username || !mgrForm.password) {
-    ElMessage.warning('请选择机构并填写用户名密码')
-    return
-  }
-  mgrLoading.value = true
-  try {
-    const id = await createUser({
-      username: mgrForm.username, password: mgrForm.password,
-      role: 'MANAGER', orgId: mgrForm.orgId
-    })
-    ElMessage.success(`管理者创建成功(id=${id})`)
-    mgrForm.username = ''
-    mgrForm.password = ''
-    mgrForm.orgId = null
-    await loadUsers()
-  } catch (e) {} finally { mgrLoading.value = false }
 }
 
 // ---- 管理者 ----
