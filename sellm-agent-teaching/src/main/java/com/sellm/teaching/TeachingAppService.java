@@ -48,10 +48,12 @@ public class TeachingAppService {
         p.setDisorderType(req.getDisorderType());
         p.setStatus("DRAFT");
         planRepo.save(p);
-        // 2. 脱敏 → Python → 还原
+        // 2. 脱敏 → Python → 还原。subjectNames 由调用方传入(agent 无 Child 表),
+        //    使中文姓名等命名 PII 纳入屏蔽表,脱敏残留则硬阻断出网。
         String content;
         try {
-            AnonymizationResult anon = anonymizer.anonymize(req.getIepContent(), List.of(), List.of());
+            AnonymizationResult anon = anonymizer.anonymize(req.getIepContent(),
+                safeNames(req.getSubjectNames()), List.of());
             String aiText = smartLayer.generate("lesson_plan", anon.getAnonymizedText(),
                 req.getDisorderType(), req.getScene(), req.getMode());
             content = anonymizer.restore(aiText, anon.getRestoreMap());
@@ -109,7 +111,8 @@ public class TeachingAppService {
         cwRepo.save(c);
         String content;
         try {
-            AnonymizationResult anon = anonymizer.anonymize(plan.getContent(), List.of(), List.of());
+            AnonymizationResult anon = anonymizer.anonymize(plan.getContent(),
+                safeNames(req.getSubjectNames()), List.of());
             String aiText = smartLayer.generate("courseware", anon.getAnonymizedText(),
                 plan.getDisorderType(), plan.getScene(), plan.getMode());
             content = anonymizer.restore(aiText, anon.getRestoreMap());
@@ -152,6 +155,12 @@ public class TeachingAppService {
     }
 
     // ---- helpers ----
+    /** subjectNames 安全转 List:null→空,过滤空白项(供脱敏屏蔽表)。 */
+    private static List<String> safeNames(List<String> names) {
+        if (names == null) return List.of();
+        return names.stream().filter(n -> n != null && !n.isBlank()).toList();
+    }
+
     private LessonPlan requireOwnedPlan(Long userId, Long id) {
         LessonPlan p = planRepo.findById(id);
         if (p == null) throw new BusinessException(ErrorCode.NOT_FOUND, "教案不存在");
