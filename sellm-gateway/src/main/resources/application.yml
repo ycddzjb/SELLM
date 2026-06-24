@@ -47,7 +47,9 @@ management:
 sellm:
   gateway:
     jwt:
-      secret: ${SELLM_JWT_SECRET:dev-jwt-secret-key-at-least-32-bytes-long-0123456789}
+      # 生产必须经 SELLM_JWT_SECRET 注入(与各服务同密钥);空默认 + 启动校验(≥32字节)防止
+      # 漏配时用公开默认密钥导致认证绕过。dev 默认值见 application-dev.yml。
+      secret: ${SELLM_JWT_SECRET:}
       whitelist:
         - /api/auth/
         - /actuator/health

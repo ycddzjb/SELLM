@@ -135,4 +135,23 @@ class JwtAuthGatewayFilterTest {
         String forwarded = captured[0].getRequest().getHeaders().getFirst("X-User-Id");
         assertNull(forwarded, "伪造的 X-User-Id 头应在入口被剥离，不得传递给下游");
     }
+
+    // ---- P0-1 回归:网关密钥 fail-fast ----
+
+    @Test
+    void 密钥不足32字节启动即拒绝() {
+        GatewayJwtProperties weak = new GatewayJwtProperties();
+        weak.setSecret("short-key");   // < 32 字节
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> new JwtAuthGatewayFilter(weak));
+        assertTrue(ex.getMessage().contains("32"), "应提示密钥长度要求");
+    }
+
+    @Test
+    void 密钥为空启动即拒绝() {
+        GatewayJwtProperties empty = new GatewayJwtProperties();
+        empty.setSecret("");   // 漏配 SELLM_JWT_SECRET 时的空默认
+        assertThrows(IllegalStateException.class, () -> new JwtAuthGatewayFilter(empty),
+                "空密钥(漏配环境变量)必须拒绝启动,防止认证绕过");
+    }
 }

@@ -19,9 +19,18 @@ import java.nio.charset.StandardCharsets;
 public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
 
     private final GatewayJwtProperties props;
+    private final SecretKey key;
 
     public JwtAuthGatewayFilter(GatewayJwtProperties props) {
         this.props = props;
+        // fail-fast:密钥缺失或不足 32 字节(HS256 要求)即拒绝启动,防止漏配 SELLM_JWT_SECRET
+        // 时用公开默认密钥验签导致认证绕过(参照 sellm-common-core JwtService 的校验)。
+        String secret = props.getSecret();
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                "sellm.gateway.jwt.secret 必须至少 32 字节(请经 SELLM_JWT_SECRET 注入,生产勿用开发默认值)");
+        }
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -64,7 +73,6 @@ public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
         String token = auth.substring(7);
 
         try {
-            SecretKey key = Keys.hmacShaKeyFor(props.getSecret().getBytes(StandardCharsets.UTF_8));
             Claims claims = Jwts.parser().verifyWith(key).build()
                     .parseSignedClaims(token).getPayload();
 
