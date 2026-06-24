@@ -1,7 +1,7 @@
 <template>
   <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f2f5;padding:20px 0">
     <el-card style="width:440px">
-      <h2 style="text-align:center;margin-bottom:20px">家长注册</h2>
+      <h2 style="text-align:center;margin-bottom:20px">用户注册</h2>
       <el-form label-width="92px" @submit.prevent="onSubmit">
         <el-form-item label="家长姓名">
           <el-input v-model="form.name" placeholder="您的姓名" />
