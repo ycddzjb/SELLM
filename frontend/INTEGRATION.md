@@ -323,3 +323,26 @@
 ## 联调结论
 
 阶段 G 两块连通:(1) 自动匹配量表——评估按儿童障碍类型推荐适配量表(行级、空类型空列表、他机构 403、老师仍可切全部);(2) 图像脱敏管线——抽 ImageAnonymizer 接口默认 Noop(不改图),HttpImageAnonymizer 接外部 CV 打码服务(失败硬阻断),vision 出网前必经脱敏层(单测验证用脱敏后字节出网)。默认双层不外联(multimodal mock + image-anon noop)。后端全量回归 237 测试全绿。后端进程已停,端口已释放。
+
+---
+
+## 安全加固收尾(2026-06-24,全栈分层排查 P0×6 + P1×4)
+
+6 并行排查(网关/调度/业务/存储/前端/红线)后落地的修复,均带回归测试,全量 `mvn clean install` 10 模块 SUCCESS:
+
+**P0(上线硬伤/红线击穿):**
+- `b014e0f` 网关 JWT 密钥 fail-fast(空默认+≥32字节校验,dev值移 application-dev.yml)。**联调起网关须带 `-Dspring-boot.run.profiles=dev` 或注入 SELLM_JWT_SECRET**。
+- `44967ab`+`eabd6ad` 4 agent(teaching/qa/research/aids)出网脱敏纳入命名 PII 屏蔽表:请求 DTO 加 `subjectNames` 由调用方传入(agent 无 Child 表,正则抓不到中文姓名)。
+- `2e88bf3` vision 训练笔记 noteText 出网前脱敏(controller 注入 Anonymizer)。
+- `5b42635` 4 agent 内存库→独立 MySQL 库(sellm_qa/research/teaching/aids)+dev profile 留 H2 联调。
+- `7d60b17` report/iep/family-iep 长文字段 VARCHAR→TEXT(防 MySQL 截断)。
+- `ff4d22a` 定稿冻结:finalize 加 FINALIZED 校验 + SQL `AND status='DRAFT'` 乐观保护。
+
+**P1(中优先级):**
+- `105ea98` 小程序障碍枚举对齐后端 DisorderType 8 码(原自造码致 5/8 类筛选失效)。
+- `177291c` aids smart-layer 超时 30→360s(容纳真实万相/视频轮询)。
+- `53fb887` teaching 去类级 @Transactional(出网不占 DB 连接)。
+- `872e28e` 网关限流 Lua 原子化 + fail-open 收窄。
+
+**剩余 P2/P3 技术债(非阻断):** actuator 端点鉴权、utf8mb4、Nacos prefer-ip-address、schema 索引/外键、narrative 字段加密、Python 智能层鉴权、限流取 X-Forwarded-For 等。
+**生产部署前(DBA):** 建 4 agent 库+backend 库;aids 的 H2 MERGE 教具种子转 MySQL 迁移脚本。
