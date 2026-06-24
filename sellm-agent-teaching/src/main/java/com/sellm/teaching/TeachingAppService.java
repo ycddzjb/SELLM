@@ -9,13 +9,14 @@ import com.sellm.common.ErrorCode;
 import com.sellm.storage.ObjectStorage;
 import com.sellm.teaching.dto.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+// 不加类级 @Transactional:generatePlan/generateCourseware 内含出网 HTTP(最长数十秒),
+// 若包在事务里会全程占用 DB 连接,并发下耗尽连接池(对齐 aids/research 的无类级事务写法)。
+// 各写操作(save/update)自动提交;DRAFT 先落库再出网,失败仅留 DRAFT(可重试),不破坏一致性。
 @Service
-@Transactional
 public class TeachingAppService {
 
     private final LessonPlanRepository planRepo;
