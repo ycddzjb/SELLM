@@ -28,7 +28,7 @@
     </select>
 
     <update id="updateFinalized">
-        UPDATE report SET finalized_content = #{content}, status = 'FINALIZED' WHERE id = #{id}
+        UPDATE report SET finalized_content = #{content}, status = 'FINALIZED' WHERE id = #{id} AND status = 'DRAFT'
     </update>
 
 </mapper>

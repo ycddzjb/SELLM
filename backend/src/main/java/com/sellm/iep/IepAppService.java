@@ -84,6 +84,9 @@ public class IepAppService {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "IEP 不存在");
         }
         accessGuard.checkChildAccess(currentUser.require(), childRepository.findById(existing.getChildId()));
+        if ("FINALIZED".equals(existing.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "IEP 已定稿,不可重复定稿");
+        }
         recordRepository.finalizePlan(id, content);
         return recordRepository.findById(id);
     }

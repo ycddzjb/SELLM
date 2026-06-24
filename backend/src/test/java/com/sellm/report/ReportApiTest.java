@@ -73,6 +73,35 @@ class ReportApiTest {
     }
 
     @Test
+    void 定稿后重复定稿被拒且内容不变() throws Exception {
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository, "rep_freeze", "pw123456", "TEACHER");
+        long childId = createChild(token, "冻结娃");
+        long assessmentId = submitAssessment(token, childId);
+        String rb = mvc.perform(post("/api/reports").header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("assessmentId", assessmentId))))
+            .andReturn().getResponse().getContentAsString();
+        long reportId = json.readTree(rb).path("data").path("id").asLong();
+
+        // 首次定稿成功
+        mvc.perform(put("/api/reports/" + reportId + "/finalize").header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("content", "终稿一"))))
+            .andExpect(status().isOk());
+
+        // 再次定稿 → 400(已定稿不可重复定稿)
+        mvc.perform(put("/api/reports/" + reportId + "/finalize").header("Authorization","Bearer "+token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("content", "篡改内容"))))
+            .andExpect(status().isBadRequest());
+
+        // 内容仍为首次终稿,未被覆盖
+        mvc.perform(get("/api/reports?childId=" + childId).header("Authorization","Bearer "+token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].finalizedContent").value("终稿一"));
+    }
+
+    @Test
     void 未定稿下载PDF返回400定稿后返回PDF() throws Exception {
         String token = AuthTestSupport.registerAndLogin(mvc, json, userRepository, "rep_pdf_teacher", "pw123456", "TEACHER");
         long childId = createChild(token, "小红");
