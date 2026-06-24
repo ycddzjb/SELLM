@@ -1,5 +1,8 @@
 package com.sellm.assessment.media;
 
+import com.sellm.anonymizer.AnonymizationException;
+import com.sellm.anonymizer.AnonymizationResult;
+import com.sellm.anonymizer.Anonymizer;
 import com.sellm.assessment.media.dto.MediaResponse;
 import com.sellm.assessment.media.dto.SuggestionResponse;
 import com.sellm.child.Child;
@@ -37,10 +40,12 @@ public class EvaluationMediaController {
     private final MultimodalModel multimodalModel;
     private final CurrentUser currentUser;
     private final AccessGuard accessGuard;
+    private final Anonymizer anonymizer;
 
     public EvaluationMediaController(EvaluationMediaRepository mediaRepository, ChildRepository childRepository,
                                      ScaleRepository scaleRepository, ObjectStorage objectStorage,
-                                     MultimodalModel multimodalModel, CurrentUser currentUser, AccessGuard accessGuard) {
+                                     MultimodalModel multimodalModel, CurrentUser currentUser, AccessGuard accessGuard,
+                                     Anonymizer anonymizer) {
         this.mediaRepository = mediaRepository;
         this.childRepository = childRepository;
         this.scaleRepository = scaleRepository;
@@ -48,6 +53,7 @@ public class EvaluationMediaController {
         this.multimodalModel = multimodalModel;
         this.currentUser = currentUser;
         this.accessGuard = accessGuard;
+        this.anonymizer = anonymizer;
     }
 
     /** 上传素材(图片/视频用 multipart file;纯笔记用 noteText)。 */
@@ -91,7 +97,21 @@ public class EvaluationMediaController {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "量表不存在");
         }
         byte[] bytes = media.getObjectKey() == null ? null : objectStorage.get(media.getObjectKey());
-        List<ItemSuggestion> suggestions = multimodalModel.analyze(bytes, media.getNoteText(), scale.getItems());
+        // P0-3:训练笔记(老师自由文本,可能含姓名/手机/身份证)出网前必须脱敏,失败硬阻断。
+        // vision 只产评分建议不需还原,故脱敏后文本直接送模型;child 姓名纳入屏蔽表(正则抓不到中文名)。
+        String safeNote = media.getNoteText();
+        if (safeNote != null && !safeNote.isBlank()) {
+            Child child = childRepository.findById(childId);
+            List<String> names = (child != null && child.getName() != null && !child.getName().isBlank())
+                ? List.of(child.getName()) : List.of();
+            try {
+                AnonymizationResult anon = anonymizer.anonymize(safeNote, names, List.of());
+                safeNote = anon.getAnonymizedText();
+            } catch (AnonymizationException ae) {
+                throw new BusinessException(ErrorCode.ANONYMIZATION_FAILED, "训练笔记脱敏未通过,已阻断出网");
+            }
+        }
+        List<ItemSuggestion> suggestions = multimodalModel.analyze(bytes, safeNote, scale.getItems());
         mediaRepository.updateStatus(mediaId, "ANALYZED");
 
         List<SuggestionResponse> out = new ArrayList<>();
