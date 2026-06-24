@@ -57,6 +57,11 @@ sellm:
         # /api/qa/conversations(历史)不在白名单,仍需登录。
         - /api/qa/ask
         - /api/qa/analyze
+        # 注册前(未登录)拉机构/班级/老师下拉的公开端点;前缀含子路径
+        # (/api/orgs/public/{id}/classes、/api/classes/public/{id}/teachers)。
+        # 注意非 public 的 /api/orgs、/api/classes 不在白名单,仍需登录。
+        - /api/orgs/public
+        - /api/classes/public
     rate-limit:
       enabled: ${SELLM_RATELIMIT_ENABLED:true}
       limit: ${SELLM_RATELIMIT_LIMIT:100}
