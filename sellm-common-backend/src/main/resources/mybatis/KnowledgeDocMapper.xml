@@ -6,13 +6,18 @@
     <resultMap id="docMap" type="com.sellm.rag.KnowledgeDoc">
         <constructor>
             <arg column="doc_id" javaType="java.lang.String"/>
+            <arg column="category" javaType="java.lang.String"/>
             <arg column="content" javaType="java.lang.String"/>
             <arg column="source" javaType="java.lang.String"/>
         </constructor>
     </resultMap>
 
     <select id="findAll" resultMap="docMap">
-        SELECT doc_id, content, source FROM knowledge_doc
+        SELECT doc_id, category, content, source FROM knowledge_doc
+    </select>
+
+    <select id="findByCategory" resultMap="docMap">
+        SELECT doc_id, category, content, source FROM knowledge_doc WHERE category = #{category}
     </select>
 
 </mapper>

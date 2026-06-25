@@ -18,7 +18,19 @@ public class DbRagRetriever implements RagRetriever {
 
     @Override
     public List<KnowledgeDoc> retrieve(String query, int topK) {
-        List<KnowledgeDoc> docs = mapper.findAll();
+        return rank(mapper.findAll(), query, topK);
+    }
+
+    @Override
+    public List<KnowledgeDoc> retrieveByCategory(String query, String category, int topK) {
+        if (category == null || category.isBlank()) {
+            return retrieve(query, topK);
+        }
+        return rank(mapper.findByCategory(category), query, topK);
+    }
+
+    /** 关键词命中计数排序,取 topK(第一版;后续换向量检索)。 */
+    private List<KnowledgeDoc> rank(List<KnowledgeDoc> docs, String query, int topK) {
         String[] terms = query.trim().split("\\s+");
         List<Scored> scored = new ArrayList<>();
         for (KnowledgeDoc doc : docs) {

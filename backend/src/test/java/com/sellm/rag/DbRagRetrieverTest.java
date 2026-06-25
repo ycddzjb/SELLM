@@ -22,12 +22,12 @@ class DbRagRetrieverTest {
     @BeforeEach
     void seed() {
         jdbc.update("DELETE FROM knowledge_doc");
-        jdbc.update("INSERT INTO knowledge_doc(doc_id, content, source) VALUES (?,?,?)",
-            "d1", "孤独症社交干预策略:结构化教学", "手册A");
-        jdbc.update("INSERT INTO knowledge_doc(doc_id, content, source) VALUES (?,?,?)",
-            "d2", "CARS 量表解读:总分与分段", "手册B");
-        jdbc.update("INSERT INTO knowledge_doc(doc_id, content, source) VALUES (?,?,?)",
-            "d3", "言语训练通用方法", "手册C");
+        jdbc.update("INSERT INTO knowledge_doc(doc_id, category, content, source) VALUES (?,?,?,?)",
+            "d1", "IEP_CASE", "孤独症社交干预策略:结构化教学", "手册A");
+        jdbc.update("INSERT INTO knowledge_doc(doc_id, category, content, source) VALUES (?,?,?,?)",
+            "d2", "SCALE_SYSTEM", "CARS 量表解读:总分与分段", "手册B");
+        jdbc.update("INSERT INTO knowledge_doc(doc_id, category, content, source) VALUES (?,?,?,?)",
+            "d3", "POLICY_ETHICS", "言语训练通用方法 禁止体罚", "手册C");
     }
 
     @Test
@@ -46,5 +46,26 @@ class DbRagRetrieverTest {
     @Test
     void 无匹配返回空列表() {
         assertThat(retriever.retrieve("微积分", 3)).isEmpty();
+    }
+
+    @Test
+    void 按分类召回只返回该类文档() {
+        List<KnowledgeDoc> docs = retriever.retrieveByCategory("训练", "POLICY_ETHICS", 5);
+        assertThat(docs).isNotEmpty();
+        assertThat(docs).allMatch(d -> "POLICY_ETHICS".equals(d.getCategory()));
+        assertThat(docs.get(0).getDocId()).isEqualTo("d3");
+    }
+
+    @Test
+    void 按分类召回不串类() {
+        List<KnowledgeDoc> docs = retriever.retrieveByCategory("训练", "SCALE_SYSTEM", 5);
+        assertThat(docs).noneMatch(d -> "d3".equals(d.getDocId()));
+    }
+
+    @Test
+    void category为空退化为全库检索() {
+        List<KnowledgeDoc> docs = retriever.retrieveByCategory("CARS 解读", null, 2);
+        assertThat(docs).isNotEmpty();
+        assertThat(docs.get(0).getDocId()).isEqualTo("d2");
     }
 }

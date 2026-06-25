@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS evaluation_media (
 CREATE TABLE IF NOT EXISTS knowledge_doc (
     id        BIGINT PRIMARY KEY AUTO_INCREMENT,
     doc_id    VARCHAR(64)  NOT NULL,
+    category  VARCHAR(32),            -- SCALE_SYSTEM / IEP_CASE / POLICY_ETHICS;空兼容旧数据
     content   VARCHAR(4000) NOT NULL,
     source    VARCHAR(256),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -173,12 +174,40 @@ CREATE TABLE IF NOT EXISTS report (
 );
 
 -- (Task 10 追加 iep 表:IEP 记录落库)
+-- 阶段(诊断+IEP)变更:report_id 改可空(新链路基于诊断),加 diagnosis_id;二者至少一个非空。
 CREATE TABLE IF NOT EXISTS iep (
     id            BIGINT PRIMARY KEY AUTO_INCREMENT,
-    report_id     BIGINT NOT NULL,
+    report_id     BIGINT,
+    diagnosis_id  BIGINT,
     child_id      BIGINT NOT NULL,
     draft         TEXT NOT NULL,
     finalized_content TEXT,
     status        VARCHAR(16) NOT NULL,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 诊断记录(多模态诊断):聚合多模态识别 + 结构化训练表现 + 量表知识库 → 结构化维度 + 报告草案。
+-- AI 只产 DRAFT,人工定稿 FINALIZED。dimensions 存 JSON(各维度能力等级/现存障碍/能力缺陷)。
+CREATE TABLE IF NOT EXISTS diagnosis (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    child_id        BIGINT NOT NULL,
+    owner_id        BIGINT NOT NULL,
+    scale_id        VARCHAR(64),            -- 关联量表(维度分析锚点,可空)
+    input_summary   TEXT,                   -- 结构化训练表现输入(JSON:剥珠正确率/眼神互动等)
+    dimensions      TEXT,                   -- AI 产结构化维度(JSON:能力等级/现存障碍/能力缺陷)
+    draft           TEXT,                   -- 诊断报告草案(叙述)
+    finalized_content TEXT,
+    status          VARCHAR(16) NOT NULL,   -- DRAFT / FINALIZED
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 诊断关联的多模态素材:按 media_type 分流识别,transcript 存 ASR/视频识别结果文本。
+CREATE TABLE IF NOT EXISTS diagnosis_media (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    diagnosis_id    BIGINT NOT NULL,
+    media_type      VARCHAR(16) NOT NULL,   -- TEXT / IMAGE / VIDEO / AUDIO
+    object_key      VARCHAR(256),           -- 对象存储 key;纯文本可空
+    transcript      TEXT,                   -- 识别结果(ASR 转写/视频理解/图片描述)
+    note_text       VARCHAR(2048),
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
