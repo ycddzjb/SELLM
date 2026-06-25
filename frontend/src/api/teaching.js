@@ -13,3 +13,9 @@ export const generateCourseware = (payload) => http.post('/teaching/courseware',
 export const editCourseware = (id, content) => http.put(`/teaching/courseware/${id}`, { content })
 export const finalizeCourseware = (id) => http.post(`/teaching/courseware/${id}/finalize`)
 export const getCourseware = (id) => http.get(`/teaching/courseware/${id}`)
+
+// ── 教学模块统一内容(教案/课件/案例/习题)──
+export const generateContent = (payload) => http.post('/teaching/contents', payload)  // {contentType,title,requirement,options,subjectNames}
+export const editContent = (id, content) => http.put(`/teaching/contents/${id}`, { content })
+export const finalizeContent = (id) => http.post(`/teaching/contents/${id}/finalize`)
+export const listContents = (type) => http.get('/teaching/contents', { params: { type } })

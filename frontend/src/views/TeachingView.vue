@@ -1,6 +1,8 @@
 <template>
   <div>
-    <h3>教学训练 · 教案与课件</h3>
+    <h3>教学训练</h3>
+    <el-tabs v-model="mainTab">
+      <el-tab-pane label="训练方案" name="train">
     <p style="color:#888;margin-top:-6px">据定稿 IEP 生成教案草案,人工定稿后可生成课件。AI 仅产草案,需人工把关。</p>
 
     <!-- 生成教案 -->
@@ -77,6 +79,21 @@
                    @click="onFinalizeCw">课件定稿</el-button>
       </template>
     </el-card>
+      </el-tab-pane>
+
+      <el-tab-pane label="教案" name="lesson">
+        <TeachingContentPanel type="LESSON" />
+      </el-tab-pane>
+      <el-tab-pane label="课件" name="courseware">
+        <TeachingContentPanel type="COURSEWARE" />
+      </el-tab-pane>
+      <el-tab-pane label="案例" name="case">
+        <TeachingContentPanel type="CASE" />
+      </el-tab-pane>
+      <el-tab-pane label="习题" name="exercise">
+        <TeachingContentPanel type="EXERCISE" />
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
@@ -89,7 +106,9 @@ import {
   generatePlan, editPlan, finalizePlan, getPlan, listPlans,
   generateCourseware, finalizeCourseware
 } from '../api/teaching'
+import TeachingContentPanel from '../components/TeachingContentPanel.vue'
 
+const mainTab = ref('train')
 const disorderOptions = DISORDER_TYPES
 const form = ref({ iepContent: '', scene: 'SCHOOL', mode: 'ONE_ON_ONE', disorderType: 'ASD', subjectNamesRaw: '' })
 const plans = ref([])
