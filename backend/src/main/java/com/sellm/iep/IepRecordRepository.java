@@ -18,6 +18,7 @@ public class IepRecordRepository {
     public IepRecord save(IepRecord r) {
         Map<String, Object> row = new HashMap<>();
         row.put("reportId", r.getReportId());
+        row.put("diagnosisId", r.getDiagnosisId());
         row.put("childId", r.getChildId());
         row.put("draft", r.getDraft());
         row.put("finalizedContent", r.getFinalizedContent());
@@ -29,24 +30,30 @@ public class IepRecordRepository {
 
     public IepRecord findById(Long id) {
         Map<String, Object> row = mapper.findById(id);
-        if (row == null) return null;
-        return new IepRecord(((Number) row.get("id")).longValue(),
-            ((Number) row.get("reportId")).longValue(),
-            ((Number) row.get("childId")).longValue(),
-            (String) row.get("draft"), (String) row.get("finalizedContent"),
-            (String) row.get("status"));
+        return row == null ? null : toRecord(row);
     }
 
     public List<IepRecord> listByChild(Long childId) {
         List<IepRecord> out = new ArrayList<>();
         for (Map<String, Object> row : mapper.findByChildId(childId)) {
-            out.add(new IepRecord(((Number) row.get("id")).longValue(),
-                ((Number) row.get("reportId")).longValue(),
-                ((Number) row.get("childId")).longValue(),
-                (String) row.get("draft"), (String) row.get("finalizedContent"),
-                (String) row.get("status")));
+            out.add(toRecord(row));
         }
         return out;
+    }
+
+    /** row→IepRecord;report_id/diagnosis_id 均可空(新旧链路二选一),null 安全转换。 */
+    private IepRecord toRecord(Map<String, Object> row) {
+        return new IepRecord(
+            ((Number) row.get("id")).longValue(),
+            asLong(row.get("reportId")),
+            asLong(row.get("diagnosisId")),
+            ((Number) row.get("childId")).longValue(),
+            (String) row.get("draft"), (String) row.get("finalizedContent"),
+            (String) row.get("status"));
+    }
+
+    private static Long asLong(Object v) {
+        return v == null ? null : ((Number) v).longValue();
     }
 
     public boolean finalizePlan(Long id, String content) {

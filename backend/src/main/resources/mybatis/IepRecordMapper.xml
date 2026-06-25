@@ -6,6 +6,7 @@
     <resultMap id="iepMap" type="map">
         <id column="id" property="id"/>
         <result column="report_id" property="reportId"/>
+        <result column="diagnosis_id" property="diagnosisId"/>
         <result column="child_id" property="childId"/>
         <result column="draft" property="draft"/>
         <result column="finalized_content" property="finalizedContent"/>
@@ -13,17 +14,17 @@
     </resultMap>
 
     <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO iep (report_id, child_id, draft, finalized_content, status)
-        VALUES (#{reportId}, #{childId}, #{draft}, #{finalizedContent}, #{status})
+        INSERT INTO iep (report_id, diagnosis_id, child_id, draft, finalized_content, status)
+        VALUES (#{reportId}, #{diagnosisId}, #{childId}, #{draft}, #{finalizedContent}, #{status})
     </insert>
 
     <select id="findById" parameterType="long" resultMap="iepMap">
-        SELECT id, report_id, child_id, draft, finalized_content, status
+        SELECT id, report_id, diagnosis_id, child_id, draft, finalized_content, status
         FROM iep WHERE id = #{id}
     </select>
 
     <select id="findByChildId" parameterType="long" resultMap="iepMap">
-        SELECT id, report_id, child_id, draft, finalized_content, status
+        SELECT id, report_id, diagnosis_id, child_id, draft, finalized_content, status
         FROM iep WHERE child_id = #{childId} ORDER BY id DESC
     </select>
 

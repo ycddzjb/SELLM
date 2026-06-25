@@ -19,18 +19,21 @@ public class IepAppService {
     private final IepService iepService;            // 计划一领域服务
     private final IepRecordRepository recordRepository;
     private final OrganizationRepository organizationRepository;
+    private final com.sellm.diagnosis.DiagnosisRepository diagnosisRepository;
     private final CurrentUser currentUser;
     private final AccessGuard accessGuard;
 
     public IepAppService(ReportRecordRepository reportRepository, ChildRepository childRepository,
                          IepService iepService, IepRecordRepository recordRepository,
                          OrganizationRepository organizationRepository,
+                         com.sellm.diagnosis.DiagnosisRepository diagnosisRepository,
                          CurrentUser currentUser, AccessGuard accessGuard) {
         this.reportRepository = reportRepository;
         this.childRepository = childRepository;
         this.iepService = iepService;
         this.recordRepository = recordRepository;
         this.organizationRepository = organizationRepository;
+        this.diagnosisRepository = diagnosisRepository;
         this.currentUser = currentUser;
         this.accessGuard = accessGuard;
     }
@@ -50,7 +53,38 @@ public class IepAppService {
         String conclusion = report.getFinalizedContent() != null
             ? report.getFinalizedContent() : report.getDraft();
         Iep domain = iepService.generateDraft(child.getName(), schoolName, conclusion, profileContext(child));
-        return recordRepository.save(new IepRecord(null, reportId, report.getChildId(),
+        return recordRepository.save(new IepRecord(null, reportId, null, report.getChildId(),
+            domain.getDraft(), null, "DRAFT"));
+    }
+
+    /** 入口:优先诊断链路(diagnosisId),否则旧报告链路(reportId)。 */
+    public IepRecord generate(Long reportId, Long diagnosisId) {
+        if (diagnosisId != null) {
+            return generateFromDiagnosis(diagnosisId);
+        }
+        if (reportId != null) {
+            return generate(reportId);
+        }
+        throw new BusinessException(ErrorCode.INVALID_INPUT, "请提供诊断 ID 或报告 ID");
+    }
+
+    /** 新链路:基于多模态诊断结果(结构化维度 + 报告)生成结构化训练 IEP。 */
+    public IepRecord generateFromDiagnosis(Long diagnosisId) {
+        com.sellm.diagnosis.Diagnosis diag = diagnosisRepository.findById(diagnosisId);
+        if (diag == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "诊断不存在");
+        }
+        Child child = childRepository.findById(diag.getChildId());
+        if (child == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "儿童档案不存在");
+        }
+        accessGuard.checkChildAccess(currentUser.require(), child);   // 行级权限
+        String schoolName = organizationRepository.nameOf(child.getOrgId());
+        // 诊断报告:优先定稿,否则草案
+        String report = diag.getFinalizedContent() != null ? diag.getFinalizedContent() : diag.getDraft();
+        Iep domain = iepService.generateFromDiagnosis(
+            child.getName(), schoolName, diag.getDimensions(), report, profileContext(child));
+        return recordRepository.save(new IepRecord(null, null, diagnosisId, diag.getChildId(),
             domain.getDraft(), null, "DRAFT"));
     }
 

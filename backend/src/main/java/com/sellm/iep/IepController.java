@@ -29,7 +29,7 @@ public class IepController {
 
     @PostMapping
     public Result<IepResponse> generate(@RequestBody GenerateIepRequest req) {
-        return Result.ok(toResponse(appService.generate(req.getReportId())));
+        return Result.ok(toResponse(appService.generate(req.getReportId(), req.getDiagnosisId())));
     }
 
     @GetMapping("/{id}")
