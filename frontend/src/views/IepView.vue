@@ -2,10 +2,17 @@
   <div>
     <h3>个别化教育计划(IEP)</h3>
     <el-form label-width="120px" style="max-width:760px">
-      <el-form-item label="报告ID">
-        <el-input v-model="reportId" placeholder="从报告页带入,或手填">
+      <el-form-item label="诊断ID">
+        <el-input v-model="diagnosisId" placeholder="从多模态诊断页带入,或手填(优先)">
           <template #append>
-            <el-button :loading="genLoading" @click="onGenerate">生成 IEP 草案</el-button>
+            <el-button :loading="genLoading" @click="onGenerateFromDiagnosis">据诊断生成 IEP</el-button>
+          </template>
+        </el-input>
+      </el-form-item>
+      <el-form-item label="报告ID">
+        <el-input v-model="reportId" placeholder="从报告页带入,或手填(旧链路)">
+          <template #append>
+            <el-button :loading="genLoading" @click="onGenerate">据报告生成 IEP</el-button>
           </template>
         </el-input>
       </el-form-item>
@@ -36,11 +43,12 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { generateIep, getIep, finalizeIep, downloadIepPdf } from '../api/ieps'
+import { generateIep, generateIepFromDiagnosis, getIep, finalizeIep, downloadIepPdf } from '../api/ieps'
 import { saveBlob } from '../api/familyIeps'
 
 const route = useRoute()
 const reportId = ref(route.query.reportId || '')
+const diagnosisId = ref(route.query.diagnosisId || '')
 const iep = ref(null)
 const finalContent = ref('')
 const genLoading = ref(false)
@@ -49,6 +57,8 @@ const finLoading = ref(false)
 onMounted(() => {
   if (route.query.iepId) {
     loadIep(Number(route.query.iepId))
+  } else if (route.query.diagnosisId) {
+    onGenerateFromDiagnosis()
   }
 })
 
@@ -57,6 +67,16 @@ async function loadIep(iepId) {
   try {
     iep.value = await getIep(iepId)
     finalContent.value = iep.value.finalizedContent || iep.value.draft
+  } catch (e) {} finally { genLoading.value = false }
+}
+
+async function onGenerateFromDiagnosis() {
+  if (!diagnosisId.value) { ElMessage.warning('请填写诊断ID'); return }
+  genLoading.value = true
+  try {
+    iep.value = await generateIepFromDiagnosis(Number(diagnosisId.value))
+    finalContent.value = iep.value.draft
+    ElMessage.success('已据诊断生成 IEP 草案')
   } catch (e) {} finally { genLoading.value = false }
 }
 

@@ -17,6 +17,7 @@ const routes = [
       { path: 'classes', component: () => import('../views/ClassesView.vue') },
       { path: 'scale-library', component: () => import('../views/ScaleLibraryView.vue') },
       { path: 'assessment', component: () => import('../views/AssessmentView.vue') },
+      { path: 'diagnosis', component: () => import('../views/DiagnosisView.vue') },
       { path: 'report', component: () => import('../views/ReportView.vue') },
       { path: 'iep', component: () => import('../views/IepView.vue') },
       { path: 'teaching', component: () => import('../views/TeachingView.vue') },

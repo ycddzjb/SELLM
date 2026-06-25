@@ -346,3 +346,30 @@
 
 **剩余 P2/P3 技术债(非阻断):** actuator 端点鉴权、utf8mb4、Nacos prefer-ip-address、schema 索引/外键、narrative 字段加密、Python 智能层鉴权、限流取 X-Forwarded-For 等。
 **生产部署前(DBA):** 建 4 agent 库+backend 库;aids 的 H2 MERGE 教具种子转 MySQL 迁移脚本。
+
+---
+
+# 阶段 H(康复 Agent:多模态诊断 + IEP 干预计划)端到端联调结果
+
+日期:2026-06-25 · 分支:`feature/special-edu-llm`
+
+后端 dev profile(H2 文件库 + 种子 admin/admin123 + 机构1 + CARS 量表 + 知识库 9 条三类语料)起在 `localhost:8080`,curl 直连验证「多模态诊断 → 结构化维度 → 定稿 → 据诊断生成 IEP」全链路。AiGateway dev 用 mock(回显 prompt,不外联);ASR/视频识别 dev 用 mock。
+
+## curl 链路逐步实际结果
+
+1. 超管登录 → 建 TEACHER(e2e_teacher) → teacher 登录 → 建 child(ASD) → **200**。
+2. `POST /api/diagnoses` {childId,scaleId:cars,structuredInput} → **200**,status=DRAFT,id 返回。
+3. `POST /api/diagnoses/{id}/media` mediaType=TEXT + noteText(multipart) → **200**(noteText 出网前脱敏,识别落 transcript)。
+4. `POST /api/diagnoses/{id}/generate` → **200**,dimensions/draft 均有内容(SCALE_SYSTEM 分类 RAG 召回 + AiGateway + 分隔符拆分成功)。
+5. `POST /api/diagnoses/{id}/finalize` → **200**,status=FINALIZED。
+6. `GET /api/diagnoses/{id}/pdf` → **200**,size≈21KB(仅 FINALIZED 可下)。
+7. `POST /api/ieps` {diagnosisId} → **200**,基于诊断结构化维度生成五领域 IEP 草案;合规 red-flag 正确触发前置「⚠️ 合规提示...检出"体罚"」(mock 回显约束词所致,逻辑正确)。
+
+## 联调结论
+
+- 多模态诊断闭环跑通(建→挂素材识别→生成结构化维度+报告→人工定稿→PDF),四模态分流(TEXT/IMAGE/VIDEO/AUDIO)就绪,ASR/视频默认 mock 不外联。
+- IEP 支持诊断/报告双链路,旧 reportId 链路回归通过;五领域结构化训练(方式/频次/步骤)+ 政策伦理分类 RAG + red-flag 合规兜底已接入。
+- 红线沿用:出网脱敏硬阻断、AI 仅产 DRAFT 人工定稿、行级 AccessGuard、端点 RBAC(诊断写限 TEACHER/MANAGER)。
+- 后端全量 285 测试 0 失败;全量 clean install 10 模块 SUCCESS;前端 build OK。
+- **本期范围**:多模态诊断 + IEP。**下期**:训练对比评估(训练结果上传、阶段评估、纵向对比、方案适配性判断、保留有效/优化低效)——需训练记录/阶段/版本表,依赖本期闭环。
+- 注:dev 从仓库根目录起后端时 H2 库落 `./data/`(非 backend/data/);schema 变更后须删该库重建,否则旧表缺 category/diagnosis_id 列报错。

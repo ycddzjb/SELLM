@@ -26,6 +26,7 @@
         <!-- ── 评估干预 Agent 的关联功能 ── -->
         <el-menu-item-group v-if="auth.isTeacher || auth.isSuperAdmin || auth.isManager" title="评估干预 · 工作台">
           <el-menu-item v-if="auth.isSuperAdmin || auth.isManager || auth.isTeacher" index="/children">儿童档案</el-menu-item>
+          <el-menu-item v-if="auth.isTeacher" index="/diagnosis">多模态诊断</el-menu-item>
           <el-menu-item v-if="auth.isTeacher" index="/report">评估报告</el-menu-item>
           <el-menu-item v-if="auth.isTeacher" index="/iep">个别化教育计划</el-menu-item>
         </el-menu-item-group>
