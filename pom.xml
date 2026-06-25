@@ -90,6 +90,15 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>${spring-boot.version}</version>
+                    <!-- agent/gateway 模块不继承 spring-boot-starter-parent,需显式绑 repackage,
+                         否则打出普通 jar(清单无 Main-Class),java -jar 报"没有主清单属性"。 -->
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
