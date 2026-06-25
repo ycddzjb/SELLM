@@ -59,6 +59,9 @@ class TeachingSanitizeHardBlockTest {
         @Override public String generate(String task, String c, String d, String s, String m) {
             called = true; return "should-not-be-called";
         }
+        @Override public String generateContent(String contentType, String requirement, String optionsJson) {
+            called = true; return "should-not-be-called";
+        }
     }
 
     @Test

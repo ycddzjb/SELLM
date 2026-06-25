@@ -46,7 +46,10 @@ class TeachingSubjectNamesTest {
     static class Cfg {
         @Bean @Primary CapturingAnonymizer capturingAnonymizer() { return new CapturingAnonymizer(); }
         @Bean @Primary SmartLayerClient stubClient() {
-            return (task, c, d, s, m) -> "AI 草案";
+            return new SmartLayerClient() {
+                @Override public String generate(String task, String c, String d, String s, String m) { return "AI 草案"; }
+                @Override public String generateContent(String contentType, String requirement, String optionsJson) { return "AI 草案"; }
+            };
         }
     }
 

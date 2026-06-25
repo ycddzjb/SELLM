@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.teaching.TeachingContentMapper">
+    <resultMap id="contentMap" type="map">
+        <id column="id" property="id"/>
+        <result column="owner_id" property="ownerId"/>
+        <result column="content_type" property="contentType"/>
+        <result column="title" property="title"/>
+        <result column="options" property="options"/>
+        <result column="ai_draft" property="aiDraft"/>
+        <result column="content" property="content"/>
+        <result column="status" property="status"/>
+    </resultMap>
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO teaching_content (owner_id, content_type, title, options, ai_draft, content, status)
+        VALUES (#{ownerId}, #{contentType}, #{title}, #{options}, #{aiDraft}, #{content}, #{status})
+    </insert>
+    <select id="findById" parameterType="long" resultMap="contentMap">
+        SELECT id, owner_id, content_type, title, options, ai_draft, content, status
+        FROM teaching_content WHERE id = #{id} AND deleted = 0
+    </select>
+    <select id="findByOwnerAndType" resultMap="contentMap">
+        SELECT id, owner_id, content_type, title, options, ai_draft, content, status
+        FROM teaching_content WHERE owner_id = #{ownerId} AND content_type = #{contentType} AND deleted = 0
+        ORDER BY id DESC
+    </select>
+    <update id="update" parameterType="map">
+        UPDATE teaching_content SET title = #{title}, ai_draft = #{aiDraft}, content = #{content}, status = #{status},
+            updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+</mapper>

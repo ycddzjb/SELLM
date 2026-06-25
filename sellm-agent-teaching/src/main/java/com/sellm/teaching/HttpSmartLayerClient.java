@@ -40,4 +40,25 @@ public class HttpSmartLayerClient extends AbstractHttpSmartLayerClient implement
             throw new SmartLayerException("智能层响应解析失败", e);
         }
     }
+
+    @Override
+    public String generateContent(String contentType, String requirement, String optionsJson) {
+        try {
+            ObjectNode body = json.createObjectNode();
+            // task 用小写 type(lesson/courseware/case/exercise),Python 据此分支
+            body.put("task", contentType == null ? "" : contentType.toLowerCase());
+            body.put("requirement", requirement == null ? "" : requirement);
+            // options 透传(JSON 字符串解析为对象塞入,Python 直接读字段)
+            if (optionsJson != null && !optionsJson.isBlank()) {
+                body.set("options", json.readTree(optionsJson));
+            }
+            String resp = send("/v1/agents/teaching/invoke", json.writeValueAsString(body));
+            JsonNode node = json.readTree(resp);
+            return node.path("content").asText("");
+        } catch (SmartLayerException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SmartLayerException("智能层响应解析失败", e);
+        }
+    }
 }

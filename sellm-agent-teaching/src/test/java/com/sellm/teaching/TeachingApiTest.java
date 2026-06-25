@@ -52,6 +52,11 @@ class TeachingApiTest {
             lastIep.set(iepContentOrPlan);
             return "[AI 生成] " + task + " 文本";
         }
+        @Override public String generateContent(String contentType, String requirement, String optionsJson) {
+            if (throwError) throw new SmartLayerException("down");
+            lastIep.set(requirement);
+            return "[AI 生成] " + contentType + " 文本";
+        }
     }
 
     private Long createFinalizedPlan(long userId) throws Exception {
