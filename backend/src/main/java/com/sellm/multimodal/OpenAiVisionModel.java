@@ -51,6 +51,36 @@ public class OpenAiVisionModel implements MultimodalModel {
         }
     }
 
+    @Override
+    public String describe(byte[] media, String noteText) {
+        try {
+            byte[] safeMedia = imageAnonymizer.sanitize(media);
+            ObjectNode root = json.createObjectNode();
+            root.put("model", props.getModel());
+            ArrayNode messages = root.putArray("messages");
+            ObjectNode msg = messages.addObject();
+            msg.put("role", "user");
+            ArrayNode content = msg.putArray("content");
+            StringBuilder instr = new StringBuilder();
+            instr.append("你是特殊教育康复评估专家。请客观描述画面中儿童的训练表现(动作、专注、互动、情绪等),");
+            instr.append("用于后续能力诊断。只描述观察到的事实,不下结论。\n");
+            if (noteText != null && !noteText.isBlank()) {
+                instr.append("教师笔记:").append(noteText).append("\n");
+            }
+            content.addObject().put("type", "text").put("text", instr.toString());
+            if (safeMedia != null && safeMedia.length > 0) {
+                String dataUrl = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(safeMedia);
+                content.addObject().put("type", "image_url").putObject("image_url").put("url", dataUrl);
+            }
+            String resp = send(json.writeValueAsString(root));
+            JsonNode r = json.readTree(resp);
+            String text = r.path("choices").path(0).path("message").path("content").asText("");
+            return text.isBlank() ? "[影像描述为空]" : text;
+        } catch (Exception e) {
+            return "[影像描述失败] 请教师据画面补充文字描述。";
+        }
+    }
+
     /** 组 vision 请求体:文本指令(列出 items,要求返回 JSON 数组)+ 可选图片(base64 data URL)。 */
     String buildRequestBody(byte[] media, String noteText, List<ScaleItem> items) throws Exception {
         StringBuilder instr = new StringBuilder();

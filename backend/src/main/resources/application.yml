@@ -52,6 +52,13 @@ sellm:
     api-key: ${SELLM_MULTIMODAL_API_KEY:}
     model: ${SELLM_MULTIMODAL_MODEL:qwen-vl-plus}
     timeout-seconds: ${SELLM_MULTIMODAL_TIMEOUT:90}
+  speech:
+    # ⚠️ openai 会把含儿童语音的音频发往第三方;启用即代表已获监护人知情同意并自担合规风险
+    provider: ${SELLM_SPEECH_PROVIDER:mock}   # mock(默认,不外联) | openai(OpenAI 兼容 ASR)
+    base-url: ${SELLM_SPEECH_BASE_URL:}
+    api-key: ${SELLM_SPEECH_API_KEY:}
+    model: ${SELLM_SPEECH_MODEL:whisper-1}
+    timeout-seconds: ${SELLM_SPEECH_TIMEOUT:90}
   image-anon:
     # vision 出网前的图像脱敏:noop(默认,不改图) | http(POST 图片到外部 CV 打码服务)
     provider: ${SELLM_IMAGE_ANON_PROVIDER:noop}
