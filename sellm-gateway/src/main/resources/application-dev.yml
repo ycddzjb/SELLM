@@ -1,0 +1,6 @@
+# dev profile 网关配置:仅提供开发用 JWT 密钥默认值(与 backend application-dev.yml 同密钥)。
+# 生产不激活 dev profile,密钥必经 SELLM_JWT_SECRET 注入。
+sellm:
+  gateway:
+    jwt:
+      secret: ${SELLM_JWT_SECRET:dev-jwt-secret-key-at-least-32-bytes-long-0123456789}

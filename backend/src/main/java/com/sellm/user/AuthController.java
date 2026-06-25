@@ -15,6 +15,9 @@ import com.sellm.security.Role;
 import com.sellm.user.dto.LoginRequest;
 import com.sellm.user.dto.LoginResponse;
 import com.sellm.user.dto.RegisterRequest;
+import com.sellm.user.dto.WeChatLoginRequest;
+import com.sellm.user.wechat.WeChatClient;
+import com.sellm.user.wechat.WeChatProperties;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,16 +30,22 @@ public class AuthController {
     private final OrganizationRepository organizationRepository;
     private final ParentProfileRepository parentProfileRepository;
     private final ClazzRepository clazzRepository;
+    private final WeChatClient weChatClient;
+    private final WeChatProperties weChatProperties;
 
     public AuthController(UserRepository userRepository, JwtService jwtService,
                           OrganizationRepository organizationRepository,
                           ParentProfileRepository parentProfileRepository,
-                          ClazzRepository clazzRepository) {
+                          ClazzRepository clazzRepository,
+                          WeChatClient weChatClient,
+                          WeChatProperties weChatProperties) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.organizationRepository = organizationRepository;
         this.parentProfileRepository = parentProfileRepository;
         this.clazzRepository = clazzRepository;
+        this.weChatClient = weChatClient;
+        this.weChatProperties = weChatProperties;
     }
 
     @PostMapping("/register")
@@ -85,6 +94,34 @@ public class AuthController {
         }
         if (!"ACTIVE".equals(user.getStatus())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "账号待审核或已停用,暂不能登录");
+        }
+        String token = jwtService.issue(
+            user.getUsername(), user.getRole().name(), user.getId(), user.getOrgId());
+        String orgName = organizationRepository.nameOf(user.getOrgId());
+        return Result.ok(new LoginResponse(
+            token, user.getRole().name(), user.getUsername(), user.getOrgId(), orgName));
+    }
+
+    /**
+     * 微信小程序登录:前端 wx.login 的 code → openid → 查/建家长用户 → 签 JWT。
+     * 首次登录自动建 PENDING 家长账号(待管理端审核分配机构/绑定孩子);非 ACTIVE 暂不放行,前端提示待审核。
+     * 不加 @Transactional:新建 PENDING 用户须独立提交(单条 insert),否则随后的"待审核"阻断会回滚掉刚建的账号,
+     * 导致管理端永远看不到该待审核用户、无法开通。
+     */
+    @PostMapping("/wechat-login")
+    public Result<LoginResponse> wechatLogin(@RequestBody WeChatLoginRequest req) {
+        if (req.getCode() == null || req.getCode().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "缺少微信登录 code");
+        }
+        String openid = weChatClient.openidByCode(req.getCode());
+        AppUser user = userRepository.findByOpenid(openid);
+        if (user == null) {
+            // 首次登录:建 PENDING 家长,用户名用 openid 派生(唯一、不暴露)
+            String username = "wx_" + openid;
+            user = userRepository.registerWeChat(username, weChatProperties.getDefaultOrgId(), openid);
+        }
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "账号待审核,请联系机构老师完成开通");
         }
         String token = jwtService.issue(
             user.getUsername(), user.getRole().name(), user.getId(), user.getOrgId());

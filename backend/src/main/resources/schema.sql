@@ -38,10 +38,23 @@ CREATE TABLE IF NOT EXISTS family_iep (
     child_id          BIGINT NOT NULL,
     parent_user_id    BIGINT NOT NULL,
     parent_goal       VARCHAR(1024),
-    draft             VARCHAR(8192),
-    finalized_content VARCHAR(8192),
+    draft             TEXT,
+    finalized_content TEXT,
     status            VARCHAR(16) NOT NULL,
     created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- (阶段 F:评估媒体,多模态素材上传记录;对象本体存对象存储,库里只存 object_key)
+CREATE TABLE IF NOT EXISTS evaluation_media (
+    id               BIGINT PRIMARY KEY AUTO_INCREMENT,
+    child_id         BIGINT NOT NULL,
+    scale_id         VARCHAR(64),
+    media_type       VARCHAR(16) NOT NULL,   -- IMAGE / VIDEO / NOTE
+    object_key       VARCHAR(256),           -- 对象存储 key;NOTE 类型可空
+    note_text        VARCHAR(2048),
+    uploader_user_id BIGINT,
+    status           VARCHAR(16) NOT NULL,   -- UPLOADED / ANALYZED
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 -- (Task 6 追加 knowledge_doc 表)
 CREATE TABLE IF NOT EXISTS knowledge_doc (
@@ -104,6 +117,10 @@ CREATE TABLE IF NOT EXISTS app_user (
 -- (计划五 Task 1 追加 app_user.status 列:账号状态 ACTIVE/PENDING/REJECTED,登录校验用)
 ALTER TABLE app_user ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE';
 
+-- (P9 微信登录:绑定微信 openid,家长端 code2session 静默登录用;唯一,可空)
+ALTER TABLE app_user ADD COLUMN IF NOT EXISTS wx_openid VARCHAR(64);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_app_user_wx_openid ON app_user (wx_openid);
+
 -- (计划六 Task 4 追加 class_room 表:班级,表名用 class_room 避开 SQL 保留字 class)
 CREATE TABLE IF NOT EXISTS class_room (
     id             BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -149,8 +166,8 @@ CREATE TABLE IF NOT EXISTS report (
     id            BIGINT PRIMARY KEY AUTO_INCREMENT,
     assessment_id BIGINT NOT NULL,
     child_id      BIGINT NOT NULL,
-    draft         VARCHAR(8000) NOT NULL,
-    finalized_content VARCHAR(8000),
+    draft         TEXT NOT NULL,
+    finalized_content TEXT,
     status        VARCHAR(16) NOT NULL,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -160,8 +177,8 @@ CREATE TABLE IF NOT EXISTS iep (
     id            BIGINT PRIMARY KEY AUTO_INCREMENT,
     report_id     BIGINT NOT NULL,
     child_id      BIGINT NOT NULL,
-    draft         VARCHAR(8000) NOT NULL,
-    finalized_content VARCHAR(8000),
+    draft         TEXT NOT NULL,
+    finalized_content TEXT,
     status        VARCHAR(16) NOT NULL,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

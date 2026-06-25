@@ -29,7 +29,7 @@
     </select>
 
     <update id="updateFinalized">
-        UPDATE family_iep SET finalized_content = #{content}, status = 'FINALIZED' WHERE id = #{id}
+        UPDATE family_iep SET finalized_content = #{content}, status = 'FINALIZED' WHERE id = #{id} AND status = 'DRAFT'
     </update>
 
 </mapper>

@@ -1,0 +1,16 @@
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+    discovery:
+      enabled: false
+    service-registry:
+      auto-registration:
+        enabled: false
+
+sellm:
+  gateway:
+    jwt:
+      # 测试用密钥(≥32字节);主 yml 已改空默认+fail-fast,test 上下文须显式提供否则启动失败
+      secret: test-secret-key-at-least-32-bytes-long-xx

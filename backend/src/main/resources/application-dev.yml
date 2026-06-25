@@ -14,9 +14,21 @@ spring:
   h2:
     console:
       enabled: true             # /h2-console 便于调试(dev only)
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
+        # dev 默认关闭服务注册:单进程 H2 联调无需 Nacos,避免无 Nacos 时启动失败(Connection refused)。
+        # 需在 dev 验证网关路由时,起 Nacos 后设 SELLM_NACOS_ENABLED=true 即可恢复注册。
+        enabled: ${SELLM_NACOS_ENABLED:false}
+        # dev 单机:强制注册回环 IP,否则注册物理网卡 IP,换网/IP 变更后网关 lb 转发到死 IP → 500。
+        ip: ${SELLM_NACOS_IP:127.0.0.1}
+    service-registry:
+      auto-registration:
+        enabled: ${SELLM_NACOS_ENABLED:false}
 
 mybatis:
-  mapper-locations: classpath:mybatis/*.xml
+  mapper-locations: classpath*:mybatis/*.xml
   configuration:
     map-underscore-to-camel-case: true
 
@@ -28,3 +40,10 @@ sellm:
     expiration-minutes: 240
   ai:
     provider: mock   # dev 默认 Mock,不外联
+  pdf:
+    font-path: ${SELLM_PDF_FONT_PATH:C:/Windows/Fonts/simhei.ttf}   # dev 默认黑体;环境变量可覆盖
+  minio:
+    provider: noop   # dev 默认本地落盘,不连 MinIO
+    local-dir: data/media
+  multimodal:
+    provider: mock   # dev 默认 Mock,不外联(图像 PII 红线)

@@ -248,3 +248,101 @@
 阶段 E 契约全连通:可切换 AI 适配器默认 Mock(provider=mock,不外联,真实模型需显式配置 api-key 才启用,出网内容经网关脱敏);报告/IEP 仍走"AI 草稿→人工定稿"红线;定稿后可下载 PDF(未定稿 400);家长家庭 IEP 取该儿童最新定稿评估报告 + 家长目标生成,行级仅限自己孩子(无定稿报告 400、他人孩子 403)。9 条路径全部符合预期。后端进程已停,端口 8080 已释放。
 
 **至此路线图 A→B→C→D→E 全部完成。** 真实模型联调需在用户自有环境配置 SELLM_AI_PROVIDER=openai + SELLM_AI_BASE_URL + SELLM_AI_API_KEY 后验证(本期交付可切换骨架,Mock 全绿)。多模态识别为后续独立阶段。
+
+---
+
+# 真实大模型联调结果(通义千问 qwen-plus)
+
+日期:2026-06-20 · 分支:`fix/ai-http-timeout`(基于 master)
+
+通过环境变量切到真实 provider(`SELLM_AI_PROVIDER=openai` + dashscope 兼容端点 + qwen-plus),不改任何代码默认值、key 不落盘。dev 库,curl 走真实生成全链路。
+
+## 联调结果
+
+| 链路 | 实际返回 | 结论 |
+|---|---|---|
+| 评估报告生成 | HTTP 200,~22s,真实四节结构化报告(无 [AI草稿] Mock 标记) | 真实模型生效 |
+| IEP 生成(基于定稿报告) | HTTP 200,~45s,真实长短期目标+干预活动 | 真实模型生效 |
+| 家庭 IEP(家长,自己孩子,已有定稿报告) | HTTP 200,~43s,真实家庭训练计划 | 真实模型生效 |
+| 脱敏 | 出网经网关替换为 [儿童1]/[学校1] 占位符(报告草稿首次以"儿童1"呈现即证模型仅见占位符),还原后给授权用户展示真名 | 脱敏红线在真实模型上确认 |
+
+## 联调暴露并修复的缺陷
+
+1. **HTTP/2 协商卡死**:JDK HttpClient 默认 HTTP/2 与 dashscope 协商时请求 30s 超时(curl 直连 0.6s 成功)→ 强制 HTTP/1.1。
+2. **超时偏紧**:默认 30s,而真实长报告生成实测 20-45s → 默认提至 60s(`SELLM_AI_TIMEOUT` 可配),connectTimeout 与请求超时分离。
+
+## 结论
+
+阶段 E 的真实大模型接入端到端验证通过:可切换适配器在配置真实 provider 后,报告/IEP/家庭IEP 全部由通义千问真实生成,脱敏出网+还原链路正确,人工定稿+PDF 下载红线不变。修复后全量回归 205 测试全绿(默认 mock 不受影响)。
+
+> 安全提醒:联调用的 API key 已出现在协作记录中,建议轮换。生产用 SELLM_AI_* 环境变量注入,key 不入库不入代码。
+
+---
+
+# 阶段 F(多模态评估)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/multimodal-eval`
+
+后端 dev profile(multimodal=mock + 存储=noop,**默认不外联、不依赖 MinIO**)起在 `localhost:8080`。前端 `npm run build` 已通过。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回 | 结论 |
+|---|------|----------|------|
+| 1 | 老师上传训练笔记(NOTE) | mediaId 返回 | 上传落库 |
+| 2 | analyze 识别 | 每指标 Mock 建议(q1/q2 各 2.0 + 理由) | 多模态识别闭环(默认 Mock) |
+| 3 | 采纳建议分提交正式评估 | totalScore=4,bandLabel=轻-中度 | 建议→现有计分链路打通 |
+| 4 | 他机构老师上传 | HTTP 403 | 行级权限(AccessGuard) |
+
+> 图片文件上传经 MockMvc `MockMultipartFile` 测试验证(存储 noop 往返 + analyze 出建议);curl 直传图片受 Windows Git Bash multipart 编码限制未走通,非后端问题。
+
+## 联调结论
+
+阶段 F 多模态评估最小闭环连通:素材(图片/笔记)上传 → 对象存储(默认本地 noop)→ 多模态模型(默认 Mock,不外联)出各指标评分建议 → 老师采纳填入 → 走现有评估计分。红线:默认不外联(multimodal mock + storage noop);真实 vision/MinIO 需显式配置;图像 PII 风险在配置项/.env.example 显著告知;AI 仅产建议、老师确认;行级权限贯穿。后端全量回归 225 测试全绿(默认 mock+noop)。后端进程已停,端口已释放。
+
+> 真实多模态联调需用户配 SELLM_MULTIMODAL_PROVIDER=openai + base-url + api-key(如通义 qwen-vl-plus),并确认已获监护人对儿童影像出网的知情同意。
+
+---
+
+# 阶段 G(自动匹配量表 + 图像脱敏管线)端到端联调结果
+
+日期:2026-06-20 · 分支:`feat/scalematch-imageanon`
+
+后端 dev profile(multimodal=mock + image-anon=noop,默认不外联)。前端 `npm run build` 已通过。
+
+## curl 链路逐步实际结果
+
+| # | 步骤 | 实际返回 | 结论 |
+|---|------|----------|------|
+| 1 | 老师对 ASD 儿童取 recommended-scales | 返回所有 ASD 类量表(cars + 新建) | 按障碍类型推荐正确 |
+| 2 | 无障碍类型儿童取推荐 | data=[] | 空类型空列表 |
+| 3 | 他机构老师取推荐 | HTTP 403 | 行级权限(AccessGuard) |
+
+> 图像脱敏管线由单测覆盖(ImageAnonConfigTest/HttpImageAnonymizerTest/OpenAiVisionModelTest 出网前用脱敏字节断言):默认 multimodal=mock,vision 不触发,e2e 不走真实图像出网,符合默认不外联红线。
+
+## 联调结论
+
+阶段 G 两块连通:(1) 自动匹配量表——评估按儿童障碍类型推荐适配量表(行级、空类型空列表、他机构 403、老师仍可切全部);(2) 图像脱敏管线——抽 ImageAnonymizer 接口默认 Noop(不改图),HttpImageAnonymizer 接外部 CV 打码服务(失败硬阻断),vision 出网前必经脱敏层(单测验证用脱敏后字节出网)。默认双层不外联(multimodal mock + image-anon noop)。后端全量回归 237 测试全绿。后端进程已停,端口已释放。
+
+---
+
+## 安全加固收尾(2026-06-24,全栈分层排查 P0×6 + P1×4)
+
+6 并行排查(网关/调度/业务/存储/前端/红线)后落地的修复,均带回归测试,全量 `mvn clean install` 10 模块 SUCCESS:
+
+**P0(上线硬伤/红线击穿):**
+- `b014e0f` 网关 JWT 密钥 fail-fast(空默认+≥32字节校验,dev值移 application-dev.yml)。**联调起网关须带 `-Dspring-boot.run.profiles=dev` 或注入 SELLM_JWT_SECRET**。
+- `44967ab`+`eabd6ad` 4 agent(teaching/qa/research/aids)出网脱敏纳入命名 PII 屏蔽表:请求 DTO 加 `subjectNames` 由调用方传入(agent 无 Child 表,正则抓不到中文姓名)。
+- `2e88bf3` vision 训练笔记 noteText 出网前脱敏(controller 注入 Anonymizer)。
+- `5b42635` 4 agent 内存库→独立 MySQL 库(sellm_qa/research/teaching/aids)+dev profile 留 H2 联调。
+- `7d60b17` report/iep/family-iep 长文字段 VARCHAR→TEXT(防 MySQL 截断)。
+- `ff4d22a` 定稿冻结:finalize 加 FINALIZED 校验 + SQL `AND status='DRAFT'` 乐观保护。
+
+**P1(中优先级):**
+- `105ea98` 小程序障碍枚举对齐后端 DisorderType 8 码(原自造码致 5/8 类筛选失效)。
+- `177291c` aids smart-layer 超时 30→360s(容纳真实万相/视频轮询)。
+- `53fb887` teaching 去类级 @Transactional(出网不占 DB 连接)。
+- `872e28e` 网关限流 Lua 原子化 + fail-open 收窄。
+
+**剩余 P2/P3 技术债(非阻断):** actuator 端点鉴权、utf8mb4、Nacos prefer-ip-address、schema 索引/外键、narrative 字段加密、Python 智能层鉴权、限流取 X-Forwarded-For 等。
+**生产部署前(DBA):** 建 4 agent 库+backend 库;aids 的 H2 MERGE 教具种子转 MySQL 迁移脚本。

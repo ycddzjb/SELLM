@@ -40,6 +40,27 @@ public class UserRepository {
         return toAppUser(mapper.findByUsername(username));
     }
 
+    public AppUser findByOpenid(String wxOpenid) {
+        return toAppUser(mapper.findByOpenid(wxOpenid));
+    }
+
+    /** 创建微信家长用户:随机密码(不可用密码登录)、绑定 openid、PENDING 待审核。 */
+    public AppUser registerWeChat(String username, Long orgId, String wxOpenid) {
+        Map<String, Object> row = new HashMap<>();
+        row.put("username", username);
+        // 随机不可逆密码:微信用户走 openid 登录,不经密码;占位避免空 hash
+        row.put("passwordHash", passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+        row.put("role", Role.PARENT.name());
+        row.put("orgId", orgId);
+        row.put("status", "PENDING");
+        row.put("wxOpenid", wxOpenid);
+        mapper.insertWeChat(row);
+        AppUser u = new AppUser(((Number) row.get("id")).longValue(),
+            username, (String) row.get("passwordHash"), Role.PARENT, orgId, "PENDING");
+        u.setWxOpenid(wxOpenid);
+        return u;
+    }
+
     public AppUser findById(Long id) {
         return toAppUser(mapper.findById(id));
     }
@@ -47,6 +68,15 @@ public class UserRepository {
     public List<AppUser> listPendingByOrg(Long orgId) {
         List<AppUser> result = new ArrayList<>();
         for (Map<String, Object> row : mapper.findPendingByOrg(orgId)) {
+            result.add(toAppUser(row));
+        }
+        return result;
+    }
+
+    /** 待激活微信家长:本机构 + 尚未分配机构(org null)。 */
+    public List<AppUser> listPendingWeChat(Long orgId) {
+        List<AppUser> result = new ArrayList<>();
+        for (Map<String, Object> row : mapper.findPendingWeChat(orgId)) {
             result.add(toAppUser(row));
         }
         return result;
@@ -73,9 +103,11 @@ public class UserRepository {
             return null;
         }
         Long orgId = row.get("orgId") == null ? null : ((Number) row.get("orgId")).longValue();
-        return new AppUser(((Number) row.get("id")).longValue(),
+        AppUser u = new AppUser(((Number) row.get("id")).longValue(),
             (String) row.get("username"), (String) row.get("passwordHash"),
             Role.valueOf((String) row.get("role")), orgId, (String) row.get("status"));
+        u.setWxOpenid((String) row.get("wxOpenid"));
+        return u;
     }
 
     public void updateRoleOrgStatus(Long id, Role role, Long orgId, String status) {
@@ -84,6 +116,10 @@ public class UserRepository {
 
     public void updateStatus(Long id, String status) {
         mapper.updateStatus(id, status);
+    }
+
+    public long countActiveByRole(String role) {
+        return mapper.countActiveByRole(role);
     }
 
     public void changePassword(Long userId, String rawPassword) {

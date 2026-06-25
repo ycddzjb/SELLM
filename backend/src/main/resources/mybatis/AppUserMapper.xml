@@ -10,6 +10,7 @@
         <result column="role" property="role"/>
         <result column="org_id" property="orgId"/>
         <result column="status" property="status"/>
+        <result column="wx_openid" property="wxOpenid"/>
     </resultMap>
 
     <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
@@ -17,19 +18,38 @@
         VALUES (#{username}, #{passwordHash}, #{role}, #{orgId}, #{status})
     </insert>
 
+    <insert id="insertWeChat" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO app_user (username, password_hash, role, org_id, status, wx_openid)
+        VALUES (#{username}, #{passwordHash}, #{role}, #{orgId}, #{status}, #{wxOpenid})
+    </insert>
+
+    <select id="findByOpenid" parameterType="string" resultMap="userMap">
+        SELECT id, username, password_hash, role, org_id, status, wx_openid
+        FROM app_user WHERE wx_openid = #{wxOpenid}
+    </select>
+
     <select id="findByUsername" parameterType="string" resultMap="userMap">
-        SELECT id, username, password_hash, role, org_id, status
+        SELECT id, username, password_hash, role, org_id, status, wx_openid
         FROM app_user WHERE username = #{username}
     </select>
 
     <select id="findById" resultMap="userMap">
-        SELECT id, username, password_hash, role, org_id, status
+        SELECT id, username, password_hash, role, org_id, status, wx_openid
         FROM app_user WHERE id = #{id}
     </select>
 
     <select id="findPendingByOrg" resultMap="userMap">
         SELECT id, username, password_hash, role, org_id, status
         FROM app_user WHERE org_id = #{orgId} AND status = 'PENDING'
+        ORDER BY id
+    </select>
+
+    <!-- 微信待激活家长:PENDING + 有 openid + (本机构 或 尚未分配机构);管理者认领无机构者落本机构 -->
+    <select id="findPendingWeChat" resultMap="userMap">
+        SELECT id, username, password_hash, role, org_id, status, wx_openid
+        FROM app_user
+        WHERE status = 'PENDING' AND wx_openid IS NOT NULL
+          AND (org_id = #{orgId} OR org_id IS NULL)
         ORDER BY id
     </select>
 
@@ -58,5 +78,9 @@
     <update id="updatePassword">
         UPDATE app_user SET password_hash = #{passwordHash} WHERE id = #{id}
     </update>
+
+    <select id="countActiveByRole" resultType="long">
+        SELECT COUNT(*) FROM app_user WHERE role = #{role} AND status = 'ACTIVE'
+    </select>
 
 </mapper>

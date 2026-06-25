@@ -8,9 +8,18 @@ spring:
     init:
       mode: always
       schema-locations: classpath:schema.sql
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+    discovery:
+      enabled: false
+    service-registry:
+      auto-registration:
+        enabled: false
 
 mybatis:
-  mapper-locations: classpath:mybatis/*.xml
+  mapper-locations: classpath*:mybatis/*.xml
   configuration:
     map-underscore-to-camel-case: true
 

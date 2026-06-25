@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.aids.GeneratedAssetMapper">
+    <resultMap id="assetMap" type="map">
+        <id column="id" property="id"/>
+        <result column="owner_id" property="ownerId"/>
+        <result column="type" property="type"/>
+        <result column="prompt" property="prompt"/>
+        <result column="storage_key" property="storageKey"/>
+        <result column="task_id" property="taskId"/>
+        <result column="status" property="status"/>
+        <result column="error" property="error"/>
+    </resultMap>
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO generated_asset (owner_id, type, prompt, storage_key, task_id, status, error)
+        VALUES (#{ownerId}, #{type}, #{prompt}, #{storageKey}, #{taskId}, #{status}, #{error})
+    </insert>
+    <select id="findById" parameterType="long" resultMap="assetMap">
+        SELECT id, owner_id, type, prompt, storage_key, task_id, status, error
+        FROM generated_asset WHERE id = #{id} AND deleted = 0
+    </select>
+    <select id="findByOwnerId" parameterType="long" resultMap="assetMap">
+        SELECT id, owner_id, type, prompt, storage_key, task_id, status, error
+        FROM generated_asset WHERE owner_id = #{ownerId} AND deleted = 0 ORDER BY id DESC
+    </select>
+    <update id="update" parameterType="map">
+        UPDATE generated_asset SET storage_key = #{storageKey}, task_id = #{taskId},
+            status = #{status}, error = #{error}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper>

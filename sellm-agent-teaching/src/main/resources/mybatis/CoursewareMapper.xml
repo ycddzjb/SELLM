@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.teaching.CoursewareMapper">
+    <resultMap id="cwMap" type="map">
+        <id column="id" property="id"/>
+        <result column="owner_id" property="ownerId"/>
+        <result column="lesson_plan_id" property="lessonPlanId"/>
+        <result column="disorder_type" property="disorderType"/>
+        <result column="ai_draft" property="aiDraft"/>
+        <result column="content" property="content"/>
+        <result column="storage_key" property="storageKey"/>
+        <result column="format" property="format"/>
+        <result column="status" property="status"/>
+    </resultMap>
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO courseware (owner_id, lesson_plan_id, disorder_type, ai_draft, content, storage_key, format, status)
+        VALUES (#{ownerId}, #{lessonPlanId}, #{disorderType}, #{aiDraft}, #{content}, #{storageKey}, #{format}, #{status})
+    </insert>
+    <select id="findById" parameterType="long" resultMap="cwMap">
+        SELECT id, owner_id, lesson_plan_id, disorder_type, ai_draft, content, storage_key, format, status
+        FROM courseware WHERE id = #{id} AND deleted = 0
+    </select>
+    <update id="update" parameterType="map">
+        UPDATE courseware SET content = #{content}, ai_draft = #{aiDraft}, storage_key = #{storageKey},
+            status = #{status}, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+</mapper>

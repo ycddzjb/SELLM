@@ -1,0 +1,68 @@
+# 网关全局过滤器:JWT 鉴权(order -100)+ Redis 令牌桶限流(order 0,fail-open)均已接入。
+spring:
+  application:
+    name: sellm-gateway
+  data:
+    redis:
+      host: ${SELLM_REDIS_HOST:127.0.0.1}
+      port: ${SELLM_REDIS_PORT:6379}
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
+    gateway:
+      routes:
+        # backend 经 Nacos 注册为 agent-assessment，lb 负载均衡
+        - id: agent-assessment
+          uri: lb://agent-assessment
+          predicates:
+            - Path=/api/auth/**,/api/orgs/**,/api/classes/**,/api/children/**,/api/scales/**,/api/reports/**,/api/ieps/**,/api/family-ieps/**,/api/assessments/**,/api/users/**
+        - id: agent-teaching
+          uri: lb://agent-teaching
+          predicates:
+            - Path=/api/teaching/**
+        - id: agent-research
+          uri: lb://agent-research
+          predicates:
+            - Path=/api/research/**
+        - id: agent-aids
+          uri: lb://agent-aids
+          predicates:
+            - Path=/api/aids/**
+        - id: agent-qa
+          uri: lb://agent-qa
+          predicates:
+            - Path=/api/qa/**
+
+# 端口分配:gateway 8888 | assessment 8080 | teaching 8081 | research 8082 | aids 8083 | qa 8084 | minio 9000/9001
+server:
+  port: 8888
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,gateway
+
+sellm:
+  gateway:
+    jwt:
+      # 生产必须经 SELLM_JWT_SECRET 注入(与各服务同密钥);空默认 + 启动校验(≥32字节)防止
+      # 漏配时用公开默认密钥导致认证绕过。dev 默认值见 application-dev.yml。
+      secret: ${SELLM_JWT_SECRET:}
+      whitelist:
+        - /api/auth/
+        - /actuator/health
+        # 匿名问答+文档分析(豆包式公开体验);注意只放这两个精确端点,
+        # /api/qa/conversations(历史)不在白名单,仍需登录。
+        - /api/qa/ask
+        - /api/qa/analyze
+        # 注册前(未登录)拉机构/班级/老师下拉的公开端点;前缀含子路径
+        # (/api/orgs/public/{id}/classes、/api/classes/public/{id}/teachers)。
+        # 注意非 public 的 /api/orgs、/api/classes 不在白名单,仍需登录。
+        - /api/orgs/public
+        - /api/classes/public
+    rate-limit:
+      enabled: ${SELLM_RATELIMIT_ENABLED:true}
+      limit: ${SELLM_RATELIMIT_LIMIT:100}
+      window-seconds: ${SELLM_RATELIMIT_WINDOW:60}

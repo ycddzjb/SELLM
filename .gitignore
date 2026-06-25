@@ -4,6 +4,10 @@ dist/
 target/
 *.class
 
+# Python 缓存
+__pycache__/
+*.pyc
+
 # IDE / 编辑器
 .idea/
 .vscode/
@@ -26,3 +30,15 @@ Thumbs.db
 
 # dev profile H2 文件库
 backend/data/
+
+# Agent dev H2 文件库 + 运行时落盘媒体(各 agent data 目录)
+sellm-agent-*/data/
+
+# 从仓库根目录起后端时 H2 按相对路径 ./data/ 落库(运行时产物,非 backend/data/)
+/data/
+
+# 微信开发者工具私有配置(各人本地)
+miniprogram/project.private.config.json
+
+# Git worktree (隔离开发工作区)
+dev_workspace/

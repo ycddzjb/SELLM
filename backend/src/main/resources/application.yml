@@ -1,6 +1,10 @@
 spring:
   application:
-    name: asd-assistant-backend
+    name: agent-assessment
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
   sql:
     init:
       mode: never
@@ -11,7 +15,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis:
-  mapper-locations: classpath:mybatis/*.xml
+  mapper-locations: classpath*:mybatis/*.xml
   configuration:
     map-underscore-to-camel-case: true
 
@@ -21,9 +25,36 @@ sellm:
   jwt:
     secret: ${SELLM_JWT_SECRET:}
     expiration-minutes: 120
+  wechat:
+    # 微信小程序登录(家长端 code2session);未配 app-id/app-secret 则 /api/auth/wechat-login 返回明确错误
+    app-id: ${SELLM_WECHAT_APP_ID:}
+    app-secret: ${SELLM_WECHAT_APP_SECRET:}
+    default-org-id: ${SELLM_WECHAT_DEFAULT_ORG_ID:}
   ai:
     provider: ${SELLM_AI_PROVIDER:mock}   # mock(默认,不外联) | openai
     base-url: ${SELLM_AI_BASE_URL:}
     api-key: ${SELLM_AI_API_KEY:}
     model: ${SELLM_AI_MODEL:gpt-4o-mini}
-    timeout-seconds: 30
+    timeout-seconds: ${SELLM_AI_TIMEOUT:60}   # 大模型生成长报告/IEP 常需 20-40s
+  pdf:
+    font-path: ${SELLM_PDF_FONT_PATH:}   # CJK TTF 路径(中文 PDF 必需);缺失时英文正常、中文缺字形
+  minio:
+    provider: ${SELLM_MINIO_PROVIDER:noop}   # noop(默认,本地落盘,不外联) | minio
+    endpoint: ${SELLM_MINIO_ENDPOINT:}
+    access-key: ${SELLM_MINIO_ACCESS_KEY:}
+    secret-key: ${SELLM_MINIO_SECRET_KEY:}
+    bucket: ${SELLM_MINIO_BUCKET:sellm-media}
+    local-dir: ${SELLM_MINIO_LOCAL_DIR:data/media}
+  multimodal:
+    # ⚠️ openai 会把含儿童面部的图片发往第三方,无法脱敏;启用即代表已获监护人知情同意并自担合规风险
+    provider: ${SELLM_MULTIMODAL_PROVIDER:mock}   # mock(默认,不外联) | openai
+    base-url: ${SELLM_MULTIMODAL_BASE_URL:}
+    api-key: ${SELLM_MULTIMODAL_API_KEY:}
+    model: ${SELLM_MULTIMODAL_MODEL:qwen-vl-plus}
+    timeout-seconds: ${SELLM_MULTIMODAL_TIMEOUT:90}
+  image-anon:
+    # vision 出网前的图像脱敏:noop(默认,不改图) | http(POST 图片到外部 CV 打码服务)
+    provider: ${SELLM_IMAGE_ANON_PROVIDER:noop}
+    endpoint: ${SELLM_IMAGE_ANON_ENDPOINT:}
+    api-key: ${SELLM_IMAGE_ANON_API_KEY:}
+    timeout-seconds: ${SELLM_IMAGE_ANON_TIMEOUT:30}

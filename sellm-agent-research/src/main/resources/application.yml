@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: agent-research
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
+        # 注册 IP:dev 单机默认回环(避免注册物理网卡 IP,换网后网关 lb 转发到死 IP → 500);
+        # 生产多机部署须经 SELLM_NACOS_IP 注入本机可达 IP。
+        ip: ${SELLM_NACOS_IP:127.0.0.1}
+  datasource:
+    # 生产用独立 MySQL 库(research);dev 联调走 application-dev.yml 的 H2 文件库。
+    url: ${SELLM_RESEARCH_DB_URL:jdbc:mysql://localhost:3306/sellm_research?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4}
+    username: ${SELLM_RESEARCH_DB_USER:root}
+    password: ${SELLM_RESEARCH_DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: never   # 生产不自动建表(由迁移脚本);dev profile 覆盖为 always
+
+mybatis:
+  mapper-locations: classpath*:mybatis/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+server:
+  port: 8082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+sellm:
+  smart-layer:
+    base-url: ${SELLM_SMARTLAYER_URL:http://localhost:8090}
+    timeout-seconds: ${SELLM_SMARTLAYER_TIMEOUT:30}

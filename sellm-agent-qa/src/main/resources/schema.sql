@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS qa_conversation (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS qa_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id BIGINT NOT NULL,
+    role VARCHAR(16) NOT NULL,
+    content TEXT,
+    route_to VARCHAR(32),
+    sources TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0
+);

@@ -1,6 +1,6 @@
 package com.sellm.child;
 
-public class Child {
+public class Child implements com.sellm.security.ChildSubject {
     private Long id;
     private String name;          // 明文姓名(领域层)
     private String disorderType;

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.research.ResearchProposalMapper">
+    <resultMap id="proposalMap" type="map">
+        <id column="id" property="id"/>
+        <result column="owner_id" property="ownerId"/>
+        <result column="topic" property="topic"/>
+        <result column="ai_draft" property="aiDraft"/>
+        <result column="content" property="content"/>
+        <result column="status" property="status"/>
+    </resultMap>
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO research_proposal (owner_id, topic, ai_draft, content, status)
+        VALUES (#{ownerId}, #{topic}, #{aiDraft}, #{content}, #{status})
+    </insert>
+    <select id="findById" parameterType="long" resultMap="proposalMap">
+        SELECT id, owner_id, topic, ai_draft, content, status FROM research_proposal WHERE id = #{id} AND deleted = 0
+    </select>
+    <select id="findByOwnerId" parameterType="long" resultMap="proposalMap">
+        SELECT id, owner_id, topic, ai_draft, content, status FROM research_proposal WHERE owner_id = #{ownerId} AND deleted = 0 ORDER BY id DESC
+    </select>
+    <update id="update" parameterType="map">
+        UPDATE research_proposal SET content = #{content}, ai_draft = #{aiDraft}, status = #{status},
+            updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+</mapper>

@@ -1,21 +1,47 @@
 <template>
   <el-container style="height: 100vh">
-    <el-aside width="200px">
+    <el-aside width="220px">
+      <div class="brand">特殊教育垂直大模型</div>
       <el-menu :default-active="$route.path" router>
-        <!-- 儿童档案:超管/管理员/老师可见 -->
-        <el-menu-item v-if="auth.isSuperAdmin || auth.isManager || auth.isTeacher" index="/children">儿童档案</el-menu-item>
-        <!-- 量表库管理:超管 -->
-        <el-menu-item v-if="auth.isSuperAdmin" index="/scale-library">量表库管理</el-menu-item>
-        <!-- 班级管理:机构管理员 -->
-        <el-menu-item v-if="auth.isManager" index="/classes">班级管理</el-menu-item>
-        <!-- 评估 / IEP:仅老师/康复师 -->
-        <el-menu-item v-if="auth.isTeacher" index="/assessment">评估</el-menu-item>
-        <el-menu-item v-if="auth.isTeacher" index="/iep">IEP</el-menu-item>
-        <!-- 用户管理:超管/管理员/老师 -->
-        <el-menu-item v-if="auth.isSuperAdmin || auth.isManager || auth.isTeacher" index="/users">用户管理</el-menu-item>
-        <!-- 家长:家庭 IEP + 个人(改密码在用户管理页,这里给家庭IEP入口) -->
-        <el-menu-item v-if="auth.isParent" index="/family-iep">家庭 IEP</el-menu-item>
-        <el-menu-item v-if="auth.isParent" index="/children">我的孩子</el-menu-item>
+        <el-menu-item index="/dashboard"><span>🏠 首页</span></el-menu-item>
+        <!-- ── 五大 Agent 模块(统一门户主导航)── -->
+        <el-menu-item-group title="智能体">
+          <el-menu-item index="/qa">
+            <span>🤖 问答机器人</span>
+          </el-menu-item>
+          <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/teaching">
+            <span>📚 教学训练</span>
+          </el-menu-item>
+          <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/assessment">
+            <span>📋 评估干预</span>
+          </el-menu-item>
+          <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/aids">
+            <span>🧩 智能教具</span>
+          </el-menu-item>
+          <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/research">
+            <span>🔬 教研科研</span>
+          </el-menu-item>
+        </el-menu-item-group>
+
+        <!-- ── 评估干预 Agent 的关联功能 ── -->
+        <el-menu-item-group v-if="auth.isTeacher || auth.isSuperAdmin || auth.isManager" title="评估干预 · 工作台">
+          <el-menu-item v-if="auth.isSuperAdmin || auth.isManager || auth.isTeacher" index="/children">儿童档案</el-menu-item>
+          <el-menu-item v-if="auth.isTeacher" index="/report">评估报告</el-menu-item>
+          <el-menu-item v-if="auth.isTeacher" index="/iep">个别化教育计划</el-menu-item>
+        </el-menu-item-group>
+
+        <!-- ── 平台管理 ── -->
+        <el-menu-item-group title="平台管理">
+          <el-menu-item v-if="auth.isSuperAdmin" index="/scale-library">量表库管理</el-menu-item>
+          <el-menu-item v-if="auth.isManager" index="/classes">班级管理</el-menu-item>
+          <el-menu-item v-if="auth.isSuperAdmin || auth.isManager || auth.isTeacher" index="/users">用户管理</el-menu-item>
+        </el-menu-item-group>
+
+        <!-- ── 家长 ── -->
+        <el-menu-item-group v-if="auth.isParent" title="家长">
+          <el-menu-item index="/children">我的孩子</el-menu-item>
+          <el-menu-item index="/family-iep">家庭 IEP</el-menu-item>
+        </el-menu-item-group>
       </el-menu>
     </el-aside>
     <el-container>
@@ -47,3 +73,17 @@ function onLogout() {
   router.push('/login')
 }
 </script>
+
+<style scoped>
+.brand {
+  height: 56px;
+  line-height: 56px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+  background: #2c3e50;
+  letter-spacing: 1px;
+}
+.el-aside { background: #fff; border-right: 1px solid #ebeef5; }
+</style>

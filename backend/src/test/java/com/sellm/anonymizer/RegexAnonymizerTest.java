@@ -67,4 +67,44 @@ class RegexAnonymizerTest {
             .doesNotContain("小明").doesNotContain("阳光小学")
             .contains("[儿童1]").contains("[学校1]");
     }
+
+    @Test
+    void 替换手机号() {
+        String text = "联系方式 13812345678 请回电";
+        AnonymizationResult r = anonymizer.anonymize(text, List.of(), List.of());
+        assertThat(r.getAnonymizedText()).doesNotContain("13812345678");
+        assertThat(r.getAnonymizedText()).contains("[电话1]");
+    }
+
+    @Test
+    void 手机号脱敏后还原() {
+        String text = "家长手机 13812345678";
+        AnonymizationResult r = anonymizer.anonymize(text, List.of(), List.of());
+        assertThat(anonymizer.restore(r.getAnonymizedText(), r.getRestoreMap()))
+            .isEqualTo(text);
+    }
+
+    @Test
+    void 替换邮箱() {
+        String text = "邮件请发 zhang.wei@example.com 谢谢";
+        AnonymizationResult r = anonymizer.anonymize(text, List.of(), List.of());
+        assertThat(r.getAnonymizedText()).doesNotContain("zhang.wei@example.com");
+        assertThat(r.getAnonymizedText()).contains("[邮箱1]");
+    }
+
+    @Test
+    void 邮箱脱敏后还原() {
+        String text = "联系邮箱 user+tag@mail.co.uk";
+        AnonymizationResult r = anonymizer.anonymize(text, List.of(), List.of());
+        assertThat(anonymizer.restore(r.getAnonymizedText(), r.getRestoreMap()))
+            .isEqualTo(text);
+    }
+
+    @Test
+    void 身份证号脱敏后还原() {
+        String text = "证件号 110101200001011234 已登记";
+        AnonymizationResult r = anonymizer.anonymize(text, List.of(), List.of());
+        assertThat(anonymizer.restore(r.getAnonymizedText(), r.getRestoreMap()))
+            .isEqualTo(text);
+    }
 }

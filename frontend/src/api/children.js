@@ -6,6 +6,7 @@ export const createChild = (payload) => http.post('/children', payload)
 export const updateChild = (id, payload) => http.put(`/children/${id}`, payload)
 export const deleteChild = (id) => http.delete(`/children/${id}`)
 export const listReminders = () => http.get('/children/reminders')
+export const recommendedScales = (childId) => http.get(`/children/${childId}/recommended-scales`)
 
 // 儿童成长记录
 export const listChildLogs = (childId, type) =>

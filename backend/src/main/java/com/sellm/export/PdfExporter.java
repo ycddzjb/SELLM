@@ -1,6 +1,8 @@
 package com.sellm.export;
 
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -15,10 +17,19 @@ import java.io.File;
 @Component
 public class PdfExporter {
 
+    private static final Logger log = LoggerFactory.getLogger(PdfExporter.class);
+
     private final String fontPath;
 
     public PdfExporter(@Value("${sellm.pdf.font-path:}") String fontPath) {
         this.fontPath = fontPath;
+        if (fontPath == null || fontPath.isBlank()) {
+            log.warn("未配置 sellm.pdf.font-path:导出 PDF 的中文将缺字形。请设置环境变量 SELLM_PDF_FONT_PATH 指向 CJK 字体(如 simhei.ttf)。");
+        } else if (!new File(fontPath).isFile()) {
+            log.warn("sellm.pdf.font-path 指向的字体不存在: {} —— 中文 PDF 将缺字形。", fontPath);
+        } else {
+            log.info("PDF 中文字体已加载: {}", fontPath);
+        }
     }
 
     public byte[] toPdf(String title, String content) {
