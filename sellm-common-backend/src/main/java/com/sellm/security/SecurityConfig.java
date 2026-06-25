@@ -27,10 +27,10 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                // 写评估/报告/IEP:仅 TEACHER、MANAGER
-                .requestMatchers(HttpMethod.POST, "/api/assessments/**", "/api/reports/**", "/api/ieps/**")
+                // 写评估/报告/IEP/诊断:仅 TEACHER、MANAGER
+                .requestMatchers(HttpMethod.POST, "/api/assessments/**", "/api/reports/**", "/api/ieps/**", "/api/diagnoses/**")
                     .hasAnyRole("TEACHER", "MANAGER")
-                .requestMatchers(HttpMethod.PUT, "/api/assessments/**", "/api/reports/**", "/api/ieps/**")
+                .requestMatchers(HttpMethod.PUT, "/api/assessments/**", "/api/reports/**", "/api/ieps/**", "/api/diagnoses/**")
                     .hasAnyRole("TEACHER", "MANAGER")
                 // 儿童成长记录:读写所有已登录用户(含家长写自己孩子),行级权限在 controller 用 AccessGuard;
                 // 须放在 /api/children/** 通配规则之前,否则会被 child 的 TEACHER/MANAGER 规则覆盖

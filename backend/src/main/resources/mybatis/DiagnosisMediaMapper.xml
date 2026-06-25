@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.diagnosis.DiagnosisMediaMapper">
+
+    <resultMap id="mediaMap" type="map">
+        <id column="id" property="id"/>
+        <result column="diagnosis_id" property="diagnosisId"/>
+        <result column="media_type" property="mediaType"/>
+        <result column="object_key" property="objectKey"/>
+        <result column="transcript" property="transcript"/>
+        <result column="note_text" property="noteText"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diagnosis_media (diagnosis_id, media_type, object_key, transcript, note_text)
+        VALUES (#{diagnosisId}, #{mediaType}, #{objectKey}, #{transcript}, #{noteText})
+    </insert>
+
+    <select id="findByDiagnosisId" parameterType="long" resultMap="mediaMap">
+        SELECT id, diagnosis_id, media_type, object_key, transcript, note_text
+        FROM diagnosis_media WHERE diagnosis_id = #{diagnosisId} ORDER BY id ASC
+    </select>
+
+</mapper>

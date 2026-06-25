@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.diagnosis.DiagnosisMapper">
+
+    <resultMap id="diagMap" type="map">
+        <id column="id" property="id"/>
+        <result column="child_id" property="childId"/>
+        <result column="owner_id" property="ownerId"/>
+        <result column="scale_id" property="scaleId"/>
+        <result column="input_summary" property="inputSummary"/>
+        <result column="dimensions" property="dimensions"/>
+        <result column="draft" property="draft"/>
+        <result column="finalized_content" property="finalizedContent"/>
+        <result column="status" property="status"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diagnosis (child_id, owner_id, scale_id, input_summary, dimensions, draft, finalized_content, status)
+        VALUES (#{childId}, #{ownerId}, #{scaleId}, #{inputSummary}, #{dimensions}, #{draft}, #{finalizedContent}, #{status})
+    </insert>
+
+    <select id="findById" parameterType="long" resultMap="diagMap">
+        SELECT id, child_id, owner_id, scale_id, input_summary, dimensions, draft, finalized_content, status
+        FROM diagnosis WHERE id = #{id}
+    </select>
+
+    <select id="findByChildId" parameterType="long" resultMap="diagMap">
+        SELECT id, child_id, owner_id, scale_id, input_summary, dimensions, draft, finalized_content, status
+        FROM diagnosis WHERE child_id = #{childId} ORDER BY id DESC
+    </select>
+
+    <update id="updateResult">
+        UPDATE diagnosis SET dimensions = #{dimensions}, draft = #{draft} WHERE id = #{id}
+    </update>
+
+    <update id="updateDraftEdited">
+        UPDATE diagnosis SET draft = #{draft} WHERE id = #{id} AND status = 'DRAFT'
+    </update>
+
+    <update id="updateFinalized">
+        UPDATE diagnosis SET finalized_content = #{content}, status = 'FINALIZED' WHERE id = #{id} AND status = 'DRAFT'
+    </update>
+
+</mapper>
