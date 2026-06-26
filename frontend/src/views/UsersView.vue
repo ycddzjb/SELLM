@@ -326,7 +326,7 @@
 </template>
 <!-- PLACEHOLDER_SCRIPT -->
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   listUsers, createUser, listPendingParents, listParents, approveUser, rejectUser, changeMyPassword,
@@ -391,6 +391,15 @@ const orgCityOptions = computed(() => {
   return p ? p.cities : []
 })
 function onOrgProvinceChange() { orgForm.city = '' }
+
+// 下拉选中已有机构名时,同步回填该机构的障碍类型/省份/地市(手输新名则不回填)
+watch(() => orgForm.name, (name) => {
+  const o = orgs.value.find(x => x.name === name)
+  if (!o) return
+  orgForm.disorderCodes = (o.disorderTypes || '').split(',').map(s => s.trim()).filter(Boolean)
+  orgForm.province = o.province || ''
+  orgForm.city = o.city || ''
+})
 
 // 机构列表筛选(省/市/障碍类型)
 const orgFilter = reactive({ province: '', city: '', disorder: '' })
