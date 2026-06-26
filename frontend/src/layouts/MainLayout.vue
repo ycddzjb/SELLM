@@ -11,13 +11,7 @@
           <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/teaching">
             <span>📚 智能教学</span>
           </el-menu-item>
-          <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/aids">
-            <span>🧩 智能教具</span>
-          </el-menu-item>
-          <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/research">
-            <span>🔬 智能科研</span>
-          </el-menu-item>
-          <!-- 智能评估 + 全流程子项(归智能体平台) -->
+          <!-- 智能评估 + 全流程子项(紧随智能教学) -->
           <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/diagnosis">
             <span>🩺 智能评估</span>
           </el-menu-item>
@@ -27,6 +21,12 @@
             <el-menu-item index="/iep"><span class="sub">· 个别化教育计划</span></el-menu-item>
             <el-menu-item index="/training"><span class="sub">· 训练对比评估</span></el-menu-item>
           </template>
+          <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/aids">
+            <span>🧩 智能教具</span>
+          </el-menu-item>
+          <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/research">
+            <span>🔬 智能科研</span>
+          </el-menu-item>
           <el-menu-item v-if="auth.isParent" index="/family-iep">
             <span>🏠 家庭 IEP</span>
           </el-menu-item>
