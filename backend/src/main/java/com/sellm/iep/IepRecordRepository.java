@@ -19,6 +19,7 @@ public class IepRecordRepository {
         Map<String, Object> row = new HashMap<>();
         row.put("reportId", r.getReportId());
         row.put("diagnosisId", r.getDiagnosisId());
+        row.put("cycleId", r.getCycleId());
         row.put("childId", r.getChildId());
         row.put("draft", r.getDraft());
         row.put("finalizedContent", r.getFinalizedContent());
@@ -41,15 +42,17 @@ public class IepRecordRepository {
         return out;
     }
 
-    /** row→IepRecord;report_id/diagnosis_id 均可空(新旧链路二选一),null 安全转换。 */
+    /** row→IepRecord;report_id/diagnosis_id/cycle_id 均可空(多链路),null 安全转换。 */
     private IepRecord toRecord(Map<String, Object> row) {
-        return new IepRecord(
+        IepRecord r = new IepRecord(
             ((Number) row.get("id")).longValue(),
             asLong(row.get("reportId")),
             asLong(row.get("diagnosisId")),
             ((Number) row.get("childId")).longValue(),
             (String) row.get("draft"), (String) row.get("finalizedContent"),
             (String) row.get("status"));
+        r.setCycleId(asLong(row.get("cycleId")));
+        return r;
     }
 
     private static Long asLong(Object v) {

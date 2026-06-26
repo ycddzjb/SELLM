@@ -4,6 +4,7 @@ public class IepRecord {
     private Long id;
     private Long reportId;
     private Long diagnosisId;
+    private Long cycleId;        // 二期:来源训练周期(据阶段评估优化生成的新版 IEP)
     private Long childId;
     private String draft;
     private String finalizedContent;
@@ -33,6 +34,8 @@ public class IepRecord {
     public void setReportId(Long reportId) { this.reportId = reportId; }
     public Long getDiagnosisId() { return diagnosisId; }
     public void setDiagnosisId(Long diagnosisId) { this.diagnosisId = diagnosisId; }
+    public Long getCycleId() { return cycleId; }
+    public void setCycleId(Long cycleId) { this.cycleId = cycleId; }
     public Long getChildId() { return childId; }
     public void setChildId(Long childId) { this.childId = childId; }
     public String getDraft() { return draft; }

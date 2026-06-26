@@ -40,6 +40,25 @@ public class IepService {
         return generate(childName, schoolName, conclusion, profileContext, diagnosisDimensions);
     }
 
+    /**
+     * 二期链路:据阶段评估的方案适配性建议,在原 IEP 基础上优化出新版 IEP。
+     * prompt 强调「保留有效内容、优化低效/不适配内容」。
+     */
+    public Iep generateFromStageEval(String childName, String schoolName,
+                                     String stageEvalReport, String prevIepContent,
+                                     String diagnosisDimensions) {
+        StringBuilder conclusion = new StringBuilder();
+        conclusion.append("阶段评估与方案适配性建议:\n").append(safe(stageEvalReport)).append("\n");
+        if (prevIepContent != null && !prevIepContent.isBlank()) {
+            conclusion.append("原 IEP 方案:\n").append(prevIepContent).append("\n");
+        }
+        if (diagnosisDimensions != null && !diagnosisDimensions.isBlank()) {
+            conclusion.append("诊断维度:\n").append(diagnosisDimensions).append("\n");
+        }
+        conclusion.append("请在原方案基础上据阶段评估调整:保留有效内容,优化低效/不适配的训练内容。");
+        return generate(childName, schoolName, conclusion.toString(), null, diagnosisDimensions);
+    }
+
     private Iep generate(String childName, String schoolName, String conclusion,
                          String profileContext, String dimensionsForQuery) {
         // IEP 个案范例 + 合规/伦理依据,分类召回
