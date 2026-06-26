@@ -20,7 +20,11 @@
         <template #header><span>创建机构(含机构管理员)</span></template>
         <el-form label-width="100px">
           <el-form-item label="机构名称">
-            <el-input v-model="orgForm.name" />
+            <el-select v-model="orgForm.name" filterable allow-create default-first-option
+                       placeholder="选择已有机构或直接输入新机构名" style="width:100%">
+              <el-option v-for="o in orgs" :key="o.id" :label="o.name" :value="o.name" />
+            </el-select>
+            <span style="color:#999;font-size:12px">选已有机构名则只新增管理员(不重复建机构),输入新名则建新机构</span>
           </el-form-item>
           <el-form-item label="障碍类型">
             <el-select v-model="orgForm.disorderCodes" multiple placeholder="可多选" style="width:100%">

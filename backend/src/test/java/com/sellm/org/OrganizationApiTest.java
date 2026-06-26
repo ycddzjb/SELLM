@@ -245,4 +245,39 @@ class OrganizationApiTest {
         mvc.perform(delete("/api/orgs/" + id).header("Authorization", "Bearer " + token))
             .andExpect(status().isForbidden());
     }
+
+    @Test
+    void 创建机构重名则复用不重复建但管理员照常创建() throws Exception {
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepo,
+            "org_dedup_sa", "secret123", "SUPER_ADMIN", null);
+        // 已有同名机构
+        long existingId = orgRepo.save(new Organization(null, "复用康复中心", "南京", "ASD", "江苏省", "南京市")).getId();
+        int before = orgRepo.listAll().size();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("name", "复用康复中心");   // 与已有重名
+        body.put("managerUsername", "reuse_mgr");
+        body.put("managerPassword", "mgrpass123");
+
+        String resp = mvc.perform(post("/api/orgs")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(body)))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        long returnedId = json.readTree(resp).path("data").asLong();
+
+        // 复用已有机构 id,机构数不变
+        org.assertj.core.api.Assertions.assertThat(returnedId).isEqualTo(existingId);
+        org.assertj.core.api.Assertions.assertThat(orgRepo.listAll().size()).isEqualTo(before);
+        // 管理员照常创建并归到该机构(能登录,orgId 指向复用机构)
+        String loginBody = mvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("username", "reuse_mgr", "password", "mgrpass123"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.role").value("MANAGER"))
+            .andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(json.readTree(loginBody).path("data").path("orgId").asLong())
+            .isEqualTo(existingId);
+    }
 }

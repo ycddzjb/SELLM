@@ -32,6 +32,9 @@ public class OrganizationAppService {
      */
     @Transactional
     public Long createWithManager(CreateOrgRequest req) {
+        if (req.getName() == null || req.getName().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "请填写机构名称");
+        }
         if (req.getManagerUsername() == null || req.getManagerUsername().isBlank()
                 || req.getManagerPassword() == null || req.getManagerPassword().isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "请填写机构管理员账号密码");
@@ -39,14 +42,24 @@ public class OrganizationAppService {
         if (userRepository.findByUsername(req.getManagerUsername()) != null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "管理员用户名已存在");
         }
-        // save 内已校验 disorderTypes(Task 2)
-        Organization org = orgRepository.save(new Organization(
-            null, req.getName(), req.getRegion(),
-            req.getDisorderTypes(), req.getProvince(), req.getCity()));
-        // 一体创建该机构 MANAGER(orgId 指向新机构,ACTIVE)
+        // 机构按名去重:重名则复用已有机构(不重复建),管理员照常归到该机构
+        String name = req.getName().trim();
+        Long orgId = orgRepository.listAll().stream()
+            .filter(o -> name.equals(o.getName()))
+            .map(Organization::getId)
+            .findFirst()
+            .orElse(null);
+        if (orgId == null) {
+            // save 内已校验 disorderTypes(Task 2)
+            Organization org = orgRepository.save(new Organization(
+                null, name, req.getRegion(),
+                req.getDisorderTypes(), req.getProvince(), req.getCity()));
+            orgId = org.getId();
+        }
+        // 一体创建该机构 MANAGER(orgId 指向新建或复用的机构,ACTIVE)
         userRepository.register(req.getManagerUsername(), req.getManagerPassword(),
-            Role.MANAGER, org.getId(), "ACTIVE");
-        return org.getId();
+            Role.MANAGER, orgId, "ACTIVE");
+        return orgId;
     }
 
     /** 编辑机构信息(不含管理员)。 */
