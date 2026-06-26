@@ -11,17 +11,18 @@
         <result column="ai_draft" property="aiDraft"/>
         <result column="content" property="content"/>
         <result column="status" property="status"/>
+        <result column="source_id" property="sourceId"/>
     </resultMap>
     <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO teaching_content (owner_id, content_type, title, options, ai_draft, content, status)
-        VALUES (#{ownerId}, #{contentType}, #{title}, #{options}, #{aiDraft}, #{content}, #{status})
+        INSERT INTO teaching_content (owner_id, content_type, title, options, ai_draft, content, status, source_id)
+        VALUES (#{ownerId}, #{contentType}, #{title}, #{options}, #{aiDraft}, #{content}, #{status}, #{sourceId})
     </insert>
     <select id="findById" parameterType="long" resultMap="contentMap">
-        SELECT id, owner_id, content_type, title, options, ai_draft, content, status
+        SELECT id, owner_id, content_type, title, options, ai_draft, content, status, source_id
         FROM teaching_content WHERE id = #{id} AND deleted = 0
     </select>
     <select id="findByOwnerAndType" resultMap="contentMap">
-        SELECT id, owner_id, content_type, title, options, ai_draft, content, status
+        SELECT id, owner_id, content_type, title, options, ai_draft, content, status, source_id
         FROM teaching_content WHERE owner_id = #{ownerId} AND content_type = #{contentType} AND deleted = 0
         ORDER BY id DESC
     </select>

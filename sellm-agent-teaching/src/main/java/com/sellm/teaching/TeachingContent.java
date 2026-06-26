@@ -4,12 +4,13 @@ package com.sellm.teaching;
 public class TeachingContent {
     private Long id;
     private Long ownerId;
-    private String contentType;   // LESSON/COURSEWARE/CASE/EXERCISE
+    private String contentType;   // PLAN/LESSON/COURSEWARE/EXERCISE
     private String title;
     private String options;       // JSON 字符串
     private String aiDraft;
     private String content;
     private String status;        // DRAFT/FINALIZED
+    private Long sourceId;        // 课件关联来源教案 id(可空)
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -27,4 +28,6 @@ public class TeachingContent {
     public void setContent(String content) { this.content = content; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public Long getSourceId() { return sourceId; }
+    public void setSourceId(Long sourceId) { this.sourceId = sourceId; }
 }

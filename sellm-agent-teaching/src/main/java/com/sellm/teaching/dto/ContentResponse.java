@@ -10,6 +10,8 @@ public class ContentResponse {
     private String status;
     private String aiDraft;
     private String content;
+    private String options;
+    private Long sourceId;
 
     public static ContentResponse of(TeachingContent c) {
         ContentResponse r = new ContentResponse();
@@ -19,6 +21,8 @@ public class ContentResponse {
         r.status = c.getStatus();
         r.aiDraft = c.getAiDraft();
         r.content = c.getContent();
+        r.options = c.getOptions();
+        r.sourceId = c.getSourceId();
         return r;
     }
 
@@ -28,4 +32,6 @@ public class ContentResponse {
     public String getStatus() { return status; }
     public String getAiDraft() { return aiDraft; }
     public String getContent() { return content; }
+    public String getOptions() { return options; }
+    public Long getSourceId() { return sourceId; }
 }

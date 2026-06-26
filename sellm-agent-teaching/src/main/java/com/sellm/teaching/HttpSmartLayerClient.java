@@ -61,4 +61,41 @@ public class HttpSmartLayerClient extends AbstractHttpSmartLayerClient implement
             throw new SmartLayerException("智能层响应解析失败", e);
         }
     }
+
+    @Override
+    public String generatePrompt(String contentType, String requirement, String optionsJson) {
+        try {
+            ObjectNode body = json.createObjectNode();
+            body.put("task", contentType == null ? "" : contentType.toLowerCase());
+            body.put("mode", "prompt");   // Python 据此产"提示词"而非正文
+            body.put("requirement", requirement == null ? "" : requirement);
+            if (optionsJson != null && !optionsJson.isBlank()) {
+                body.set("options", json.readTree(optionsJson));
+            }
+            String resp = send("/v1/agents/teaching/invoke", json.writeValueAsString(body));
+            return json.readTree(resp).path("content").asText("");
+        } catch (SmartLayerException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SmartLayerException("智能层响应解析失败", e);
+        }
+    }
+
+    @Override
+    public String generateCoursewareFromLesson(String lessonContent, String optionsJson) {
+        try {
+            ObjectNode body = json.createObjectNode();
+            body.put("task", "courseware_from_lesson");
+            body.put("lessonContent", lessonContent == null ? "" : lessonContent);
+            if (optionsJson != null && !optionsJson.isBlank()) {
+                body.set("options", json.readTree(optionsJson));
+            }
+            String resp = send("/v1/agents/teaching/invoke", json.writeValueAsString(body));
+            return json.readTree(resp).path("content").asText("");
+        } catch (SmartLayerException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new SmartLayerException("智能层响应解析失败", e);
+        }
+    }
 }

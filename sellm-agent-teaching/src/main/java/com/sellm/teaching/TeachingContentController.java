@@ -24,6 +24,41 @@ public class TeachingContentController {
         return Result.ok(ContentResponse.of(appService.generate(userId, req)));
     }
 
+    // ── 无状态草稿生成(不落库):提示词 / 教案正文 / 课件 ──
+
+    @PostMapping("/draft/prompt")
+    public Result<DraftText> draftPrompt(@RequestHeader(value = "X-User-Id", required = false) Long userId,
+                                         @RequestBody GenerateContentRequest req) {
+        requireUser(userId);
+        return Result.ok(new DraftText(appService.genPromptDraft(req)));
+    }
+
+    @PostMapping("/draft/content")
+    public Result<DraftText> draftContent(@RequestHeader(value = "X-User-Id", required = false) Long userId,
+                                          @RequestBody GenerateContentRequest req) {
+        requireUser(userId);
+        return Result.ok(new DraftText(appService.genContentDraft(req)));
+    }
+
+    @PostMapping("/draft/courseware")
+    public Result<DraftText> draftCourseware(@RequestHeader(value = "X-User-Id", required = false) Long userId,
+                                             @RequestBody GenerateContentRequest req) {
+        requireUser(userId);
+        return Result.ok(new DraftText(appService.genCoursewareDraft(userId, req.getLessonId(), req.getSubjectNames())));
+    }
+
+    /** 定稿保存:一次性落库 FINALIZED(草稿态此前不入库)。 */
+    @PostMapping("/finalize-new")
+    public Result<ContentResponse> finalizeNew(@RequestHeader(value = "X-User-Id", required = false) Long userId,
+                                               @RequestBody GenerateContentRequest req) {
+        requireUser(userId);
+        return Result.ok(ContentResponse.of(
+            appService.finalizeNew(userId, req, req.getContent(), req.getSourceId())));
+    }
+
+    /** 草稿文本返回体。 */
+    public record DraftText(String content) {}
+
     @PutMapping("/{id}")
     public Result<ContentResponse> edit(@RequestHeader(value = "X-User-Id", required = false) Long userId,
                                         @PathVariable("id") Long id, @RequestBody EditRequest req) {

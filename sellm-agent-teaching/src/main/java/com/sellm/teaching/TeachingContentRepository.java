@@ -20,6 +20,7 @@ public class TeachingContentRepository {
         row.put("aiDraft", c.getAiDraft());
         row.put("content", c.getContent());
         row.put("status", c.getStatus());
+        row.put("sourceId", c.getSourceId());
         mapper.insert(row);
         c.setId(((Number) row.get("id")).longValue());
         return c;
@@ -56,6 +57,7 @@ public class TeachingContentRepository {
         c.setAiDraft((String) row.get("aiDraft"));
         c.setContent((String) row.get("content"));
         c.setStatus((String) row.get("status"));
+        if (row.get("sourceId") != null) c.setSourceId(((Number) row.get("sourceId")).longValue());
         return c;
     }
 }

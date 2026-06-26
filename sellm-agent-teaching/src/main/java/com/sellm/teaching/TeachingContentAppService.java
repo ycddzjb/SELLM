@@ -70,6 +70,85 @@ public class TeachingContentAppService {
         repo.update(c);
         return c;
     }
+
+    // ── 无状态生成(草稿不落库):教案两步 + 课件;只脱敏→出网→还原,不碰 repo ──
+
+    /** 生成"提示词"草稿(可编辑),不落库。 */
+    public String genPromptDraft(GenerateContentRequest req) {
+        String type = normType(req.getContentType());
+        requireRequirement(req.getRequirement());
+        String optionsJson = writeJson(req.getOptions());
+        String text = (req.getTitle() == null ? "" : req.getTitle() + "\n") + req.getRequirement();
+        return outbound(text, req.getSubjectNames(),
+            (safe) -> smartLayer.generatePrompt(type, safe, optionsJson));
+    }
+
+    /** 据提示词生成正文草稿(可编辑),不落库。 */
+    public String genContentDraft(GenerateContentRequest req) {
+        String type = normType(req.getContentType());
+        if (req.getRequirement() == null || req.getRequirement().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "请输入提示词");
+        }
+        String optionsJson = writeJson(req.getOptions());
+        return outbound(req.getRequirement(), req.getSubjectNames(),   // requirement 此处承载提示词
+            (safe) -> smartLayer.generateContent(type, safe, optionsJson));
+    }
+
+    /** 基于定稿教案正文生成课件草稿(可编辑),不落库。 */
+    public String genCoursewareDraft(Long userId, Long lessonId, List<String> subjectNames) {
+        TeachingContent lesson = requireOwned(userId, lessonId);
+        if (!"LESSON".equals(lesson.getContentType()) || !"FINALIZED".equals(lesson.getStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "请选择已定稿的教案");
+        }
+        String optionsJson = lesson.getOptions();
+        return outbound(lesson.getContent(), subjectNames,
+            (safe) -> smartLayer.generateCoursewareFromLesson(safe, optionsJson));
+    }
+
+    /** 定稿保存:一次性落库 FINALIZED(草稿态此前不入库)。 */
+    public TeachingContent finalizeNew(Long userId, GenerateContentRequest req, String content, Long sourceId) {
+        String type = normType(req.getContentType());
+        if (content == null || content.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "定稿内容不能为空");
+        }
+        TeachingContent c = new TeachingContent();
+        c.setOwnerId(userId);
+        c.setContentType(type);
+        c.setTitle(req.getTitle());
+        c.setOptions(writeJson(req.getOptions()));
+        c.setAiDraft(content);
+        c.setContent(content);
+        c.setStatus("FINALIZED");
+        c.setSourceId(sourceId);
+        return repo.save(c);
+    }
+
+    /** 脱敏→出网→还原 通用封装;脱敏失败硬阻断。 */
+    private String outbound(String text, List<String> names, java.util.function.Function<String, String> call) {
+        try {
+            AnonymizationResult anon = anonymizer.anonymize(text, safeNames(names), List.of());
+            String ai = call.apply(anon.getAnonymizedText());
+            return anonymizer.restore(ai, anon.getRestoreMap());
+        } catch (AnonymizationException ae) {
+            throw new BusinessException(ErrorCode.ANONYMIZATION_FAILED, "脱敏校验未通过,已阻断出网");
+        } catch (SmartLayerException se) {
+            return "AI 生成失败,可重试或手动撰写。";
+        }
+    }
+
+    private String normType(String t) {
+        String type = t == null ? "" : t.toUpperCase();
+        if (!TYPES.contains(type)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "不支持的内容类型: " + t);
+        }
+        return type;
+    }
+
+    private void requireRequirement(String r) {
+        if (r == null || r.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "请输入内容与要求");
+        }
+    }
     public TeachingContent edit(Long userId, Long id, String content) {
         TeachingContent c = requireOwned(userId, id);
         if ("FINALIZED".equals(c.getStatus()))

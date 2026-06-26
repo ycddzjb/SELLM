@@ -37,6 +37,9 @@
           <el-menu-item index="/children">
             <span>👦 儿童档案</span>
           </el-menu-item>
+          <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/teaching-archive">
+            <span>📁 教学档案</span>
+          </el-menu-item>
           <el-menu-item v-if="auth.isSuperAdmin" index="/scale-library">
             <span>📚 量表库管理</span>
           </el-menu-item>

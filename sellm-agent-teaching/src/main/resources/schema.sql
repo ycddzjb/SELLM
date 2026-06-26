@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS teaching_content (
     ai_draft TEXT,
     content TEXT,
     status VARCHAR(16) NOT NULL,         -- DRAFT/FINALIZED
+    source_id BIGINT,                    -- 课件关联来源教案 id(可空)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted TINYINT DEFAULT 0

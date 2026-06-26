@@ -163,4 +163,37 @@ class TeachingContentApiTest {
         assertTrue(anon.capturedNames.contains("小明"), "儿童姓名应进入脱敏屏蔽表");
         assertTrue(anon.capturedNames.contains("阳光小学"), "校名应进入脱敏屏蔽表");
     }
+
+    @Test
+    void 草稿生成不落库定稿才归档() throws Exception {
+        // 生成提示词草稿:返回文本,不落库(列表为空)
+        mvc.perform(post("/api/teaching/contents/draft/prompt")
+                .header("X-User-Id", "60").contentType("application/json")
+                .content(json.writeValueAsString(Map.of(
+                    "contentType", "LESSON", "title", "教案A", "requirement", "认识情绪", "options", Map.of()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.content").isNotEmpty());
+        // 生成正文草稿:同样不落库
+        mvc.perform(post("/api/teaching/contents/draft/content")
+                .header("X-User-Id", "60").contentType("application/json")
+                .content(json.writeValueAsString(Map.of(
+                    "contentType", "LESSON", "requirement", "据提示词生成", "options", Map.of()))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.content").isNotEmpty());
+        // 此时列表应为空(草稿未落库)
+        mvc.perform(get("/api/teaching/contents").param("type", "LESSON").header("X-User-Id", "60"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(0));
+        // 定稿落库:status=FINALIZED
+        mvc.perform(post("/api/teaching/contents/finalize-new")
+                .header("X-User-Id", "60").contentType("application/json")
+                .content(json.writeValueAsString(Map.of(
+                    "contentType", "LESSON", "title", "教案A", "options", Map.of(), "content", "定稿教案正文"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("FINALIZED"));
+        // 列表出现 1 条
+        mvc.perform(get("/api/teaching/contents").param("type", "LESSON").header("X-User-Id", "60"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(1));
+    }
 }

@@ -22,6 +22,7 @@ const routes = [
       { path: 'report', component: () => import('../views/ReportView.vue') },
       { path: 'iep', component: () => import('../views/IepView.vue') },
       { path: 'teaching', component: () => import('../views/TeachingView.vue') },
+      { path: 'teaching-archive', component: () => import('../views/TeachingArchiveView.vue') },
       { path: 'research', component: () => import('../views/ResearchView.vue') },
       { path: 'aids', component: () => import('../views/AidsView.vue') },
       { path: 'qa', component: () => import('../views/QaView.vue') },
