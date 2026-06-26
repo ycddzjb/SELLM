@@ -280,4 +280,32 @@ class OrganizationApiTest {
         org.assertj.core.api.Assertions.assertThat(json.readTree(loginBody).path("data").path("orgId").asLong())
             .isEqualTo(existingId);
     }
+
+    @Test
+    void 重名复用时补全的障碍省市同步到已有机构() throws Exception {
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepo,
+            "org_sync_sa", "secret123", "SUPER_ADMIN", null);
+        // 已有机构信息不全(无障碍/省/市)
+        long id = orgRepo.save(new Organization(null, "待补全中心", null)).getId();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("name", "待补全中心");          // 重名
+        body.put("disorderTypes", "ASD,ADHD");   // 补全
+        body.put("province", "江苏省");
+        body.put("city", "南京市");
+        body.put("managerUsername", "sync_mgr");
+        body.put("managerPassword", "mgrpass123");
+
+        mvc.perform(post("/api/orgs")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(body)))
+            .andExpect(status().isOk());
+
+        // 复用机构的障碍/省/市已被补全更新
+        Organization after = orgRepo.findById(id);
+        org.assertj.core.api.Assertions.assertThat(after.getDisorderTypes()).isEqualTo("ASD,ADHD");
+        org.assertj.core.api.Assertions.assertThat(after.getProvince()).isEqualTo("江苏省");
+        org.assertj.core.api.Assertions.assertThat(after.getCity()).isEqualTo("南京市");
+    }
 }

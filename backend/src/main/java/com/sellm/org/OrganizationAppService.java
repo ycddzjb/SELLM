@@ -42,14 +42,23 @@ public class OrganizationAppService {
         if (userRepository.findByUsername(req.getManagerUsername()) != null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "管理员用户名已存在");
         }
-        // 机构按名去重:重名则复用已有机构(不重复建),管理员照常归到该机构
+        // 机构按名去重:重名则复用已有机构(不重复建);提交的障碍/省/市非空则补全同步到该机构
         String name = req.getName().trim();
-        Long orgId = orgRepository.listAll().stream()
+        Organization existing = orgRepository.listAll().stream()
             .filter(o -> name.equals(o.getName()))
-            .map(Organization::getId)
             .findFirst()
             .orElse(null);
-        if (orgId == null) {
+        Long orgId;
+        if (existing != null) {
+            // 补全:表单值非空则覆盖到已有机构记录(下拉选中后补全的信息同步回列表)
+            boolean changed = false;
+            if (notBlank(req.getDisorderTypes())) { existing.setDisorderTypes(req.getDisorderTypes()); changed = true; }
+            if (notBlank(req.getProvince())) { existing.setProvince(req.getProvince()); changed = true; }
+            if (notBlank(req.getCity())) { existing.setCity(req.getCity()); changed = true; }
+            if (notBlank(req.getRegion())) { existing.setRegion(req.getRegion()); changed = true; }
+            if (changed) orgRepository.update(existing);
+            orgId = existing.getId();
+        } else {
             // save 内已校验 disorderTypes(Task 2)
             Organization org = orgRepository.save(new Organization(
                 null, name, req.getRegion(),
@@ -61,6 +70,8 @@ public class OrganizationAppService {
             Role.MANAGER, orgId, "ACTIVE");
         return orgId;
     }
+
+    private static boolean notBlank(String s) { return s != null && !s.isBlank(); }
 
     /** 编辑机构信息(不含管理员)。 */
     public void update(Long id, CreateOrgRequest req) {
