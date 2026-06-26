@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.training.StageEvalMapper">
+
+    <resultMap id="evalMap" type="map">
+        <id column="id" property="id"/>
+        <result column="cycle_id" property="cycleId"/>
+        <result column="child_id" property="childId"/>
+        <result column="scores_summary" property="scoresSummary"/>
+        <result column="delta_summary" property="deltaSummary"/>
+        <result column="draft" property="draft"/>
+        <result column="finalized_content" property="finalizedContent"/>
+        <result column="status" property="status"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO stage_eval (cycle_id, child_id, scores_summary, delta_summary, draft, finalized_content, status)
+        VALUES (#{cycleId}, #{childId}, #{scoresSummary}, #{deltaSummary}, #{draft}, #{finalizedContent}, #{status})
+    </insert>
+
+    <select id="findById" parameterType="long" resultMap="evalMap">
+        SELECT id, cycle_id, child_id, scores_summary, delta_summary, draft, finalized_content, status
+        FROM stage_eval WHERE id = #{id}
+    </select>
+
+    <select id="findByCycleId" parameterType="long" resultMap="evalMap">
+        SELECT id, cycle_id, child_id, scores_summary, delta_summary, draft, finalized_content, status
+        FROM stage_eval WHERE cycle_id = #{cycleId} ORDER BY id DESC LIMIT 1
+    </select>
+
+    <update id="updateDraftEdited">
+        UPDATE stage_eval SET draft = #{draft} WHERE id = #{id} AND status = 'DRAFT'
+    </update>
+
+    <update id="updateFinalized">
+        UPDATE stage_eval SET finalized_content = #{content}, status = 'FINALIZED' WHERE id = #{id} AND status = 'DRAFT'
+    </update>
+
+</mapper>
