@@ -9,17 +9,17 @@
         <el-menu-item-group title="智能体平台">
           <el-menu-item index="/qa"><span>🤖 问答机器人</span></el-menu-item>
           <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/teaching">
-            <span>📚 教学训练</span>
+            <span>📚 智能教学</span>
           </el-menu-item>
           <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/aids">
             <span>🧩 智能教具</span>
           </el-menu-item>
           <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/research">
-            <span>🔬 教研科研</span>
+            <span>🔬 智能科研</span>
           </el-menu-item>
-          <!-- 康复智能体 + 全流程子项(归智能体平台) -->
+          <!-- 智能评估 + 全流程子项(归智能体平台) -->
           <el-menu-item v-if="auth.isTeacher || auth.isSuperAdmin" index="/diagnosis">
-            <span>🩺 康复智能体</span>
+            <span>🩺 智能评估</span>
           </el-menu-item>
           <template v-if="auth.isTeacher">
             <el-menu-item index="/assessment"><span class="sub">· 量表评估</span></el-menu-item>

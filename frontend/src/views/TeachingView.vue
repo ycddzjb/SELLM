@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3>教学训练</h3>
+    <h3>智能教学</h3>
     <el-tabs v-model="mainTab">
       <el-tab-pane label="训练方案" name="train">
     <p style="color:#888;margin-top:-6px">据定稿 IEP 生成教案草案,人工定稿后可生成课件。AI 仅产草案,需人工把关。</p>

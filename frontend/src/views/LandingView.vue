@@ -7,7 +7,7 @@
 
     <section class="hero">
       <h1>五大智能体,协同赋能特殊教育</h1>
-      <p>问答 · 教学训练 · 康复 · 智能教具 · 教研科研。无需登录,即可体验智能问答。</p>
+      <p>问答 · 智能教学 · 智能评估 · 智能教具 · 智能科研。无需登录,即可体验智能问答。</p>
       <el-button type="primary" size="large" @click="$router.push('/chat')">免登录体验问答 →</el-button>
     </section>
 
@@ -30,10 +30,10 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const modules = [
   { icon: '🤖', title: '问答机器人', desc: '政策法规与专业知识问答,支持文档/图片分析', public: true, path: '/chat' },
-  { icon: '📚', title: '教学训练', desc: '据 IEP 生成教案与课件草案', public: false },
-  { icon: '🩺', title: '康复智能体', desc: '多模态诊断 → IEP 干预计划 → 训练对比评估', public: false },
+  { icon: '📚', title: '智能教学', desc: '据 IEP 生成教案与课件草案', public: false },
+  { icon: '🩺', title: '智能评估', desc: '多模态诊断 → IEP 干预计划 → 训练对比评估', public: false },
   { icon: '🧩', title: '智能教具', desc: '障碍类型教具推荐与文生素材', public: false },
-  { icon: '🔬', title: '教研科研', desc: '课题申报书与量表信效度计算', public: false }
+  { icon: '🔬', title: '智能科研', desc: '课题申报书与量表信效度计算', public: false }
 ]
 function enter(m) { router.push(m.public ? m.path : '/login') }
 </script>

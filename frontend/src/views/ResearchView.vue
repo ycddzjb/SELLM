@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3>教研科研 · 课题书与信效度</h3>
+    <h3>智能科研 · 课题书与信效度</h3>
     <el-tabs v-model="tab">
       <!-- 课题申报书 -->
       <el-tab-pane label="课题申报书" name="proposal">
