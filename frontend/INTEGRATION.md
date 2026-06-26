@@ -373,3 +373,27 @@
 - 后端全量 285 测试 0 失败;全量 clean install 10 模块 SUCCESS;前端 build OK。
 - **本期范围**:多模态诊断 + IEP。**下期**:训练对比评估(训练结果上传、阶段评估、纵向对比、方案适配性判断、保留有效/优化低效)——需训练记录/阶段/版本表,依赖本期闭环。
 - 注:dev 从仓库根目录起后端时 H2 库落 `./data/`(非 backend/data/);schema 变更后须删该库重建,否则旧表缺 category/diagnosis_id 列报错。
+
+---
+
+# 阶段 I(康复 Agent 二期:训练对比评估)联调结果
+
+日期:2026-06-25 · 分支:`feature/special-edu-llm`
+
+依赖一期(诊断+IEP)闭环。验证「训练周期 → 多模态训练数据+指标得分 → 阶段评估(量化 delta + AI 叙述)→ 定稿 → 据适配性生成新版 IEP」全链路 + 纵向对比。后端全量 298 测试 0 失败,集成测试等价覆盖端到端契约。
+
+## 关键验证(集成测试 StageEvalApiTest / NextIepApiTest)
+
+1. 建周期 seq 自增(同一 child 第1/2个周期 seq=1/2)。
+2. 挂多模态训练数据(TEXT/IMAGE/VIDEO/AUDIO 复用 MediaRecognizer 识别),scores JSON 指标得分落库;noteText 出网前脱敏硬阻断。
+3. 阶段评估:周期1(bead=2)首期无上期 delta=null;周期2(bead=4)对比周期1 → delta=+2、reached=true(4/4≥80%)、improvedItems=1。量化部分纯 Java 计算,不依赖 AI。
+4. AI 叙述(stub):能力提升/未达标/方案适配性建议;DRAFT→定稿冻结(定稿后编辑返 400)。
+5. 纵向对比 `GET /compare?childId=`:返回各周期阶段评估(2 条),前端表格展示达标/进步项。
+6. `POST /{cycleId}/next-iep`:据阶段评估适配性建议 + 原 IEP + 诊断维度 → 新版 IEP DRAFT,关联 cycle_id 并回挂周期 iepId;未生成阶段评估时返 400。
+
+## 联调结论
+
+- 训练对比评估闭环跑通,周期串联「诊断→IEP→训练数据→阶段评估→新IEP」形成「评估-优化-再训练」循环。
+- 量化 delta(本期 vs 上期 seq-1,达标阈值 80%)+ AI 适配性叙述(保留有效/优化低效)双轨;教师未录指标得分时量化退化为空,AI 叙述仍可产(降级)。
+- 红线沿用:脱敏硬阻断、AI 仅产 DRAFT 人工定稿、行级 AccessGuard、端点 RBAC(训练写限 TEACHER/MANAGER)、多模态识别复用一期(ASR/视频默认 mock 不外联)。
+- 后端全量 298 测试 0 失败;全量 clean install 10 模块 SUCCESS;前端 build OK。

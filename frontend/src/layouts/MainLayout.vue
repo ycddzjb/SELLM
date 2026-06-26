@@ -29,6 +29,7 @@
           <el-menu-item v-if="auth.isTeacher" index="/diagnosis">多模态诊断</el-menu-item>
           <el-menu-item v-if="auth.isTeacher" index="/report">评估报告</el-menu-item>
           <el-menu-item v-if="auth.isTeacher" index="/iep">个别化教育计划</el-menu-item>
+          <el-menu-item v-if="auth.isTeacher" index="/training">训练对比评估</el-menu-item>
         </el-menu-item-group>
 
         <!-- ── 平台管理 ── -->
