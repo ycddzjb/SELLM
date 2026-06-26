@@ -11,6 +11,9 @@ spring:
       discovery:
         server-addr: ${SELLM_NACOS_ADDR:127.0.0.1:8848}
     gateway:
+      httpclient:
+        connect-timeout: 5000           # 连接超时 5s
+        response-timeout: 370s          # 响应超时 370s(容纳下游真实 LLM 生成,略大于 agent smart-layer 360s)
       routes:
         # backend 经 Nacos 注册为 agent-assessment，lb 负载均衡
         - id: agent-assessment
