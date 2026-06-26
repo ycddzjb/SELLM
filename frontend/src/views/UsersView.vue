@@ -505,7 +505,7 @@ async function onCreateOrg() {
     orgForm.city = ''
     orgForm.managerUsername = ''
     orgForm.managerPassword = ''
-    await loadOrgs()
+    await Promise.all([loadOrgs(), loadUsers()])   // 即时同步机构列表 + 全部用户(新管理员)
   } catch (e) {} finally { orgLoading.value = false }
 }
 
