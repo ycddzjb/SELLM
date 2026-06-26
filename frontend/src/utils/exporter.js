@@ -1,7 +1,14 @@
-// 教学内容导出:Word(docx) + 一键 PPT(pptxgenjs)。纯前端,不外联。
+// 教学内容导出:Word(docx) + 一键 PPT(pptxgenjs) + Markdown。纯前端,不外联。
 import { Document, Packer, Paragraph, HeadingLevel, TextRun } from 'docx'
 import PptxGenJS from 'pptxgenjs'
 import { saveAs } from 'file-saver'
+
+/** 导出 Markdown:# 标题 + 正文。 */
+export function exportMarkdown(title, content) {
+  const md = `# ${title || '教学内容'}\n\n${content || ''}\n`
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
+  saveAs(blob, `${title || '教学内容'}.md`)
+}
 
 /** 导出 Word:标题 + 正文(按行分段)。 */
 export async function exportWord(title, content) {

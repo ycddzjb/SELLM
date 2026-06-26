@@ -47,3 +47,16 @@ export const QUESTION_DIRECTIONS = [
   { code: 'LOGIC', label: '逻辑推理' },
   { code: 'LIFE_SKILL', label: '生活技能' }
 ]
+
+// 三子功能(训练方案/教案/课件)用:学段细化(学前 + 小学1-6 + 初中7-9);label 直接作选项值
+export const TEACHING_STAGES = [
+  { label: '学前' },
+  { label: '小学一年级' }, { label: '小学二年级' }, { label: '小学三年级' },
+  { label: '小学四年级' }, { label: '小学五年级' }, { label: '小学六年级' },
+  { label: '初中七年级' }, { label: '初中八年级' }, { label: '初中九年级' }
+]
+
+// 教学场景
+export const TEACHING_SCENES = [
+  { label: '家庭' }, { label: '机构' }, { label: '学校' }
+]

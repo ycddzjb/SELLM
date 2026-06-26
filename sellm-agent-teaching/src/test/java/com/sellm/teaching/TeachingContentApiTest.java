@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * 教学模块统一内容(教案/课件/案例/习题)API 回归。
+ * 教学模块统一内容(训练方案/教案/课件/习题)API 回归。
  * 覆盖:生成→DRAFT、按 type 列表、编辑、定稿冻结、行级权限、出网脱敏屏蔽表、脱敏失败硬阻断。
  */
 @SpringBootTest
@@ -81,7 +81,7 @@ class TeachingContentApiTest {
 
     @Test
     void 四类内容均可生成为DRAFT() throws Exception {
-        for (String t : List.of("LESSON", "COURSEWARE", "CASE", "EXERCISE")) {
+        for (String t : List.of("PLAN", "LESSON", "COURSEWARE", "EXERCISE")) {
             mvc.perform(post("/api/teaching/contents")
                     .header("X-User-Id", "5").contentType("application/json")
                     .content(json.writeValueAsString(Map.of(
@@ -120,7 +120,7 @@ class TeachingContentApiTest {
 
     @Test
     void 编辑后定稿且定稿后不可编辑() throws Exception {
-        Long id = generate(5L, "CASE", "案例", "要求", Map.of("subject", "生活语文"));
+        Long id = generate(5L, "PLAN", "训练方案", "要求", Map.of("subject", "生活语文"));
         mvc.perform(put("/api/teaching/contents/" + id)
                 .header("X-User-Id", "5").contentType("application/json")
                 .content(json.writeValueAsString(Map.of("content", "我编辑后的内容"))))

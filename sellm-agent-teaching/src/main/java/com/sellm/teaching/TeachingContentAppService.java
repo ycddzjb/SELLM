@@ -21,7 +21,7 @@ import java.util.Set;
 @Service
 public class TeachingContentAppService {
 
-    private static final Set<String> TYPES = Set.of("LESSON", "COURSEWARE", "CASE", "EXERCISE");
+    private static final Set<String> TYPES = Set.of("PLAN", "LESSON", "COURSEWARE", "EXERCISE");
 
     private final TeachingContentRepository repo;
     private final SmartLayerClient smartLayer;
