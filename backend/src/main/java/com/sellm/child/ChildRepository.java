@@ -70,6 +70,11 @@ public class ChildRepository {
         return true;
     }
 
+    /** 机构下儿童数(机构软删非空拦截用)。 */
+    public long countByOrg(Long orgId) {
+        return mapper.countByOrg(orgId);
+    }
+
     private Child toChild(Map<String, Object> row) {
         Long orgId = row.get("orgId") == null ? null : ((Number) row.get("orgId")).longValue();
         Long guardian = row.get("guardianUserId") == null ? null : ((Number) row.get("guardianUserId")).longValue();

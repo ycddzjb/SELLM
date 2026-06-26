@@ -21,4 +21,5 @@ public interface AppUserMapper {
     void updateStatus(@Param("id") Long id, @Param("status") String status);
     void updatePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash);
     long countActiveByRole(@Param("role") String role);
+    long countByOrg(@Param("orgId") Long orgId);
 }

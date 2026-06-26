@@ -18,12 +18,24 @@
     </insert>
 
     <select id="findById" parameterType="long" resultMap="orgMap">
-        SELECT id, name, region, disorder_types, province, city FROM organization WHERE id = #{id}
+        SELECT id, name, region, disorder_types, province, city FROM organization
+        WHERE id = #{id} AND (deleted = 0 OR deleted IS NULL)
     </select>
 
     <select id="findAll" resultMap="orgMap">
-        SELECT id, name, region, disorder_types, province, city FROM organization ORDER BY id
+        SELECT id, name, region, disorder_types, province, city FROM organization
+        WHERE deleted = 0 OR deleted IS NULL ORDER BY id
     </select>
+
+    <update id="update" parameterType="map">
+        UPDATE organization SET name = #{name}, region = #{region},
+            disorder_types = #{disorderTypes}, province = #{province}, city = #{city}
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDelete">
+        UPDATE organization SET deleted = 1 WHERE id = #{id}
+    </update>
 
 </mapper>
 

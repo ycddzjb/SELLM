@@ -17,4 +17,6 @@ public interface ChildMapper {
     void update(Map<String, Object> row);
 
     void deleteById(@Param("id") Long id);
+
+    long countByOrg(@Param("orgId") Long orgId);
 }

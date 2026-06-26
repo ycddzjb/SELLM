@@ -175,4 +175,74 @@ class OrganizationApiTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isForbidden());
     }
+
+    @Test
+    void 超管编辑机构成功() throws Exception {
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepo,
+            "org_edit_sa", "secret123", "SUPER_ADMIN", null);
+        long id = orgRepo.save(new Organization(null, "待改机构", "南京", "ASD", "江苏省", "南京市")).getId();
+
+        mvc.perform(put("/api/orgs/" + id)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of(
+                    "name", "已改机构", "disorderTypes", "ADHD", "province", "浙江省", "city", "杭州市"))))
+            .andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(orgRepo.findById(id).getName()).isEqualTo("已改机构");
+    }
+
+    @Test
+    void 软删空机构后列表不含() throws Exception {
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepo,
+            "org_del_sa", "secret123", "SUPER_ADMIN", null);
+        long id = orgRepo.save(new Organization(null, "空机构待删", "南京")).getId();
+
+        mvc.perform(delete("/api/orgs/" + id).header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(orgRepo.findById(id)).isNull();
+    }
+
+    @Test
+    void 机构下有用户时删被拦400() throws Exception {
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepo,
+            "org_del_busy", "secret123", "SUPER_ADMIN", null);
+        long id = orgRepo.save(new Organization(null, "有用户机构", "南京")).getId();
+        // 该机构下挂一个用户
+        userRepo.register("busy_mgr", "pw123456", com.sellm.security.Role.MANAGER, id, "ACTIVE");
+
+        mvc.perform(delete("/api/orgs/" + id).header("Authorization", "Bearer " + token))
+            .andExpect(status().isBadRequest());
+        // 未被软删
+        org.assertj.core.api.Assertions.assertThat(orgRepo.findById(id)).isNotNull();
+    }
+
+    @Test
+    void 批量建机构逐条容错返回成功数与失败明细() throws Exception {
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepo,
+            "org_batch_sa", "secret123", "SUPER_ADMIN", null);
+
+        var ok = Map.of("name", "批量机构A", "managerUsername", "batch_a", "managerPassword", "pw123456");
+        var bad = Map.of("name", "批量机构B");   // 缺管理员账号密码 → 失败
+        mvc.perform(post("/api/orgs/batch")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(java.util.List.of(ok, bad))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.success").value(1))
+            .andExpect(jsonPath("$.data.failures.length()").value(1));
+    }
+
+    @Test
+    void 非超管编辑或删除机构被拒() throws Exception {
+        String token = AuthTestSupport.registerAndLogin(mvc, json, userRepo,
+            "org_mgr3", "secret123", "MANAGER", 1L);
+        long id = orgRepo.save(new Organization(null, "机构X", "南京")).getId();
+
+        mvc.perform(put("/api/orgs/" + id).header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("name", "x"))))
+            .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/orgs/" + id).header("Authorization", "Bearer " + token))
+            .andExpect(status().isForbidden());
+    }
 }

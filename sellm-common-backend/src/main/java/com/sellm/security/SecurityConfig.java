@@ -65,6 +65,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/orgs/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/orgs/public/*/classes").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/orgs").hasRole("SUPER_ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/orgs/batch").hasRole("SUPER_ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/orgs/*").hasRole("SUPER_ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/orgs/*").hasRole("SUPER_ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/orgs").hasRole("SUPER_ADMIN")
                 // 公开:班级下老师(注册选审核老师),免登录;放在 /api/classes 通配规则之前
                 .requestMatchers(HttpMethod.GET, "/api/classes/public/*/teachers").permitAll()

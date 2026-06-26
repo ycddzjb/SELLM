@@ -53,4 +53,8 @@
         DELETE FROM child WHERE id = #{id}
     </delete>
 
+    <select id="countByOrg" resultType="long">
+        SELECT COUNT(*) FROM child WHERE org_id = #{orgId}
+    </select>
+
 </mapper>

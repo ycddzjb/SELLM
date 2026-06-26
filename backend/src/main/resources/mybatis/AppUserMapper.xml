@@ -83,4 +83,8 @@
         SELECT COUNT(*) FROM app_user WHERE role = #{role} AND status = 'ACTIVE'
     </select>
 
+    <select id="countByOrg" resultType="long">
+        SELECT COUNT(*) FROM app_user WHERE org_id = #{orgId} AND status &lt;&gt; 'DISABLED'
+    </select>
+
 </mapper>

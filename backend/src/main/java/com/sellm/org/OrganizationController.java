@@ -6,9 +6,11 @@ import com.sellm.clazz.dto.ClazzResponse;
 import com.sellm.common.Result;
 import com.sellm.org.dto.CreateOrgRequest;
 import com.sellm.org.dto.OrgResponse;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -57,6 +59,26 @@ public class OrganizationController {
     @GetMapping
     public Result<List<OrgResponse>> listAll() {
         return Result.ok(toResponses());
+    }
+
+    /** 超管:编辑机构信息(端点级限 SUPER_ADMIN)。 */
+    @PutMapping("/{id}")
+    public Result<Void> update(@PathVariable Long id, @RequestBody CreateOrgRequest req) {
+        appService.update(id, req);
+        return Result.ok(null);
+    }
+
+    /** 超管:软删机构(机构下有用户/儿童则拦截;端点级限 SUPER_ADMIN)。 */
+    @DeleteMapping("/{id}")
+    public Result<Void> delete(@PathVariable Long id) {
+        appService.delete(id);
+        return Result.ok(null);
+    }
+
+    /** 超管:批量创建机构(含机构管理员),逐条容错,返回成功数+失败明细。 */
+    @PostMapping("/batch")
+    public Result<OrganizationAppService.BatchResult> batchCreate(@RequestBody List<CreateOrgRequest> list) {
+        return Result.ok(appService.batchCreate(list));
     }
 
     private List<OrgResponse> toResponses() {

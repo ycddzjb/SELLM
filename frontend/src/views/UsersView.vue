@@ -49,7 +49,18 @@
       </el-card>
 
       <el-card style="margin-bottom:24px">
-        <template #header><span>机构列表</span></template>
+        <template #header>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>机构列表</span>
+            <div style="display:flex;gap:8px">
+              <el-button size="small" @click="onDownloadOrgTemplate">下载导入模板</el-button>
+              <el-upload :show-file-list="false" :before-upload="onImportOrgs" accept=".xlsx,.xls" style="display:inline-block">
+                <el-button size="small" type="primary" :loading="orgImporting">批量导入</el-button>
+              </el-upload>
+              <el-button size="small" @click="onExportOrgs">导出 Excel</el-button>
+            </div>
+          </div>
+        </template>
         <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
           <el-select v-model="orgFilter.province" placeholder="按省份" clearable filterable style="width:160px" @change="orgFilter.city=''">
             <el-option v-for="p in PROVINCES" :key="p.name" :label="p.name" :value="p.name" />
@@ -62,19 +73,55 @@
           </el-select>
         </div>
         <el-table :data="filteredOrgs" size="small">
-          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column prop="id" label="ID" width="70" />
           <el-table-column prop="name" label="名称" />
           <el-table-column label="障碍类型">
             <template #default="{ row }">{{ disorderCsvToLabels(row.disorderTypes) }}</template>
           </el-table-column>
-          <el-table-column prop="province" label="省份" width="100" />
-          <el-table-column prop="city" label="地市" width="100" />
+          <el-table-column prop="province" label="省份" width="90" />
+          <el-table-column prop="city" label="地市" width="90" />
+          <el-table-column label="操作" width="140">
+            <template #default="{ row }">
+              <el-button size="small" @click="openEditOrg(row)">编辑</el-button>
+              <el-button size="small" type="danger" @click="onDeleteOrg(row)">删除</el-button>
+            </template>
+          </el-table-column>
         </el-table>
         <el-empty v-if="!filteredOrgs.length" description="无匹配机构" :image-size="60" />
       </el-card>
 
+      <el-dialog v-model="editOrgDialog" title="编辑机构" width="460px">
+        <el-form label-width="90px">
+          <el-form-item label="机构名称"><el-input v-model="editOrgForm.name" /></el-form-item>
+          <el-form-item label="障碍类型">
+            <el-select v-model="editOrgForm.disorderCodes" multiple placeholder="可多选" style="width:100%">
+              <el-option v-for="d in DISORDER_TYPES" :key="d.code" :label="d.label" :value="d.code" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="省份">
+            <el-select v-model="editOrgForm.province" placeholder="选择省份" filterable style="width:100%" @change="editOrgForm.city=''">
+              <el-option v-for="p in PROVINCES" :key="p.name" :label="p.name" :value="p.name" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="地市">
+            <el-select v-model="editOrgForm.city" placeholder="先选省份" filterable :disabled="!editOrgForm.province" style="width:100%">
+              <el-option v-for="c in editOrgCityOptions" :key="c" :label="c" :value="c" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="editOrgDialog=false">取消</el-button>
+          <el-button type="primary" :loading="editOrgLoading" @click="onSaveOrg">保存</el-button>
+        </template>
+      </el-dialog>
+
       <el-card>
-        <template #header><span>全部用户</span></template>
+        <template #header>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span>全部用户</span>
+            <el-button size="small" @click="onExportUsers">导出 Excel</el-button>
+          </div>
+        </template>
         <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
           <el-select v-model="userFilter.province" placeholder="按地区(省)" clearable filterable style="width:150px">
             <el-option v-for="p in PROVINCES" :key="p.name" :label="p.name" :value="p.name" />
@@ -123,8 +170,10 @@
               <el-option label="家长" value="PARENT" />
             </el-select>
           </el-form-item>
-          <el-form-item label="机构ID">
-            <el-input v-model.number="editUserForm.orgId" placeholder="机构 ID(可空)" />
+          <el-form-item label="机构">
+            <el-select v-model="editUserForm.orgId" placeholder="选择机构(可空)" clearable filterable style="width:100%">
+              <el-option v-for="o in orgs" :key="o.id" :label="o.name" :value="o.id" />
+            </el-select>
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="editUserForm.status" style="width:100%">
@@ -279,10 +328,11 @@ import {
   listUsers, createUser, listPendingParents, listParents, approveUser, rejectUser, changeMyPassword,
   listPendingWeChat, activateWeChat, rejectWeChat, updateUser, deleteUser, resetUserPassword
 } from '../api/users'
-import { listOrgs, createOrg } from '../api/orgs'
+import { listOrgs, createOrg, updateOrg, deleteOrg, batchCreateOrgs } from '../api/orgs'
 import { listClasses } from '../api/classes'
 import { DISORDER_TYPES, disorderCsvToLabels } from '../api/meta'
 import { PROVINCES } from '../api/regions'
+import { exportSheet, exportTemplate, parseSheet } from '../utils/xlsxExport'
 import { useAuthStore } from '../stores/auth'
 
 const ROLE_LABELS = {
@@ -444,6 +494,102 @@ async function onCreateOrg() {
     orgForm.managerPassword = ''
     await loadOrgs()
   } catch (e) {} finally { orgLoading.value = false }
+}
+
+// ---- 机构 编辑 / 删除 ----
+const editOrgDialog = ref(false)
+const editOrgLoading = ref(false)
+const editOrgForm = reactive({ id: null, name: '', disorderCodes: [], province: '', city: '' })
+const editOrgCityOptions = computed(() => {
+  const p = PROVINCES.find(x => x.name === editOrgForm.province)
+  return p ? p.cities : []
+})
+function openEditOrg(row) {
+  editOrgForm.id = row.id
+  editOrgForm.name = row.name
+  editOrgForm.disorderCodes = (row.disorderTypes || '').split(',').map(s => s.trim()).filter(Boolean)
+  editOrgForm.province = row.province || ''
+  editOrgForm.city = row.city || ''
+  editOrgDialog.value = true
+}
+async function onSaveOrg() {
+  if (!editOrgForm.name) { ElMessage.warning('请填写机构名称'); return }
+  editOrgLoading.value = true
+  try {
+    await updateOrg(editOrgForm.id, {
+      name: editOrgForm.name,
+      disorderTypes: editOrgForm.disorderCodes.join(','),
+      province: editOrgForm.province,
+      city: editOrgForm.city
+    })
+    ElMessage.success('已保存')
+    editOrgDialog.value = false
+    await loadOrgs()   // 同步:机构名下拉(用户筛选/编辑)随之刷新
+  } catch (e) {} finally { editOrgLoading.value = false }
+}
+async function onDeleteOrg(row) {
+  try {
+    await ElMessageBox.confirm(`确认删除机构「${row.name}」?机构下有用户或儿童时将被拦截。`, '确认删除', { type: 'warning' })
+  } catch { return }
+  try {
+    await deleteOrg(row.id)
+    ElMessage.success('已删除')
+    await loadOrgs()
+  } catch (e) {}
+}
+
+// ---- 机构 批量导入 / 导出 / 模板 ----
+const orgImporting = ref(false)
+function onDownloadOrgTemplate() {
+  exportTemplate('机构导入模板',
+    ['机构名称', '省份', '地市', '障碍类型(逗号分隔代码)', '管理员账号', '管理员密码'],
+    [['示例康复中心', '江苏省', '南京市', 'ASD,ADHD', 'mgr_demo', 'pwd123456']])
+}
+function onExportOrgs() {
+  exportSheet('机构列表', '机构', filteredOrgs.value.map(o => ({
+    id: o.id, name: o.name,
+    disorderTypes: disorderCsvToLabels(o.disorderTypes),
+    province: o.province, city: o.city
+  })), [
+    { key: 'id', label: 'ID' }, { key: 'name', label: '机构名称' },
+    { key: 'disorderTypes', label: '障碍类型' },
+    { key: 'province', label: '省份' }, { key: 'city', label: '地市' }
+  ])
+}
+async function onImportOrgs(file) {
+  orgImporting.value = true
+  try {
+    const rows = await parseSheet(file)
+    const list = rows.map(r => ({
+      name: (r['机构名称'] || '').toString().trim(),
+      province: (r['省份'] || '').toString().trim(),
+      city: (r['地市'] || '').toString().trim(),
+      disorderTypes: (r['障碍类型(逗号分隔代码)'] || '').toString().trim(),
+      managerUsername: (r['管理员账号'] || '').toString().trim(),
+      managerPassword: (r['管理员密码'] || '').toString().trim()
+    })).filter(o => o.name)
+    if (!list.length) { ElMessage.warning('未解析到有效机构行'); return }
+    const res = await batchCreateOrgs(list)
+    const msg = `导入完成:成功 ${res.success} 条` +
+      (res.failures && res.failures.length ? `,失败 ${res.failures.length} 条:\n${res.failures.join('\n')}` : '')
+    ElMessageBox.alert(msg, '批量导入结果', { type: res.failures && res.failures.length ? 'warning' : 'success' })
+    await loadOrgs()
+  } catch (e) {
+    ElMessage.error('导入失败,请检查文件格式')
+  } finally { orgImporting.value = false }
+  return false   // 阻止 el-upload 默认上传
+}
+
+// ---- 全部用户 导出 ----
+function onExportUsers() {
+  exportSheet('全部用户', '用户', filteredUsers.value.map(u => ({
+    id: u.id, username: u.username, role: roleLabel(u.role),
+    orgName: orgName(u.orgId), status: statusLabel(u.status)
+  })), [
+    { key: 'id', label: 'ID' }, { key: 'username', label: '用户名' },
+    { key: 'role', label: '角色' }, { key: 'orgName', label: '机构' },
+    { key: 'status', label: '状态' }
+  ])
 }
 
 // ---- 管理者 ----

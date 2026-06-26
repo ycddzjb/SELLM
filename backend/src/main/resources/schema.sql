@@ -105,6 +105,8 @@ CREATE TABLE IF NOT EXISTS organization (
 ALTER TABLE organization ADD COLUMN IF NOT EXISTS disorder_types VARCHAR(256);
 ALTER TABLE organization ADD COLUMN IF NOT EXISTS province VARCHAR(64);
 ALTER TABLE organization ADD COLUMN IF NOT EXISTS city VARCHAR(64);
+-- 机构软删(置 1 即停用,列表默认过滤)
+ALTER TABLE organization ADD COLUMN IF NOT EXISTS deleted TINYINT DEFAULT 0;
 
 -- (Task 3 追加 app_user 表,表名 app_user 避开 SQL 保留字 user)
 CREATE TABLE IF NOT EXISTS app_user (

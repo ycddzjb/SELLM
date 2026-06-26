@@ -122,6 +122,11 @@ public class UserRepository {
         return mapper.countActiveByRole(role);
     }
 
+    /** 机构下非停用用户数(机构软删非空拦截用)。 */
+    public long countByOrg(Long orgId) {
+        return mapper.countByOrg(orgId);
+    }
+
     public void changePassword(Long userId, String rawPassword) {
         mapper.updatePassword(userId, passwordEncoder.encode(rawPassword));
     }

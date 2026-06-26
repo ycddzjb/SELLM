@@ -10,4 +10,6 @@ public interface OrganizationMapper {
     void insert(Map<String, Object> row);
     Map<String, Object> findById(@Param("id") Long id);
     List<Map<String, Object>> findAll();
+    void update(Map<String, Object> row);
+    void softDelete(@Param("id") Long id);
 }

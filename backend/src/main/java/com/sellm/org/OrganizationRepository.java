@@ -56,5 +56,21 @@ public class OrganizationRepository {
         Organization org = findById(orgId);
         return org == null ? "未知机构" : org.getName();
     }
+
+    public void update(Organization org) {
+        DisorderType.validateCsv(org.getDisorderTypes());
+        Map<String, Object> row = new HashMap<>();
+        row.put("id", org.getId());
+        row.put("name", org.getName());
+        row.put("region", org.getRegion());
+        row.put("disorderTypes", org.getDisorderTypes());
+        row.put("province", org.getProvince());
+        row.put("city", org.getCity());
+        mapper.update(row);
+    }
+
+    public void softDelete(Long id) {
+        mapper.softDelete(id);
+    }
 }
 
