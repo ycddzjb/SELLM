@@ -175,10 +175,12 @@ CREATE TABLE IF NOT EXISTS report (
 
 -- (Task 10 追加 iep 表:IEP 记录落库)
 -- 阶段(诊断+IEP)变更:report_id 改可空(新链路基于诊断),加 diagnosis_id;二者至少一个非空。
+-- 二期(训练对比评估):加 cycle_id 记录来源训练周期(据阶段评估优化生成的新版 IEP)。
 CREATE TABLE IF NOT EXISTS iep (
     id            BIGINT PRIMARY KEY AUTO_INCREMENT,
     report_id     BIGINT,
     diagnosis_id  BIGINT,
+    cycle_id      BIGINT,
     child_id      BIGINT NOT NULL,
     draft         TEXT NOT NULL,
     finalized_content TEXT,
@@ -209,5 +211,44 @@ CREATE TABLE IF NOT EXISTS diagnosis_media (
     object_key      VARCHAR(256),           -- 对象存储 key;纯文本可空
     transcript      TEXT,                   -- 识别结果(ASR 转写/视频理解/图片描述)
     note_text       VARCHAR(2048),
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ── 二期:训练对比评估 ──
+-- 训练周期/阶段:串起「诊断→IEP→训练数据→阶段评估」;一个 child 多个周期,seq 递增。
+CREATE TABLE IF NOT EXISTS training_cycle (
+    id           BIGINT PRIMARY KEY AUTO_INCREMENT,
+    child_id     BIGINT NOT NULL,
+    owner_id     BIGINT NOT NULL,
+    diagnosis_id BIGINT,
+    iep_id       BIGINT,
+    seq          INT NOT NULL,            -- 第几阶段(从1递增)
+    title        VARCHAR(255),
+    status       VARCHAR(16) NOT NULL,    -- ACTIVE / CLOSED
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 训练数据:多模态训练记录 + 教师录入/采纳的指标得分。
+CREATE TABLE IF NOT EXISTS training_record (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    cycle_id    BIGINT NOT NULL,
+    media_type  VARCHAR(16) NOT NULL,     -- TEXT / IMAGE / VIDEO / AUDIO
+    object_key  VARCHAR(256),
+    transcript  TEXT,                     -- 多模态识别结果
+    note_text   VARCHAR(2048),
+    scores      TEXT,                     -- JSON:[{item,score,maxScore}] 指标得分
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 阶段评估报告:量化 delta(本周期 vs 上一周期)+ AI 叙述(提升/未达标/适配性建议)。
+CREATE TABLE IF NOT EXISTS stage_eval (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    cycle_id        BIGINT NOT NULL,
+    child_id        BIGINT NOT NULL,
+    scores_summary  TEXT,                 -- JSON:本期各指标得分汇总
+    delta_summary   TEXT,                 -- JSON:对比上一周期 delta/达标判定
+    draft           TEXT,                 -- AI 叙述草案
+    finalized_content TEXT,
+    status          VARCHAR(16) NOT NULL, -- DRAFT / FINALIZED
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

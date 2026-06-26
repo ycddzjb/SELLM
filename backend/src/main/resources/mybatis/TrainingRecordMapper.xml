@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sellm.training.TrainingRecordMapper">
+
+    <resultMap id="recordMap" type="map">
+        <id column="id" property="id"/>
+        <result column="cycle_id" property="cycleId"/>
+        <result column="media_type" property="mediaType"/>
+        <result column="object_key" property="objectKey"/>
+        <result column="transcript" property="transcript"/>
+        <result column="note_text" property="noteText"/>
+        <result column="scores" property="scores"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO training_record (cycle_id, media_type, object_key, transcript, note_text, scores)
+        VALUES (#{cycleId}, #{mediaType}, #{objectKey}, #{transcript}, #{noteText}, #{scores})
+    </insert>
+
+    <select id="findByCycleId" parameterType="long" resultMap="recordMap">
+        SELECT id, cycle_id, media_type, object_key, transcript, note_text, scores
+        FROM training_record WHERE cycle_id = #{cycleId} ORDER BY id ASC
+    </select>
+
+</mapper>
