@@ -5,7 +5,7 @@
       <p>欢迎,{{ auth.username }} <el-tag size="small">{{ auth.roleLabel }}</el-tag>
         <span v-if="auth.orgLabel" style="color:#909399"> · {{ auth.orgLabel }}</span>
       </p>
-      <p class="sub">五大智能体协同:问答 · 教学训练 · 评估干预 · 智能教具 · 教研科研。选择一个开始工作。</p>
+      <p class="sub">五大智能体协同:问答 · 教学训练 · 康复 · 智能教具 · 教研科研。选择一个开始工作。</p>
     </div>
 
     <div class="grid">
@@ -30,7 +30,7 @@ const router = useRouter()
 const modules = [
   { path: '/qa', icon: '🤖', title: '问答机器人', desc: '政策法规、专业知识问答,RAG 检索增强,业务意图智能引导', roles: ['SUPER_ADMIN', 'MANAGER', 'TEACHER', 'PARENT'] },
   { path: '/teaching', icon: '📚', title: '教学训练', desc: '据定稿 IEP 生成教案与课件草案,人工定稿', roles: ['SUPER_ADMIN', 'TEACHER'] },
-  { path: '/assessment', icon: '📋', title: '评估干预', desc: '量表评估打分 → 生成报告 → 个别化教育计划(IEP)', roles: ['SUPER_ADMIN', 'TEACHER'] },
+  { path: '/diagnosis', icon: '🩺', title: '康复智能体', desc: '多模态诊断(文本/图片/视频/语音)→ IEP 干预计划 → 训练对比评估,聚焦特殊儿童康复', roles: ['SUPER_ADMIN', 'TEACHER'] },
   { path: '/aids', icon: '🧩', title: '智能教具', desc: '按障碍类型推荐教具,文生教学素材(插图/绘本/音视频)', roles: ['SUPER_ADMIN', 'TEACHER'] },
   { path: '/research', icon: '🔬', title: '教研科研', desc: '课题申报书生成,量表信效度(Cronbach α)计算', roles: ['SUPER_ADMIN', 'TEACHER'] }
 ]
