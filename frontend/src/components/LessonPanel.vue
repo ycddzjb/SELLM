@@ -43,17 +43,8 @@
             <span>正常 <el-input-number v-model="form.normal" :min="0" :max="100" size="small" controls-position="right" style="width:90px" /></span>
           </div>
         </el-form-item>
-        <el-button type="primary" :loading="promptLoading" @click="onGenPrompt">生成提示词</el-button>
+        <el-button type="primary" :loading="genLoading" @click="onGenContent">生成{{ typeLabel }}</el-button>
       </el-form>
-
-      <!-- 提示词(可编辑) -->
-      <template v-if="promptText !== null">
-        <el-divider>提示词(可编辑)</el-divider>
-        <el-input v-model="promptText" type="textarea" :rows="4" />
-        <div style="margin-top:10px">
-          <el-button type="primary" :loading="genLoading" @click="onGenContent">生成{{ typeLabel }}</el-button>
-        </div>
-      </template>
 
       <!-- 草稿(可编辑,不可导出/不落库) -->
       <template v-if="draft !== null">
@@ -108,7 +99,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { TEACHING_FIELDS, TEACHING_SUBJECTS, TEACHING_STAGES, TEACHING_SCENES, SPECIAL_EDU_TYPES } from '../api/teachingMeta'
-import { draftPrompt, draftContentGen, draftCourseware, finalizeNew, listContents } from '../api/teaching'
+import { draftContentGen, draftCourseware, finalizeNew, listContents } from '../api/teaching'
 import { exportWord } from '../utils/exporter'
 
 const props = defineProps({ type: { type: String, required: true } })  // PLAN | LESSON
@@ -119,11 +110,10 @@ const form = reactive({
   title: '', specialEduType: '', stage: '', subject: '', schedule: '', field: '', scene: '',
   total: null, severe: null, moderate: null, mild: null, normal: null
 })
-const promptText = ref(null)   // 提示词草稿(可编辑)
 const draft = ref(null)        // 正文草稿(可编辑,不落库)
 const list = ref([])
 const item = ref(null)
-const promptLoading = ref(false), genLoading = ref(false), finLoading = ref(false)
+const genLoading = ref(false), finLoading = ref(false)
 
 // 课件(仅 LESSON)
 const cwLesson = ref(null)
@@ -163,26 +153,13 @@ function backgroundText() {
   return parts.join(';')
 }
 
-async function onGenPrompt() {
-  if (!form.title.trim()) { ElMessage.warning('请填写教学主题'); return }
-  promptLoading.value = true
-  try {
-    const r = await draftPrompt({
-      contentType: props.type, title: form.title, requirement: backgroundText(),
-      options: buildOptions(), subjectNames: []
-    })
-    promptText.value = r.content || ''
-    draft.value = null
-    ElMessage.success('已生成提示词,可编辑后生成' + typeLabel.value)
-  } catch (e) {} finally { promptLoading.value = false }
-}
-
 async function onGenContent() {
-  if (!promptText.value || !promptText.value.trim()) { ElMessage.warning('提示词不能为空'); return }
+  if (!form.title.trim()) { ElMessage.warning('请填写教学主题'); return }
   genLoading.value = true
   try {
+    // 据背景信息 + options,结合特教通用模板与分层理念,一步生成正文(后端 prompt 内置模板)
     const r = await draftContentGen({
-      contentType: props.type, requirement: promptText.value,
+      contentType: props.type, title: form.title, requirement: backgroundText(),
       options: buildOptions(), subjectNames: []
     })
     draft.value = r.content || ''
@@ -198,7 +175,7 @@ async function onFinalize() {
       contentType: props.type, title: form.title, options: buildOptions(), content: draft.value
     })
     ElMessage.success('已定稿归档')
-    promptText.value = null; draft.value = null
+    draft.value = null
     loadList()
   } catch (e) {} finally { finLoading.value = false }
 }
