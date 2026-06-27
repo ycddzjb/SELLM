@@ -34,10 +34,14 @@
             <el-option v-for="s in TEACHING_SCENES" :key="s.label" :label="s.label" :value="s.label" />
           </el-select>
         </el-form-item>
-        <el-form-item label="教学形式">
-          <el-select v-model="form.form" clearable placeholder="选择" style="width:220px">
-            <el-option v-for="f in TEACHING_FORMS" :key="f.code" :label="f.label" :value="f.label" />
-          </el-select>
+        <el-form-item label="班级人数">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <span>总人数 <el-input-number v-model="form.total" :min="0" :max="100" size="small" controls-position="right" style="width:96px" /></span>
+            <span>重度 <el-input-number v-model="form.severe" :min="0" :max="100" size="small" controls-position="right" style="width:90px" /></span>
+            <span>中度 <el-input-number v-model="form.moderate" :min="0" :max="100" size="small" controls-position="right" style="width:90px" /></span>
+            <span>轻度 <el-input-number v-model="form.mild" :min="0" :max="100" size="small" controls-position="right" style="width:90px" /></span>
+            <span>正常 <el-input-number v-model="form.normal" :min="0" :max="100" size="small" controls-position="right" style="width:90px" /></span>
+          </div>
         </el-form-item>
         <el-button type="primary" :loading="promptLoading" @click="onGenPrompt">生成提示词</el-button>
       </el-form>
@@ -103,7 +107,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { TEACHING_FIELDS, TEACHING_FORMS, TEACHING_SUBJECTS, TEACHING_STAGES, TEACHING_SCENES, SPECIAL_EDU_TYPES } from '../api/teachingMeta'
+import { TEACHING_FIELDS, TEACHING_SUBJECTS, TEACHING_STAGES, TEACHING_SCENES, SPECIAL_EDU_TYPES } from '../api/teachingMeta'
 import { draftPrompt, draftContentGen, draftCourseware, finalizeNew, listContents } from '../api/teaching'
 import { exportWord } from '../utils/exporter'
 
@@ -112,7 +116,8 @@ const TYPE_LABELS = { PLAN: '训练方案', LESSON: '教案' }
 const typeLabel = computed(() => TYPE_LABELS[props.type] || '内容')
 
 const form = reactive({
-  title: '', specialEduType: '', stage: '', subject: '', schedule: '', field: '', scene: '', form: ''
+  title: '', specialEduType: '', stage: '', subject: '', schedule: '', field: '', scene: '',
+  total: null, severe: null, moderate: null, mild: null, normal: null
 })
 const promptText = ref(null)   // 提示词草稿(可编辑)
 const draft = ref(null)        // 正文草稿(可编辑,不落库)
@@ -131,10 +136,16 @@ async function loadList() {
   try { list.value = (await listContents(props.type)).filter(c => c.status === 'FINALIZED') } catch (e) {}
 }
 
+function classComposition() {
+  const n = (v) => (v == null ? 0 : v)
+  return `总人数${n(form.total)}人(重度${n(form.severe)}/中度${n(form.moderate)}/轻度${n(form.mild)}/正常${n(form.normal)})`
+}
+
 function buildOptions() {
   return {
     specialEduType: form.specialEduType, stage: form.stage, subject: form.subject,
-    schedule: form.schedule || '20分钟', field: form.field, scene: form.scene, form: form.form
+    schedule: form.schedule || '20分钟', field: form.field, scene: form.scene,
+    classComposition: classComposition()
   }
 }
 
@@ -148,7 +159,7 @@ function backgroundText() {
   parts.push(`课程安排:${form.schedule || '20分钟'}`)
   if (form.field) parts.push(`教学领域:${form.field}`)
   if (form.scene) parts.push(`教学场景:${form.scene}`)
-  if (form.form) parts.push(`教学形式:${form.form}`)
+  parts.push(`班级构成:${classComposition()}`)
   return parts.join(';')
 }
 

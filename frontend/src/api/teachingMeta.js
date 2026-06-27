@@ -58,7 +58,7 @@ export const TEACHING_STAGES = [
 
 // 教学场景
 export const TEACHING_SCENES = [
-  { label: '送教入户' }, { label: '康复机构' }, { label: '特教班' }, { label: '融合班' }
+  { label: '康复机构' }, { label: '特教班' }, { label: '融合班' }
 ]
 
 // 特教类型(10 类)

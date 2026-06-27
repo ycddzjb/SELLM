@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     ai_base_url: str = ""
     ai_api_key: str = ""
     ai_model: str = "gpt-4o-mini"
-    ai_timeout: int = 60
+    ai_timeout: int = 300   # 真实 LLM 生成分层教案等长文本耗时长,默认放宽到 300s
 
     # 文生媒体(可切换,默认 mock 不外联)
     media_provider: str = "mock"  # mock | openai | wanx(阿里云通义万相,异步任务)

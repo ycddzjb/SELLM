@@ -24,24 +24,38 @@ def _disorders_text(opts: dict) -> str:
     return _disorder_label(opts.get("disorderType", ""))
 
 
+_LAYERED_SKELETON = (
+    "【分层教学骨架范例(提炼自优秀教案,务必遵循)】\n"
+    "1. 学情分析(必备):障碍特征与功能水平、优势能力与兴趣、挑战领域与支持需求;"
+    "并按障碍程度分组说明(如 A组轻度/B组中度/C组重度,各组现有能力与差异)。\n"
+    "2. 分层教学目标:同一主题对 A/B/C 组分别设可量化(SMART)目标,体现能力梯度。\n"
+    "3. 分层学具与情境准备:各组适配的教具/提示卡/结构化情境。\n"
+    "4. 教学过程(分步):每环节标注对不同层级的差异化任务与逐级递减的辅助(语言/视觉/肢体提示)。\n"
+    "5. 分层评价:各组达标标准与数据化评估方式。\n"
+)
+
+
 def _teaching_prompt(task: str, requirement: str, opts: dict) -> str:
     """教学模块生成 prompt(训练方案/教案/课件/习题)。"""
     field = opts.get("field", "")          # 教学领域
-    form = opts.get("form", "")            # 教学形式(一对一/集体)
     subject = opts.get("subject", "")      # 教学学科
     scene = opts.get("scene", "")          # 教学场景
     stage = opts.get("stage", "")          # 教学学段
     set_ = opts.get("specialEduType", "")  # 特教类型
     sched = opts.get("schedule", "")       # 课程安排
+    klass = opts.get("classComposition", "")  # 班级构成(总/重/中/轻/正常)
     who = set_ or "特殊"
     ctx = (f"特教类型:{set_};教学学段:{stage};教学学科:{subject};课程安排:{sched};"
-           f"教学领域:{field};教学场景:{scene};教学形式:{form}。")
+           f"教学领域:{field};教学场景:{scene};班级构成:{klass}。")
     if task == "plan":
         return (f"你是特殊教育训练方案专家。请面向「{who}」生成一份个别化训练方案。{ctx}要求:{requirement}\n"
-                f"请按【训练目标】【训练内容】【训练步骤(分步)】【训练频次】【评估方式】结构输出。")
+                f"{_LAYERED_SKELETON}"
+                f"请按【学情分析】【训练目标(分层)】【训练内容】【训练步骤(分步,分层)】【训练频次】【评估方式(分层)】结构输出。")
     if task == "lesson":
-        return (f"你是特殊教育备课专家。请面向「{who}」生成一份完整教案。{ctx}要求:{requirement}\n"
-                f"请按【教学目标】【重难点】【教学准备】【教学过程(分步)】【评价方式】结构输出。")
+        return (f"你是特殊教育备课专家。请面向「{who}」生成一份完整的分层教学教案。{ctx}要求:{requirement}\n"
+                f"{_LAYERED_SKELETON}"
+                f"请按【学情分析】【教学目标(分层)】【重难点】【教学准备(分层学具)】"
+                f"【教学过程(分步,标注各层差异化任务与辅助)】【评价方式(分层)】结构输出,务必包含学情分析。")
     if task == "courseware":
         return (f"你是特殊教育课件设计专家。请面向「{who}」生成教学课件内容。{ctx}要求:{requirement}\n"
                 f"请按课件页面组织,每页给【标题】+【要点】+【配图建议】,适配该特教类型的认知特点。")
@@ -63,11 +77,13 @@ def _prompt_designer(task: str, requirement: str, opts: dict) -> str:
     ctx = (f"特教类型:{opts.get('specialEduType','')};教学学段:{opts.get('stage','')};"
            f"教学学科:{opts.get('subject','')};课程安排:{opts.get('schedule','')};"
            f"教学领域:{opts.get('field','')};教学场景:{opts.get('scene','')};"
-           f"教学形式:{opts.get('form','')}。")
+           f"班级构成:{opts.get('classComposition','')}。")
     kind = {"plan": "训练方案", "lesson": "教案", "courseware": "课件"}.get(task, "教学内容")
+    extra = _LAYERED_SKELETON if task in ("plan", "lesson") else ""
     return (f"你是特殊教育教学提示词工程师。请基于以下背景信息,为生成「{kind}」撰写一段结构清晰、"
             f"要素完整的中文提示词(prompt),供后续直接喂给大模型生成正文。{ctx}背景:{requirement}\n"
-            f"请只输出可直接使用的提示词正文,包含教学目标、对象特点、内容要点与输出格式要求。")
+            f"{extra}"
+            f"请只输出可直接使用的提示词正文,须包含学情分析、分层教学目标、对象特点、内容要点与输出格式要求。")
 
 
 def _courseware_from_lesson(lesson_content: str, opts: dict) -> str:
