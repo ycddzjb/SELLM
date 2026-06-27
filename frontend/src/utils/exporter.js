@@ -97,3 +97,64 @@ function splitIntoSlides(content) {
   if (cur) blocks.push(cur)
   return blocks
 }
+
+// ── 课件 PPT:暖色高对比主题(LLM 出结构 JSON,前端渲染)──
+const WARM = {
+  bg: 'FFF8F0', band: 'E8762C', bandDark: 'C75A1B', title: '5A3A22',
+  text: '4A3520', groupA: '2E8B57', groupB: 'D2691E', groupC: 'C0392B'
+}
+const HEAD_ICON = [
+  { k: '学情', i: '📋' }, { k: '目标', i: '🎯' }, { k: '重难点', i: '⭐' },
+  { k: '准备', i: '🧰' }, { k: '第一阶段', i: '①' }, { k: '第二阶段', i: '②' },
+  { k: '第三阶段', i: '③' }, { k: '第四阶段', i: '④' }, { k: '评价', i: '✅' }
+]
+function iconFor(h) { const m = HEAD_ICON.find(x => (h || '').includes(x.k)); return m ? m.i + ' ' : '📌 ' }
+function groupColor(t) {
+  if (/^A组/.test(t)) return WARM.groupA
+  if (/^B组/.test(t)) return WARM.groupB
+  if (/^C组/.test(t)) return WARM.groupC
+  return WARM.text
+}
+
+/** 课件导出:解析 PPT JSON 按暖色主题渲染;非 JSON 降级文本切页。 */
+export async function exportCoursewarePptx(title, jsonOrText) {
+  const pptx = new PptxGenJS()
+  pptx.defineLayout({ name: 'W', width: 10, height: 5.63 })
+  pptx.layout = 'W'
+  let data = null
+  try { data = JSON.parse(jsonOrText) } catch (e) { data = null }
+
+  if (data && Array.isArray(data.slides)) {
+    for (const s of data.slides) {
+      const slide = pptx.addSlide()
+      slide.background = { color: WARM.bg }
+      if (s.type === 'cover') {
+        slide.addShape('rect', { x: 0, y: 1.9, w: 10, h: 1.8, fill: { color: WARM.band } })
+        slide.addText(s.title || title || '教学课件',
+          { x: 0.5, y: 2.0, w: 9, h: 1.0, fontSize: 34, bold: true, color: 'FFFFFF', align: 'center' })
+        slide.addText(s.subtitle || '',
+          { x: 0.5, y: 3.0, w: 9, h: 0.6, fontSize: 18, color: 'FFF1E0', align: 'center' })
+      } else {
+        slide.addShape('rect', { x: 0, y: 0, w: 10, h: 0.9, fill: { color: WARM.band } })
+        slide.addText(iconFor(s.heading) + (s.heading || ''),
+          { x: 0.4, y: 0.12, w: 9.2, h: 0.66, fontSize: 24, bold: true, color: 'FFFFFF' })
+        const pts = (s.points || []).map(p => ({
+          text: String(p), options: { color: groupColor(String(p)), fontSize: 17, bullet: { code: '2022' }, paraSpaceAfter: 8 }
+        }))
+        slide.addText(pts.length ? pts : [{ text: '(无内容)', options: { color: WARM.text } }],
+          { x: 0.6, y: 1.2, w: 8.8, h: 4.1, valign: 'top' })
+      }
+    }
+    await pptx.writeFile({ fileName: `${data.title || title || '课件'}.pptx` })
+    return
+  }
+  // 降级:非 JSON 按文本切页(暖色简版)
+  const cover = pptx.addSlide(); cover.background = { color: WARM.bg }
+  cover.addText(title || '教学课件', { x: 0.5, y: 2.2, w: 9, h: 1.2, fontSize: 32, bold: true, color: WARM.title, align: 'center' })
+  for (const b of splitIntoSlides(jsonOrText || '')) {
+    const slide = pptx.addSlide(); slide.background = { color: WARM.bg }
+    slide.addText(b.title, { x: 0.5, y: 0.4, w: 9, h: 0.8, fontSize: 22, bold: true, color: WARM.band })
+    slide.addText(b.body, { x: 0.6, y: 1.3, w: 8.8, h: 4, fontSize: 16, color: WARM.text, valign: 'top' })
+  }
+  await pptx.writeFile({ fileName: `${title || '课件'}.pptx` })
+}

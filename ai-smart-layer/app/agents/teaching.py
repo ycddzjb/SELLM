@@ -99,10 +99,29 @@ def _prompt_designer(task: str, requirement: str, opts: dict) -> str:
 
 
 def _courseware_from_lesson(lesson_content: str, opts: dict) -> str:
-    d = _disorders_text(opts)
-    return (f"你是特殊教育课件设计专家。请基于以下已定稿教案,为{d}儿童生成配套 PPT 课件内容。\n"
-            f"教案正文:\n{lesson_content}\n"
-            f"请按课件页面组织,每页给【标题】+【要点】+【配图建议】,适配该障碍类型认知特点。")
+    set_ = opts.get("specialEduType", "") or "特殊"
+    sub = f"{set_} | {opts.get('stage','')} | {opts.get('schedule','40分钟')}"
+    return (
+        "你是特殊教育课件设计专家。请基于以下已定稿教案,生成一份配套 PPT 课件的结构化内容,"
+        "采用温暖友好、结构清晰、高对比的设计理念,适配该特教类型授课特点。\n"
+        f"封面副标题参考:{sub}\n"
+        f"教案正文:\n{lesson_content}\n\n"
+        "请严格只输出如下 JSON(不要任何额外说明、不要 markdown 代码块):\n"
+        '{"title":"课题名称","slides":[\n'
+        '  {"type":"cover","title":"课题名称","subtitle":"特教类型 | 学段 | 课时"},\n'
+        '  {"type":"section","heading":"学情分析","points":["A组(能力较强):...","B组(中等):...","C组(需支持):..."]},\n'
+        '  {"type":"section","heading":"教学目标","points":["A组:...","B组:...","C组:..."]},\n'
+        '  {"type":"section","heading":"重难点","points":["..."]},\n'
+        '  {"type":"section","heading":"教学准备","points":["..."]},\n'
+        '  {"type":"section","heading":"教学过程·第一阶段 情境导入","points":["..."]},\n'
+        '  {"type":"section","heading":"教学过程·第二阶段 探究学习","points":["..."]},\n'
+        '  {"type":"section","heading":"教学过程·第三阶段 分层练习","points":["A组:...","B组:...","C组:..."]},\n'
+        '  {"type":"section","heading":"教学过程·第四阶段 总结评价","points":["..."]},\n'
+        '  {"type":"section","heading":"分层评价","points":["A组达标标准:...","B组:...","C组:..."]}\n'
+        "]}\n"
+        "要求:每页 points 简洁(每条不超过40字);凡按能力分层处,要点以「A组」「B组」「C组」开头并标注具体辅助梯度与支持策略;"
+        "内容须与教案主题吻合、贴合该特教类型认知特点。"
+    )
 
 
 async def invoke_teaching(payload: dict) -> dict:

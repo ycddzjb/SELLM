@@ -23,7 +23,7 @@
         <span>{{ view.title }} · {{ typeLabel(view.contentType) }}</span>
         <el-tag type="success">已归档</el-tag>
       </div>
-      <pre class="box">{{ view.content }}</pre>
+      <pre class="box">{{ viewText(view) }}</pre>
     </el-card>
   </div>
 </template>
@@ -32,12 +32,26 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { listContents } from '../api/teaching'
-import { exportWord, exportPpt } from '../utils/exporter'
+import { exportWord, exportCoursewarePptx } from '../utils/exporter'
 
 const rows = ref([])
 const view = ref(null)
 const TYPE_LABELS = { PLAN: '训练方案', LESSON: '教案', COURSEWARE: '课件', EXERCISE: '习题' }
 const typeLabel = (t) => TYPE_LABELS[t] || t
+
+// 课件存的是 PPT 结构 JSON,查看时展示页标题概览;教案等展示正文
+function viewText(row) {
+  if (row.contentType === 'COURSEWARE') {
+    try {
+      const d = JSON.parse(row.content)
+      if (d && Array.isArray(d.slides)) {
+        return d.slides.map((s, i) => `${i + 1}. ${s.type === 'cover' ? '封面:' + (s.title || '') : (s.heading || '')}`).join('\n')
+          + '\n\n(PPT 课件,点"导出 PPT"下载完整暖色课件)'
+      }
+    } catch (e) {}
+  }
+  return row.content
+}
 
 onMounted(load)
 async function load() {
@@ -50,7 +64,7 @@ function exportWordRow(row) {
   try { exportWord(row.title, row.content) } catch (e) { ElMessage.error('导出失败') }
 }
 function exportPptRow(row) {
-  try { exportPpt(row.title, row.content) } catch (e) { ElMessage.error('导出失败') }
+  try { exportCoursewarePptx(row.title, row.content) } catch (e) { ElMessage.error('导出失败') }
 }
 </script>
 

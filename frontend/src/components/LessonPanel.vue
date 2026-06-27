@@ -64,7 +64,7 @@
         <template #default="{ row }">
           <el-button link type="primary" @click="openItem(row)">查看</el-button>
           <el-button link type="success" @click="exportItemWord(row)">导出 Word</el-button>
-          <el-button v-if="type === 'LESSON'" link type="warning" @click="openCourseware(row)">生成课件</el-button>
+          <el-button v-if="type === 'LESSON'" link type="warning" :loading="cwBusyId === row.id" @click="onGenCourseware(row)">生成课件</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -79,18 +79,9 @@
       <el-button type="success" plain @click="exportItemWord(item)">导出 Word</el-button>
     </el-card>
 
-    <!-- 课件:基于选定教案生成(仅 LESSON) -->
-    <el-card v-if="cwLesson" style="max-width:920px">
-      <div style="font-weight:600;margin-bottom:8px">基于教案《{{ cwLesson.title }}》生成课件</div>
-      <el-button type="primary" :loading="cwGenLoading" @click="onGenCourseware">生成课件草稿</el-button>
-      <template v-if="cwDraft !== null">
-        <el-divider>课件草稿(可编辑;定稿后方可导出 PPT)</el-divider>
-        <el-input v-model="cwDraft" type="textarea" :rows="8" />
-        <div style="margin-top:10px">
-          <el-button type="success" :loading="cwFinLoading" @click="onFinalizeCourseware">课件定稿保存</el-button>
-        </div>
-      </template>
-    </el-card>
+    <p v-if="type === 'LESSON'" style="color:#999;font-size:12px;max-width:920px">
+      提示:点教案行的「生成课件」将直接生成 PPT 课件并归档到教学档案,可在那里下载。
+    </p>
   </div>
 </template>
 <!-- SCRIPT_PLACEHOLDER -->
@@ -118,9 +109,8 @@ const item = ref(null)
 const genLoading = ref(false), finLoading = ref(false)
 
 // 课件(仅 LESSON)
-const cwLesson = ref(null)
-const cwDraft = ref(null)
-const cwGenLoading = ref(false), cwFinLoading = ref(false)
+// 课件(仅 LESSON):一键生成 PPT JSON 并直接归档(去草稿)
+const cwBusyId = ref(null)
 
 onMounted(loadList)
 
@@ -205,30 +195,17 @@ function exportItemWord(row) {
   try { exportWord(row.title || typeLabel.value, row.content) } catch (e) { ElMessage.error('导出失败') }
 }
 
-// ── 课件:基于选定已定稿教案 ──
-function openCourseware(lesson) {
-  cwLesson.value = lesson
-  cwDraft.value = null
-}
-async function onGenCourseware() {
-  cwGenLoading.value = true
+// ── 课件:基于选定已定稿教案,一键生成 PPT 内容并直接归档(去草稿)──
+async function onGenCourseware(lesson) {
+  cwBusyId.value = lesson.id
   try {
-    const r = await draftCourseware({ lessonId: cwLesson.value.id, subjectNames: [] })
-    cwDraft.value = r.content || ''
-    ElMessage.success('已生成课件草稿,编辑后可定稿')
-  } catch (e) {} finally { cwGenLoading.value = false }
-}
-async function onFinalizeCourseware() {
-  if (!cwDraft.value || !cwDraft.value.trim()) { ElMessage.warning('课件草稿不能为空'); return }
-  cwFinLoading.value = true
-  try {
+    const r = await draftCourseware({ lessonId: lesson.id, subjectNames: [] })
     await finalizeNew({
-      contentType: 'COURSEWARE', title: cwLesson.value.title + ' · 课件',
-      options: {}, content: cwDraft.value, sourceId: cwLesson.value.id
+      contentType: 'COURSEWARE', title: lesson.title + ' · 课件',
+      options: {}, content: r.content || '', sourceId: lesson.id
     })
-    ElMessage.success('课件已定稿归档')
-    cwDraft.value = null; cwLesson.value = null
-  } catch (e) {} finally { cwFinLoading.value = false }
+    ElMessage.success('课件已生成并归档,可在教学档案下载 PPT')
+  } catch (e) {} finally { cwBusyId.value = null }
 }
 </script>
 
