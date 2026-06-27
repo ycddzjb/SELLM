@@ -58,5 +58,19 @@ export const TEACHING_STAGES = [
 
 // 教学场景
 export const TEACHING_SCENES = [
-  { label: '家庭' }, { label: '机构' }, { label: '学校' }
+  { label: '送教入户' }, { label: '康复机构' }, { label: '特教班' }, { label: '融合班' }
+]
+
+// 特教类型(10 类)
+export const SPECIAL_EDU_TYPES = [
+  { label: '视力障碍教育' },
+  { label: '听力障碍教育' },
+  { label: '智力障碍教育' },
+  { label: '孤独症教育' },
+  { label: '脑瘫与肢体障碍教育' },
+  { label: '言语语言障碍教育' },
+  { label: '情绪与行为障碍教育' },
+  { label: '学习障碍教育' },
+  { label: '超常教育' },
+  { label: '双重特殊儿童教育' }
 ]

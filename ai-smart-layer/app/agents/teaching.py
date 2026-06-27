@@ -26,25 +26,27 @@ def _disorders_text(opts: dict) -> str:
 
 def _teaching_prompt(task: str, requirement: str, opts: dict) -> str:
     """教学模块生成 prompt(训练方案/教案/课件/习题)。"""
-    d = _disorders_text(opts)
     field = opts.get("field", "")          # 教学领域
     form = opts.get("form", "")            # 教学形式(一对一/集体)
     subject = opts.get("subject", "")      # 教学学科
-    scene = opts.get("scene", "")          # 教学场景(家庭/机构/学校)
+    scene = opts.get("scene", "")          # 教学场景
     stage = opts.get("stage", "")          # 教学学段
-    age = opts.get("ageRange", "")         # 年龄区间(如 3~4岁)
-    ctx = (f"残障类型:{d};教学学段:{stage};年龄区间:{age};教学学科:{subject};"
+    set_ = opts.get("specialEduType", "")  # 特教类型
+    sched = opts.get("schedule", "")       # 课程安排
+    who = set_ or "特殊"
+    ctx = (f"特教类型:{set_};教学学段:{stage};教学学科:{subject};课程安排:{sched};"
            f"教学领域:{field};教学场景:{scene};教学形式:{form}。")
     if task == "plan":
-        return (f"你是特殊教育训练方案专家。请为{d}儿童生成一份个别化训练方案。{ctx}要求:{requirement}\n"
+        return (f"你是特殊教育训练方案专家。请面向「{who}」生成一份个别化训练方案。{ctx}要求:{requirement}\n"
                 f"请按【训练目标】【训练内容】【训练步骤(分步)】【训练频次】【评估方式】结构输出。")
     if task == "lesson":
-        return (f"你是特殊教育备课专家。请为{d}儿童生成一份完整教案。{ctx}要求:{requirement}\n"
+        return (f"你是特殊教育备课专家。请面向「{who}」生成一份完整教案。{ctx}要求:{requirement}\n"
                 f"请按【教学目标】【重难点】【教学准备】【教学过程(分步)】【评价方式】结构输出。")
     if task == "courseware":
-        return (f"你是特殊教育课件设计专家。请为{d}儿童生成教学课件内容。{ctx}要求:{requirement}\n"
-                f"请按课件页面组织,每页给【标题】+【要点】+【配图建议】,适配该障碍类型的认知特点。")
+        return (f"你是特殊教育课件设计专家。请面向「{who}」生成教学课件内容。{ctx}要求:{requirement}\n"
+                f"请按课件页面组织,每页给【标题】+【要点】+【配图建议】,适配该特教类型的认知特点。")
     if task == "exercise":
+        d = _disorders_text(opts)
         qtype = opts.get("questionType", "")   # 题型
         level = opts.get("difficulty", "")     # 难度
         ex_stage = opts.get("stage", "")       # 学段
@@ -57,14 +59,14 @@ def _teaching_prompt(task: str, requirement: str, opts: dict) -> str:
 
 
 def _prompt_designer(task: str, requirement: str, opts: dict) -> str:
-    """AIGC 出"提示词":让模型据各字段产出一段高质量提示词(供教师编辑后再生成正文)。"""
-    d = _disorders_text(opts)
-    ctx = (f"残障类型:{d};教学学段:{opts.get('stage','')};年龄区间:{opts.get('ageRange','')};"
-           f"教学学科:{opts.get('subject','')};教学领域:{opts.get('field','')};"
-           f"教学场景:{opts.get('scene','')};教学形式:{opts.get('form','')}。")
+    """AIGC 出"提示词":据所选背景信息汇总,产一段高质量提示词(供教师编辑后再生成正文)。"""
+    ctx = (f"特教类型:{opts.get('specialEduType','')};教学学段:{opts.get('stage','')};"
+           f"教学学科:{opts.get('subject','')};课程安排:{opts.get('schedule','')};"
+           f"教学领域:{opts.get('field','')};教学场景:{opts.get('scene','')};"
+           f"教学形式:{opts.get('form','')}。")
     kind = {"plan": "训练方案", "lesson": "教案", "courseware": "课件"}.get(task, "教学内容")
-    return (f"你是特殊教育教学提示词工程师。请基于以下信息,为生成「{kind}」撰写一段结构清晰、"
-            f"要素完整的中文提示词(prompt),供后续直接喂给大模型生成正文。{ctx}教师补充要求:{requirement}\n"
+    return (f"你是特殊教育教学提示词工程师。请基于以下背景信息,为生成「{kind}」撰写一段结构清晰、"
+            f"要素完整的中文提示词(prompt),供后续直接喂给大模型生成正文。{ctx}背景:{requirement}\n"
             f"请只输出可直接使用的提示词正文,包含教学目标、对象特点、内容要点与输出格式要求。")
 
 

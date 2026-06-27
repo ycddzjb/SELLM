@@ -3,17 +3,13 @@
     <!-- 录入 + 两步生成 -->
     <el-card style="max-width:920px;margin-bottom:16px">
       <el-form label-width="96px">
-        <el-form-item label="标题">
+        <el-form-item label="教学主题">
           <el-input v-model="form.title" placeholder="如:认识情绪——高兴与难过" />
         </el-form-item>
-        <el-form-item label="残障类型">
-          <el-select v-model="form.disorderTypes" multiple filterable allow-create default-first-option
-                     placeholder="可多选可输入" style="width:100%">
-            <el-option v-for="d in DISORDER_TYPES" :key="d.code" :label="d.label" :value="d.label" />
+        <el-form-item label="特教类型">
+          <el-select v-model="form.specialEduType" filterable clearable placeholder="选择特教类型" style="width:260px">
+            <el-option v-for="t in SPECIAL_EDU_TYPES" :key="t.label" :label="t.label" :value="t.label" />
           </el-select>
-        </el-form-item>
-        <el-form-item label="年龄区间">
-          <el-input v-model="form.ageRange" placeholder="如:3~4岁" style="width:220px" />
         </el-form-item>
         <el-form-item label="教学学段">
           <el-select v-model="form.stage" filterable allow-create clearable placeholder="可选可输入" style="width:220px">
@@ -24,6 +20,9 @@
           <el-select v-model="form.subject" filterable allow-create clearable placeholder="可选可输入" style="width:220px">
             <el-option v-for="s in TEACHING_SUBJECTS" :key="s.code" :label="s.label" :value="s.label" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="课程安排">
+          <el-input v-model="form.schedule" placeholder="20分钟" style="width:220px" />
         </el-form-item>
         <el-form-item label="教学领域">
           <el-select v-model="form.field" filterable allow-create clearable placeholder="可选可输入" style="width:220px">
@@ -39,17 +38,6 @@
           <el-select v-model="form.form" clearable placeholder="选择" style="width:220px">
             <el-option v-for="f in TEACHING_FORMS" :key="f.code" :label="f.label" :value="f.label" />
           </el-select>
-        </el-form-item>
-        <el-form-item label="内容与要求">
-          <div style="width:100%">
-            <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
-              <span style="color:#999;font-size:12px">提问示例(点击填入):</span>
-              <el-tag v-for="(ex,i) in TEACHING_EXAMPLES" :key="i" type="info" effect="plain"
-                      style="cursor:pointer" @click="form.requirement = ex">{{ ex }}</el-tag>
-            </div>
-            <el-input v-model="form.requirement" type="textarea" :rows="3"
-                      placeholder="输入内容与具体要求,或点提问示例填入" />
-          </div>
         </el-form-item>
         <el-button type="primary" :loading="promptLoading" @click="onGenPrompt">生成提示词</el-button>
       </el-form>
@@ -115,9 +103,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { DISORDER_TYPES } from '../api/meta'
-import { TEACHING_FIELDS, TEACHING_FORMS, TEACHING_SUBJECTS, TEACHING_STAGES, TEACHING_SCENES } from '../api/teachingMeta'
-import { TEACHING_EXAMPLES } from '../api/teachingPresets'
+import { TEACHING_FIELDS, TEACHING_FORMS, TEACHING_SUBJECTS, TEACHING_STAGES, TEACHING_SCENES, SPECIAL_EDU_TYPES } from '../api/teachingMeta'
 import { draftPrompt, draftContentGen, draftCourseware, finalizeNew, listContents } from '../api/teaching'
 import { exportWord } from '../utils/exporter'
 
@@ -126,7 +112,7 @@ const TYPE_LABELS = { PLAN: '训练方案', LESSON: '教案' }
 const typeLabel = computed(() => TYPE_LABELS[props.type] || '内容')
 
 const form = reactive({
-  title: '', disorderTypes: [], ageRange: '', stage: '', subject: '', field: '', scene: '', form: '', requirement: ''
+  title: '', specialEduType: '', stage: '', subject: '', schedule: '', field: '', scene: '', form: ''
 })
 const promptText = ref(null)   // 提示词草稿(可编辑)
 const draft = ref(null)        // 正文草稿(可编辑,不落库)
@@ -147,17 +133,31 @@ async function loadList() {
 
 function buildOptions() {
   return {
-    disorderTypes: form.disorderTypes, ageRange: form.ageRange, stage: form.stage,
-    subject: form.subject, field: form.field, scene: form.scene, form: form.form
+    specialEduType: form.specialEduType, stage: form.stage, subject: form.subject,
+    schedule: form.schedule || '20分钟', field: form.field, scene: form.scene, form: form.form
   }
 }
 
+// 据背景信息汇总成一段要求文本(供生成提示词)
+function backgroundText() {
+  const parts = []
+  if (form.title) parts.push(`教学主题:${form.title}`)
+  if (form.specialEduType) parts.push(`特教类型:${form.specialEduType}`)
+  if (form.stage) parts.push(`教学学段:${form.stage}`)
+  if (form.subject) parts.push(`教学学科:${form.subject}`)
+  parts.push(`课程安排:${form.schedule || '20分钟'}`)
+  if (form.field) parts.push(`教学领域:${form.field}`)
+  if (form.scene) parts.push(`教学场景:${form.scene}`)
+  if (form.form) parts.push(`教学形式:${form.form}`)
+  return parts.join(';')
+}
+
 async function onGenPrompt() {
-  if (!form.requirement.trim()) { ElMessage.warning('请输入内容与要求'); return }
+  if (!form.title.trim()) { ElMessage.warning('请填写教学主题'); return }
   promptLoading.value = true
   try {
     const r = await draftPrompt({
-      contentType: props.type, title: form.title, requirement: form.requirement,
+      contentType: props.type, title: form.title, requirement: backgroundText(),
       options: buildOptions(), subjectNames: []
     })
     promptText.value = r.content || ''
