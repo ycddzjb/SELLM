@@ -21,6 +21,7 @@ export const getCourseware = (id) => http.get(`/teaching/courseware/${id}`)
 export const generateContent = (payload) => http.post('/teaching/contents', payload, GEN)  // {contentType,title,requirement,options,subjectNames}
 export const editContent = (id, content) => http.put(`/teaching/contents/${id}`, { content })
 export const finalizeContent = (id) => http.post(`/teaching/contents/${id}/finalize`)
+export const deleteContent = (id) => http.delete(`/teaching/contents/${id}`)
 export const listContents = (type) => http.get('/teaching/contents', { params: { type } })
 
 // ── 两步生成(草稿不落库):提示词 → 正文;课件基于定稿教案 ──

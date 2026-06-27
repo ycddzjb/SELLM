@@ -171,6 +171,11 @@ public class TeachingContentAppService {
         return requireOwned(userId, id);
     }
 
+    public void delete(Long userId, Long id) {
+        requireOwned(userId, id);   // 行级校验:仅本人可删
+        repo.softDelete(id);
+    }
+
     public List<TeachingContent> list(Long userId, String contentType) {
         return repo.listByOwnerAndType(userId, contentType == null ? "" : contentType.toUpperCase());
     }

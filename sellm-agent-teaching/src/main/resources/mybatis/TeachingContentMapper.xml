@@ -30,4 +30,8 @@
         UPDATE teaching_content SET title = #{title}, ai_draft = #{aiDraft}, content = #{content}, status = #{status},
             updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
     </update>
+
+    <update id="softDelete" parameterType="long">
+        UPDATE teaching_content SET deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
 </mapper>

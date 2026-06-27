@@ -87,6 +87,14 @@ public class TeachingContentController {
         return Result.ok(appService.list(userId, type).stream().map(ContentResponse::of).toList());
     }
 
+    @DeleteMapping("/{id}")
+    public Result<Void> delete(@RequestHeader(value = "X-User-Id", required = false) Long userId,
+                               @PathVariable("id") Long id) {
+        requireUser(userId);
+        appService.delete(userId, id);
+        return Result.ok(null);
+    }
+
     private void requireUser(Long userId) {
         if (userId == null) throw new UnauthorizedException("缺少 X-User-Id");
     }

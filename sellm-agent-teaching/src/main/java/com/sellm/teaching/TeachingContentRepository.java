@@ -47,6 +47,10 @@ public class TeachingContentRepository {
         mapper.update(row);
     }
 
+    public void softDelete(Long id) {
+        mapper.softDelete(id);
+    }
+
     private TeachingContent fromRow(Map<String, Object> row) {
         TeachingContent c = new TeachingContent();
         c.setId(((Number) row.get("id")).longValue());

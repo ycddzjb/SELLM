@@ -11,4 +11,5 @@ public interface TeachingContentMapper {
     Map<String, Object> findById(Long id);
     List<Map<String, Object>> findByOwnerAndType(@Param("ownerId") Long ownerId, @Param("contentType") String contentType);
     void update(Map<String, Object> row);
+    void softDelete(@Param("id") Long id);
 }
