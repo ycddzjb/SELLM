@@ -23,8 +23,11 @@ function stripMarkdown(line) {
   return s.trim()
 }
 
-/** 判断标题级别:1=一级(【x】或 一、),2=二级(1. / (1) / 1、),0=正文。 */
+/** 判断标题级别:1=一级(单个【x】节标题 或 一、),2=二级(1. / (1) / X组),0=正文。 */
 function headingLevel(line) {
+  // 基本信息行含多个【】(如【课题名称】..【学科】..),作正文不作标题
+  const braceCount = (line.match(/【/g) || []).length
+  if (braceCount >= 2) return 0
   if (/^【.+】/.test(line) || /^[一二三四五六七八九十]+[、.]/.test(line)) return 1
   if (/^\d+[.、)]/.test(line) || /^[(（]\d+[)）]/.test(line) || /^[A-Za-z]组/.test(line)) return 2
   return 0

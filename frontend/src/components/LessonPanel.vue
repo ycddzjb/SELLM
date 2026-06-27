@@ -101,7 +101,9 @@ import { ElMessage } from 'element-plus'
 import { TEACHING_FIELDS, TEACHING_SUBJECTS, TEACHING_STAGES, TEACHING_SCENES, SPECIAL_EDU_TYPES } from '../api/teachingMeta'
 import { draftContentGen, draftCourseware, finalizeNew, listContents } from '../api/teaching'
 import { exportWord } from '../utils/exporter'
+import { useAuthStore } from '../stores/auth'
 
+const auth = useAuthStore()
 const props = defineProps({ type: { type: String, required: true } })  // PLAN | LESSON
 const TYPE_LABELS = { PLAN: '训练方案', LESSON: '教案' }
 const typeLabel = computed(() => TYPE_LABELS[props.type] || '内容')
@@ -153,6 +155,22 @@ function backgroundText() {
   return parts.join(';')
 }
 
+// 教案基本信息表头(据表单+用户账户自动补,缺的留空)
+function basicInfoHeader() {
+  const n = (v) => (v == null ? 0 : v)
+  const deg = []
+  if (n(form.severe)) deg.push(`重度${form.severe}`)
+  if (n(form.moderate)) deg.push(`中度${form.moderate}`)
+  if (n(form.mild)) deg.push(`轻度${form.mild}`)
+  if (n(form.normal)) deg.push(`正常${form.normal}`)
+  return [
+    `【课题名称】${form.title || ''}  【学科】${form.subject || ''}  【年级】${form.stage || ''}  【课时】${form.schedule || '20分钟'}`,
+    `【授课对象】障碍类型 ${form.specialEduType || ''}  程度 ${deg.join('、') || ''}  人数 ${n(form.total) || ''}`,
+    `【授课教师】${auth.username || ''}`,
+    ''
+  ].join('\n')
+}
+
 async function onGenContent() {
   if (!form.title.trim()) { ElMessage.warning('请填写教学主题'); return }
   genLoading.value = true
@@ -162,7 +180,9 @@ async function onGenContent() {
       contentType: props.type, title: form.title, requirement: backgroundText(),
       options: buildOptions(), subjectNames: []
     })
-    draft.value = r.content || ''
+    const body = r.content || ''
+    // 教案在正文最前面加基本信息表头(训练方案 PLAN 不加)
+    draft.value = props.type === 'LESSON' ? (basicInfoHeader() + body) : body
     ElMessage.success('已生成草稿,编辑后可定稿保存')
   } catch (e) {} finally { genLoading.value = false }
 }
