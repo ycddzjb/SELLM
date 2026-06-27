@@ -10,12 +10,40 @@ export function exportMarkdown(title, content) {
   saveAs(blob, `${title || '教学内容'}.md`)
 }
 
-/** 导出 Word:标题 + 正文(按行分段)。 */
+/** 去除常见 markdown 标记,转为纯文本(供 Word/PPT 规范排版)。 */
+function stripMarkdown(line) {
+  let s = line
+  s = s.replace(/`{1,3}/g, '')                 // 代码反引号
+  s = s.replace(/\*\*(.+?)\*\*/g, '$1')         // 加粗 **x**
+  s = s.replace(/\*(.+?)\*/g, '$1')             // 斜体 *x*
+  s = s.replace(/^\s{0,3}#{1,6}\s*/, '')        // 标题 #
+  s = s.replace(/^\s*[-*+]\s+/, '· ')           // 无序列表 - * + → ·
+  s = s.replace(/^\s*>\s?/, '')                 // 引用 >
+  s = s.replace(/\|/g, ' ')                     // 表格竖线
+  return s.trim()
+}
+
+/** 判断标题级别:1=一级(【x】或 一、),2=二级(1. / (1) / 1、),0=正文。 */
+function headingLevel(line) {
+  if (/^【.+】/.test(line) || /^[一二三四五六七八九十]+[、.]/.test(line)) return 1
+  if (/^\d+[.、)]/.test(line) || /^[(（]\d+[)）]/.test(line) || /^[A-Za-z]组/.test(line)) return 2
+  return 0
+}
+
+/** 导出 Word:识别标题层次,清洗 markdown,层次分明排版。 */
 export async function exportWord(title, content) {
-  const lines = (content || '').split(/\n/)
   const children = [new Paragraph({ text: title || '教学内容', heading: HeadingLevel.HEADING_1 })]
-  for (const line of lines) {
-    children.push(new Paragraph({ children: [new TextRun(line)] }))
+  for (const raw of (content || '').split(/\n/)) {
+    const line = stripMarkdown(raw)
+    if (!line) { children.push(new Paragraph({ children: [] })); continue }
+    const lv = headingLevel(line)
+    if (lv === 1) {
+      children.push(new Paragraph({ text: line, heading: HeadingLevel.HEADING_2 }))
+    } else if (lv === 2) {
+      children.push(new Paragraph({ text: line, heading: HeadingLevel.HEADING_3 }))
+    } else {
+      children.push(new Paragraph({ children: [new TextRun(line)] }))
+    }
   }
   const doc = new Document({ sections: [{ children }] })
   const blob = await Packer.toBlob(doc)

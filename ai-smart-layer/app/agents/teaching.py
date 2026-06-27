@@ -34,6 +34,15 @@ _LAYERED_SKELETON = (
     "5. 分层评价:各组达标标准与数据化评估方式。\n"
 )
 
+# 输出格式约束:纯文本,禁用 markdown/html,适配 Word 排版
+_FORMAT_RULE = (
+    "【输出格式要求(严格遵守)】\n"
+    "- 输出纯文本,严禁使用 Markdown 或 HTML 标记:不要出现 #、*、**、`、---、表格竖线 | 等符号。\n"
+    "- 一级标题用中文方括号【】包裹(如【学情分析】);其下要点用 一、二、三 或 1. 2. 3. 编号;"
+    "更细层级用 (1)(2) 或 · 圆点。\n"
+    "- 段落之间用空行分隔,层次分明,便于直接导出为 Word 文档。\n"
+)
+
 
 def _teaching_prompt(task: str, requirement: str, opts: dict) -> str:
     """教学模块生成 prompt(训练方案/教案/课件/习题)。"""
@@ -50,15 +59,18 @@ def _teaching_prompt(task: str, requirement: str, opts: dict) -> str:
     if task == "plan":
         return (f"你是特殊教育训练方案专家。请面向「{who}」生成一份个别化训练方案。{ctx}要求:{requirement}\n"
                 f"{_LAYERED_SKELETON}"
-                f"请按【学情分析】【训练目标(分层)】【训练内容】【训练步骤(分步,分层)】【训练频次】【评估方式(分层)】结构输出。")
+                f"请按【学情分析】【训练目标(分层)】【训练内容】【训练步骤(分步,分层)】【训练频次】【评估方式(分层)】结构输出。\n"
+                f"{_FORMAT_RULE}")
     if task == "lesson":
         return (f"你是特殊教育备课专家。请面向「{who}」生成一份完整的分层教学教案。{ctx}要求:{requirement}\n"
                 f"{_LAYERED_SKELETON}"
                 f"请按【学情分析】【教学目标(分层)】【重难点】【教学准备(分层学具)】"
-                f"【教学过程(分步,标注各层差异化任务与辅助)】【评价方式(分层)】结构输出,务必包含学情分析。")
+                f"【教学过程(分步,标注各层差异化任务与辅助)】【评价方式(分层)】结构输出,务必包含学情分析。\n"
+                f"{_FORMAT_RULE}")
     if task == "courseware":
         return (f"你是特殊教育课件设计专家。请面向「{who}」生成教学课件内容。{ctx}要求:{requirement}\n"
-                f"请按课件页面组织,每页给【标题】+【要点】+【配图建议】,适配该特教类型的认知特点。")
+                f"请按课件页面组织,每页给【标题】+【要点】+【配图建议】,适配该特教类型的认知特点。\n"
+                f"{_FORMAT_RULE}")
     if task == "exercise":
         d = _disorders_text(opts)
         qtype = opts.get("questionType", "")   # 题型
